@@ -7,24 +7,19 @@ export default function DashboardLayout({
 }) {
   return (
     <div className="flex min-h-screen bg-background">
-      
-      {/* Sidebar (fixed width on desktop) */}
-      <div className="hidden md:block w-64 shrink-0">
+      <div className="hidden md:block w-72 shrink-0">
         <Sidebar />
       </div>
 
-      {/* Mobile Sidebar */}
       <div className="md:hidden">
         <Sidebar />
       </div>
 
-      {/* Main Content */}
       <main className="flex-1 overflow-auto pt-16 md:pt-0">
-        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+        <div className="mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-10">
           {children}
         </div>
       </main>
-
     </div>
   );
 }

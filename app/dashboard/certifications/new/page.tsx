@@ -82,7 +82,7 @@ export default function NewCertificationPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="page-shell">
       {/* Back Button */}
       <Link
         href="/dashboard/certifications"
@@ -92,7 +92,7 @@ export default function NewCertificationPage() {
         Back to Certifications
       </Link>
 
-      <Card className="p-8 max-w-2xl">
+      <Card className="surface-card max-w-2xl p-8">
         <h1 className="text-2xl font-bold mb-6">Add New Certification</h1>
 
         {/* Error Message */}

@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { resetPassword } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
 import { FieldGroup, FieldLabel } from '@/components/ui/field';
 import Link from 'next/link';
+import { AuthShell } from '@/components/auth-shell';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -32,22 +32,16 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <div className="p-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2">Reset Password</h1>
-            <p className="text-muted-foreground">Enter your email to receive a password reset link</p>
-          </div>
+    <AuthShell title="Reset Password" subtitle="Enter your email to receive a reset link">
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            <div className="mb-6 rounded-lg border border-destructive/40 bg-destructive/15 p-4 text-sm text-destructive">
               {error}
             </div>
           )}
 
           {message && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+            <div className="mb-6 rounded-lg border border-emerald-500/35 bg-emerald-500/12 p-4 text-sm text-emerald-300">
               {message}
             </div>
           )}
@@ -79,8 +73,6 @@ export default function ForgotPasswordPage() {
               Back to login
             </Link>
           </div>
-        </div>
-      </Card>
-    </div>
+    </AuthShell>
   );
 }

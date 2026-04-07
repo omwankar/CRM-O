@@ -126,19 +126,19 @@ export default function AlertsPage() {
   const getAlertStyles = (status: string) => {
     switch (status) {
       case 'expired':
-        return 'bg-red-950 border-red-800';
+        return 'border-red-500/35 bg-red-500/12';
       case 'expiring_soon':
-        return 'bg-amber-950 border-amber-800';
+        return 'border-amber-500/35 bg-amber-500/12';
       default:
-        return 'bg-slate-800 border-slate-700';
+        return 'border-emerald-500/35 bg-emerald-500/12';
     }
   };
 
   const getAlertIcon = (status: string) => {
     return status === 'expired' || status === 'expiring_soon' ? (
-      <AlertCircle className="w-5 h-5 text-red-400" />
+      <AlertCircle className="w-5 h-5 text-red-500" />
     ) : (
-      <CheckCircle className="w-5 h-5 text-green-400" />
+      <CheckCircle className="w-5 h-5 text-emerald-600" />
     );
   };
 
@@ -154,16 +154,18 @@ export default function AlertsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Alerts & Expiries</h1>
-        <p className="text-muted-foreground">Monitor upcoming expirations across all modules</p>
+    <div className="page-shell">
+      <div className="page-header">
+        <div>
+        <h1 className="page-title">Alerts & Expiries</h1>
+        <p className="page-subtitle">Monitor upcoming expirations across all modules</p>
+        </div>
       </div>
 
       {loading ? (
         <div className="grid gap-4">
           {[...Array(3)].map((_, i) => (
-            <Card key={i} className="p-6 animate-pulse">
+            <Card key={i} className="surface-card p-6 animate-pulse">
               <div className="h-4 bg-muted rounded w-1/2 mb-4"></div>
               <div className="h-4 bg-muted rounded w-1/3"></div>
             </Card>
@@ -180,7 +182,7 @@ export default function AlertsPage() {
           {alerts.map((alert) => (
             <Card
               key={`${alert.type}-${alert.id}`}
-              className={`border-l-4 p-6 ${getAlertStyles(alert.status)}`}
+              className={`surface-card border-l-4 p-6 ${getAlertStyles(alert.status)}`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4 flex-1">
@@ -188,14 +190,14 @@ export default function AlertsPage() {
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="text-lg font-semibold text-foreground">{alert.name}</h3>
-                      <span className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-100">
+                      <span className="rounded-full bg-card px-2 py-1 text-xs text-muted-foreground">
                         {alert.type.charAt(0).toUpperCase() + alert.type.slice(1)}
                       </span>
                     </div>
-                    <p className="text-sm font-medium text-slate-200 mb-2">
+                    <p className="mb-2 text-sm font-medium text-foreground">
                       {getStatusText(alert.days_until_expiry)}
                     </p>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-muted-foreground">
                       Expiry Date: {formatDate(alert.expiry_date)}
                     </p>
                   </div>

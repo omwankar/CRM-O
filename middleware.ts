@@ -44,6 +44,23 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Only super admins can create/invite users through signup
+  if (pathname.startsWith('/auth/signup')) {
+    if (!user) {
+      return NextResponse.redirect(new URL('/auth/login', request.url))
+    }
+
+    const { data: userRole } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (userRole?.role !== 'super_admin') {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+  }
+
   return response
 }
 

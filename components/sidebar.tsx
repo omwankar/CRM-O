@@ -48,7 +48,7 @@ export function Sidebar() {
       {/* Mobile Toggle */}
       <button
         onClick={() => setOpen(!open)}
-        className="fixed top-4 left-4 z-50 md:hidden bg-card border border-border p-2 rounded-lg shadow-sm"
+        className="fixed top-4 left-4 z-50 md:hidden rounded-lg border border-border/70 bg-card p-2 shadow-sm"
       >
         {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
       </button>
@@ -56,15 +56,16 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed left-0 top-0 h-full w-64 bg-card border-r border-border transition-transform duration-300 ease-in-out z-40',
+          'fixed left-0 top-0 z-40 h-full w-72 border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform duration-300 ease-in-out',
           open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         )}
       >
         <div className="flex flex-col h-full">
 
           {/* HEADER */}
-          <div className="flex items-center gap-3 p-5 border-b border-border bg-muted/30">
-            <div className="w-10 h-10 rounded-xl overflow-hidden bg-white shadow-sm flex items-center justify-center">
+          <div className="border-b border-sidebar-border px-5 py-5">
+            <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-sidebar-accent shadow-sm">
               <img
                 src="/cropped-clarusto-logitics-e1756811318321-85x85 .png"
                 alt="Logo"
@@ -73,17 +74,17 @@ export function Sidebar() {
             </div>
 
             <div className="flex flex-col leading-tight">
-              <h1 className="text-sm font-semibold text-foreground">
+              <h1 className="text-sm font-semibold text-sidebar-foreground">
                 CRM Portal
               </h1>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-sidebar-foreground/70">
                 Management System
               </span>
             </div>
+            </div>
           </div>
 
-          {/* NAVIGATION */}
-          <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+          <nav className="flex-1 overflow-y-auto p-3 space-y-1.5">
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive =
@@ -96,18 +97,18 @@ export function Sidebar() {
                   href={item.href}
                   onClick={() => setOpen(false)}
                   className={cn(
-                    'group flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all',
+                    'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
                     isActive
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                      ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-sm'
+                      : 'text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                   )}
                 >
                   <Icon
                     className={cn(
                       'w-5 h-5 transition-colors',
                       isActive
-                        ? 'text-primary-foreground'
-                        : 'text-muted-foreground group-hover:text-foreground'
+                        ? 'text-sidebar-primary-foreground'
+                        : 'text-sidebar-foreground/70 group-hover:text-sidebar-accent-foreground'
                     )}
                   />
                   <span>{item.label}</span>
@@ -116,11 +117,10 @@ export function Sidebar() {
             })}
           </nav>
 
-          {/* FOOTER */}
-          <div className="p-3 border-t border-border">
+          <div className="border-t border-sidebar-border p-3">
             <Button
               variant="ghost"
-              className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
+              className="w-full justify-start gap-3 text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               onClick={handleLogout}
             >
               <LogOut className="w-5 h-5" />
@@ -133,7 +133,7 @@ export function Sidebar() {
       {/* Mobile Overlay */}
       {open && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30 md:hidden"
+          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm md:hidden"
           onClick={() => setOpen(false)}
         />
       )}

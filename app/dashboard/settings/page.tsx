@@ -94,20 +94,22 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-8 max-w-2xl">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Settings</h1>
-        <p className="text-muted-foreground">Manage your CRM preferences and alert settings</p>
+    <div className="page-shell max-w-3xl">
+      <div className="page-header">
+        <div>
+        <h1 className="page-title">Settings</h1>
+        <p className="page-subtitle">Manage your CRM preferences and alert settings</p>
+        </div>
       </div>
 
-      <Card className="p-8">
+      <Card className="surface-card p-8">
         <h2 className="text-xl font-semibold text-foreground mb-6">Expiry Alert Configuration</h2>
 
         {message && (
           <div className={`mb-6 p-4 rounded-lg ${
             message.includes('successfully')
-              ? 'bg-green-50 text-green-700 border border-green-200'
-              : 'bg-red-50 text-red-700 border border-red-200'
+              ? 'border border-emerald-500/35 bg-emerald-500/12 text-emerald-300'
+              : 'border border-destructive/40 bg-destructive/15 text-destructive'
           }`}>
             {message}
           </div>
@@ -216,7 +218,7 @@ export default function SettingsPage() {
         </form>
       </Card>
 
-      <Card className="p-8 bg-muted/50">
+      <Card className="surface-card p-8 bg-muted/40">
         <h3 className="text-lg font-semibold text-foreground mb-2">About This CRM</h3>
         <p className="text-sm text-muted-foreground">
           This CRM system helps you manage certifications, memberships, partnerships, insurance policies, vendors, buyers, and documents all in one place. Set your alert preferences above to stay on top of important expiration dates.

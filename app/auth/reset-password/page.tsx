@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { updatePassword } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
 import { FieldGroup, FieldLabel } from '@/components/ui/field';
 import Link from 'next/link';
+import { AuthShell } from '@/components/auth-shell';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -43,16 +43,10 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <div className="p-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2">Create New Password</h1>
-            <p className="text-muted-foreground">Enter your new password below</p>
-          </div>
+    <AuthShell title="Create New Password" subtitle="Set your new account password">
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            <div className="mb-6 rounded-lg border border-destructive/40 bg-destructive/15 p-4 text-sm text-destructive">
               {error}
             </div>
           )}
@@ -96,8 +90,6 @@ export default function ResetPasswordPage() {
               Back to login
             </Link>
           </div>
-        </div>
-      </Card>
-    </div>
+    </AuthShell>
   );
 }

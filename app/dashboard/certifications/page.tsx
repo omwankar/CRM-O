@@ -115,13 +115,13 @@ export default function CertificationsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="page-shell">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="page-header">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Certifications</h1>
-          <p className="text-muted-foreground">
+          <h1 className="page-title">Certifications</h1>
+          <p className="page-subtitle">
             {isAdmin
               ? 'Manage your certifications and licenses'
               : 'View certifications'}
@@ -140,7 +140,7 @@ export default function CertificationsPage() {
       </div>
 
       {/* Search */}
-      <Card className="p-4">
+      <Card className="surface-card p-4">
         <div className="flex gap-2 items-center">
           <Search className="w-5 h-5 text-muted-foreground" />
           <Input
@@ -156,7 +156,7 @@ export default function CertificationsPage() {
       {loading ? (
         <div className="grid gap-4">
           {[...Array(3)].map((_, i) => (
-            <Card key={i} className="p-6 animate-pulse">
+            <Card key={i} className="surface-card p-6 animate-pulse">
               <div className="h-4 bg-muted rounded w-1/2 mb-4"></div>
               <div className="h-4 bg-muted rounded w-1/3"></div>
             </Card>
@@ -196,7 +196,7 @@ export default function CertificationsPage() {
         /* List */
         <div className="grid gap-4">
           {filteredCertifications.map((cert) => (
-            <Card key={cert.id} className="p-6">
+            <Card key={cert.id} className="surface-card p-6">
 
               <div className="flex items-start justify-between">
 

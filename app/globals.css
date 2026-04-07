@@ -4,75 +4,74 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Modern Dark Theme */
-  --background: #0F172A;
-  --foreground: #E2E8F0;
-  --card: #1E293B;
-  --card-foreground: #E2E8F0;
-  --popover: #1E293B;
-  --popover-foreground: #E2E8F0;
-  --primary: #38BDF8;
-  --primary-foreground: #0F172A;
-  --secondary: #6366F1;
-  --secondary-foreground: #E2E8F0;
-  --muted: #334155;
-  --muted-foreground: #94A3B8;
-  --accent: #38BDF8;
-  --accent-foreground: #0F172A;
-  --destructive: #EF4444;
-  --destructive-foreground: #0F172A;
-  --border: #1E293B;
-  --input: #1E293B;
-  --ring: #38BDF8;
-  --chart-1: #38BDF8;
-  --chart-2: #6366F1;
-  --chart-3: #8B5CF6;
-  --chart-4: #EC4899;
-  --chart-5: #F59E0B;
-  --radius: 0.625rem;
-  --sidebar: #0A0F1F;
-  --sidebar-foreground: #E2E8F0;
-  --sidebar-primary: #38BDF8;
-  --sidebar-primary-foreground: #0F172A;
-  --sidebar-accent: #1E293B;
-  --sidebar-accent-foreground: #38BDF8;
-  --sidebar-border: #1E293B;
-  --sidebar-ring: #38BDF8;
+  --background: #070b14;
+  --foreground: #e8edf7;
+  --card: #0f1726;
+  --card-foreground: #e8edf7;
+  --popover: #0f1726;
+  --popover-foreground: #e8edf7;
+  --primary: #4f8cff;
+  --primary-foreground: #f8fbff;
+  --secondary: #152238;
+  --secondary-foreground: #d7e3ff;
+  --muted: #101a2a;
+  --muted-foreground: #9fb0cc;
+  --accent: #192741;
+  --accent-foreground: #dbe7ff;
+  --destructive: #f87171;
+  --destructive-foreground: #1b0a0a;
+  --border: #22324a;
+  --input: #0e1728;
+  --ring: #4f8cff;
+  --chart-1: #4f8cff;
+  --chart-2: #22d3ee;
+  --chart-3: #a78bfa;
+  --chart-4: #f472b6;
+  --chart-5: #fbbf24;
+  --radius: 0.875rem;
+  --sidebar: #060d1c;
+  --sidebar-foreground: #d8e4ff;
+  --sidebar-primary: #4f8cff;
+  --sidebar-primary-foreground: #f8fbff;
+  --sidebar-accent: #132239;
+  --sidebar-accent-foreground: #dbe7ff;
+  --sidebar-border: #1f2f48;
+  --sidebar-ring: #4f8cff;
 }
 
 .dark {
-  --background: #0F172A;
-  --foreground: #E2E8F0;
-  --card: #1E293B;
-  --card-foreground: #E2E8F0;
-  --popover: #1E293B;
-  --popover-foreground: #E2E8F0;
-  --primary: #38BDF8;
-  --primary-foreground: #0F172A;
-  --secondary: #6366F1;
-  --secondary-foreground: #E2E8F0;
-  --muted: #334155;
-  --muted-foreground: #94A3B8;
-  --accent: #38BDF8;
-  --accent-foreground: #0F172A;
-  --destructive: #EF4444;
-  --destructive-foreground: #0F172A;
-  --border: #1E293B;
-  --input: #1E293B;
-  --ring: #38BDF8;
-  --chart-1: #38BDF8;
-  --chart-2: #6366F1;
-  --chart-3: #8B5CF6;
-  --chart-4: #EC4899;
-  --chart-5: #F59E0B;
-  --sidebar: #0A0F1F;
-  --sidebar-foreground: #E2E8F0;
-  --sidebar-primary: #38BDF8;
-  --sidebar-primary-foreground: #0F172A;
-  --sidebar-accent: #1E293B;
-  --sidebar-accent-foreground: #38BDF8;
-  --sidebar-border: #1E293B;
-  --sidebar-ring: #38BDF8;
+  --background: #070b14;
+  --foreground: #e8edf7;
+  --card: #0f1726;
+  --card-foreground: #e8edf7;
+  --popover: #0f1726;
+  --popover-foreground: #e8edf7;
+  --primary: #4f8cff;
+  --primary-foreground: #f8fbff;
+  --secondary: #152238;
+  --secondary-foreground: #d7e3ff;
+  --muted: #101a2a;
+  --muted-foreground: #9fb0cc;
+  --accent: #192741;
+  --accent-foreground: #dbe7ff;
+  --destructive: #f87171;
+  --destructive-foreground: #1b0a0a;
+  --border: #22324a;
+  --input: #0e1728;
+  --ring: #4f8cff;
+  --chart-1: #4f8cff;
+  --chart-2: #22d3ee;
+  --chart-3: #a78bfa;
+  --chart-4: #f472b6;
+  --chart-5: #fbbf24;
+  --sidebar: #060d1c;
+  --sidebar-foreground: #d8e4ff;
+  --sidebar-primary: #4f8cff;
+  --sidebar-primary-foreground: #f8fbff;
+  --sidebar-accent: #132239;
+  --sidebar-accent-foreground: #dbe7ff;
+  --sidebar-border: #1f2f48;
+  --sidebar-ring: #4f8cff;
 }
 
 @theme inline {
@@ -121,7 +120,10 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground min-h-screen;
+    background-image:
+      radial-gradient(circle at 0% 0%, rgba(79, 140, 255, 0.18), transparent 35%),
+      radial-gradient(circle at 100% 0%, rgba(34, 211, 238, 0.12), transparent 30%);
   }
 
   /* Form Input Styling */
@@ -140,5 +142,27 @@
   input::placeholder,
   textarea::placeholder {
     @apply text-muted-foreground;
+  }
+}
+
+@layer components {
+  .page-shell {
+    @apply space-y-8;
+  }
+
+  .page-header {
+    @apply flex flex-col gap-4 md:flex-row md:items-center md:justify-between;
+  }
+
+  .page-title {
+    @apply text-2xl font-semibold tracking-tight text-foreground md:text-3xl;
+  }
+
+  .page-subtitle {
+    @apply text-sm text-muted-foreground md:text-base;
+  }
+
+  .surface-card {
+    @apply rounded-2xl border border-border/70 bg-card shadow-sm;
   }
 }

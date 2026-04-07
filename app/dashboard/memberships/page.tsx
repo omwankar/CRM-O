@@ -109,13 +109,13 @@ export default function MembershipsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="page-shell">
 
       {/* HEADER */}
-      <div className="flex items-center justify-between">
+      <div className="page-header">
         <div>
-          <h1 className="text-3xl font-bold">Memberships</h1>
-          <p className="text-muted-foreground">
+          <h1 className="page-title">Memberships</h1>
+          <p className="page-subtitle">
             {isAdmin
               ? 'Manage organization memberships'
               : 'View organization memberships'}
@@ -134,7 +134,7 @@ export default function MembershipsPage() {
       </div>
 
       {/* SEARCH */}
-      <Card className="p-4">
+      <Card className="surface-card p-4">
         <div className="flex gap-2 items-center">
           <Search className="w-5 h-5 text-muted-foreground" />
           <Input
@@ -150,7 +150,7 @@ export default function MembershipsPage() {
       {loading ? (
         <div className="grid gap-4">
           {[...Array(3)].map((_, i) => (
-            <Card key={i} className="p-6 animate-pulse">
+            <Card key={i} className="surface-card p-6 animate-pulse">
               <div className="h-4 bg-muted rounded w-1/2 mb-4"></div>
             </Card>
           ))}
@@ -189,7 +189,7 @@ export default function MembershipsPage() {
         /* LIST */
         <div className="grid gap-4">
           {filteredMemberships.map((mem) => (
-            <Card key={mem.id} className="p-6">
+            <Card key={mem.id} className="surface-card p-6">
 
               <div className="flex justify-between">
 

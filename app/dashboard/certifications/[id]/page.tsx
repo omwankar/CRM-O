@@ -119,7 +119,7 @@ export default function EditCertificationPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="page-shell">
 
       {/* Back */}
       <Link
@@ -130,7 +130,7 @@ export default function EditCertificationPage() {
         Back to Certifications
       </Link>
 
-      <Card className="p-8 max-w-2xl">
+      <Card className="surface-card max-w-2xl p-8">
         <h1 className="text-2xl font-bold mb-6">Edit Certification</h1>
 
         {error && (

@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation';
 import { signInWithEmail } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
 import { FieldGroup, FieldLabel } from '@/components/ui/field';
 import Link from 'next/link';
 import { getCurrentUserWithRole, signOut } from '@/lib/auth';
 import { supabase } from '@/lib/supabaseClient';
+import { AuthShell } from '@/components/auth-shell';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -49,7 +49,7 @@ const handleLogin = async (e: React.FormEvent) => {
     }
 
     // Step 4: Allow access
-    window.location.href = '/dashboard';
+    router.replace('/dashboard');
 
   } catch (err: any) {
     setError(err.message || 'Failed to sign in');
@@ -59,16 +59,9 @@ const handleLogin = async (e: React.FormEvent) => {
 };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <div className="p-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2">CRM Portal</h1>
-            <p className="text-muted-foreground">Sign in to your account</p>
-          </div>
-
+    <AuthShell title="Welcome Back" subtitle="Sign in to your CRM account">
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            <div className="mb-6 rounded-lg border border-destructive/40 bg-destructive/15 p-4 text-sm text-destructive">
               {error}
             </div>
           )}
@@ -120,8 +113,6 @@ const handleLogin = async (e: React.FormEvent) => {
               </Link>
             </div>
           </div>
-        </div>
-      </Card>
-    </div>
+    </AuthShell>
   );
 }
