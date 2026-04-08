@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,8 @@ import {
   Package,
   ShoppingCart,
   FileText,
+  Clock3,
+  CalendarDays,
   Settings,
   LogOut,
   Menu,
@@ -24,6 +26,8 @@ import {
 const menuItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Alerts', href: '/dashboard/alerts', icon: Bell },
+  { label: 'Clock In/Out', href: '/dashboard/clock', icon: Clock3 },
+  { label: 'Calendar', href: '/dashboard/calendar', icon: CalendarDays },
   { label: 'Certifications', href: '/dashboard/certifications', icon: Award },
   { label: 'Memberships', href: '/dashboard/memberships', icon: Users },
   { label: 'Partnerships', href: '/dashboard/partnerships', icon: Briefcase },
@@ -37,6 +41,12 @@ const menuItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+
+  // If user navigates while the mobile sidebar is open, ensure the overlay
+  // doesn't remain on top and block clicks.
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
 
   const handleLogout = async () => {
     const { signOut } = await import('@/lib/auth');
