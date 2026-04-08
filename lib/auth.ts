@@ -3,10 +3,7 @@ import { createBrowserClient } from '@supabase/ssr';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-export const supabase = createBrowserClient(
-  supabaseUrl,
-  supabaseAnonKey
-);
+export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
 
 
 // ==============================
@@ -30,23 +27,57 @@ export async function getCurrentUserWithRole() {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const { data, error } = await supabase
-    .from('users')
-    .select('role, full_name, organization_id')
-    .eq('id', user.id)
-    .single();
+  try {
+    const { data: sessionData, error: sessionError } =
+      await supabase.auth.getSession();
+    if (sessionError) {
+      console.error('Session fetch error', sessionError);
+    }
 
-  if (error) {
-    console.error('Role fetch error:', error);
-    return { ...user, role: 'user' }; // fallback
-  }
+    const { data, error } = await supabase
+      .from('users')
+      // Keep the selected columns in sync with your actual `public.users` table schema.
+      // Your table currently does NOT have `organization_id`.
+      .select('role, full_name')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (error) {
+      // Supabase errors often log as {} in Next overlays; log a few shapes explicitly.
+      console.error('Role fetch error (raw)', error);
+      console.error('Role fetch error (details)', {
+        name: (error as any)?.name,
+        message: (error as any)?.message,
+        code: (error as any)?.code,
+        details: (error as any)?.details,
+        hint: (error as any)?.hint,
+        stack: (error as any)?.stack,
+        sessionUserId: sessionData?.session?.user?.id,
+        authUserId: user.id,
+      });
+      return { ...user, role: 'user' }; // fallback
+    }
+
+    // If the profile row doesn't exist yet, don't treat it as an error.
+    if (!data) {
+      console.warn('No users row found for auth user id', user.id);
+      return { ...user, role: 'user' };
+    }
 
   return {
     ...user,
     role: data?.role || 'user',
     full_name: data?.full_name,
-    organization_id: data?.organization_id,
   };
+  } catch (e: any) {
+    console.error('Role fetch threw (exception)', e);
+    console.error('Role fetch threw (details)', {
+      name: e?.name,
+      message: e?.message,
+      stack: e?.stack,
+    });
+    return { ...user, role: 'user' };
+  }
 }
 
 

@@ -2,13 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithEmail } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FieldGroup, FieldLabel } from '@/components/ui/field';
 import Link from 'next/link';
-import { getCurrentUserWithRole, signOut } from '@/lib/auth';
-import { supabase } from '@/lib/supabaseClient';
 import { AuthShell } from '@/components/auth-shell';
 
 export default function LoginPage() {
@@ -26,29 +23,20 @@ const handleLogin = async (e: React.FormEvent) => {
   setLoading(true);
 
   try {
-    // Step 1: Login
-    await signInWithEmail(email, password);
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
 
-    // Step 2: Get user + role + approval
-    const user = await getCurrentUserWithRole();
+    const payload = (await res.json().catch(() => ({}))) as {
+      error?: string;
+    };
 
-    if (!user) {
-      throw new Error('User not found');
+    if (!res.ok) {
+      throw new Error(payload.error || 'Failed to sign in');
     }
 
-    // Step 3: Check approval
-    const { data } = await supabase
-      .from('users')
-      .select('approved')
-      .eq('id', user.id)
-      .single();
-
-    if (!data?.approved) {
-      await signOut(); // logout immediately
-      throw new Error('Your account is not approved yet');
-    }
-
-    // Step 4: Allow access
     router.replace('/dashboard');
 
   } catch (err: any) {
