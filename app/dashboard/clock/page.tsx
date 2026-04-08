@@ -53,6 +53,7 @@ export default function ClockPage() {
   const monthKey = useMemo(() => formatMonthKey(monthDate), [monthDate]);
 
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<'clock_in' | 'clock_out' | null>(null);
   const [error, setError] = useState<string>('');
   const [sessions, setSessions] = useState<ClockSession[]>([]);
   const [openSession, setOpenSession] = useState<SessionsResponse['openSession']>(null);
@@ -97,24 +98,34 @@ export default function ClockPage() {
 
   const handleClockIn = async () => {
     setError('');
-    const res = await fetch('/api/clock/clock-in', { method: 'POST', credentials: 'include' });
-    const payload = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setError(payload.error || 'Clock-in failed');
-      return;
+    setActionLoading('clock_in');
+    try {
+      const res = await fetch('/api/clock/clock-in', { method: 'POST', credentials: 'include' });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(payload.error || 'Clock-in failed');
+        return;
+      }
+      await fetchSessions();
+    } finally {
+      setActionLoading(null);
     }
-    await fetchSessions();
   };
 
   const handleClockOut = async () => {
     setError('');
-    const res = await fetch('/api/clock/clock-out', { method: 'POST', credentials: 'include' });
-    const payload = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setError(payload.error || 'Clock-out failed');
-      return;
+    setActionLoading('clock_out');
+    try {
+      const res = await fetch('/api/clock/clock-out', { method: 'POST', credentials: 'include' });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(payload.error || 'Clock-out failed');
+        return;
+      }
+      await fetchSessions();
+    } finally {
+      setActionLoading(null);
     }
-    await fetchSessions();
   };
 
   const submitMissedPunch = async (e: React.FormEvent) => {
@@ -205,12 +216,34 @@ export default function ClockPage() {
         <Card className="surface-card p-5 md:col-span-1">
           <h2 className="text-lg font-semibold mb-3">Today Actions</h2>
           {!openSession ? (
-            <Button onClick={handleClockIn} className="w-full">
-              Clock In
+            <Button
+              onClick={handleClockIn}
+              className="w-full"
+              disabled={actionLoading !== null || loading}
+            >
+              {actionLoading === 'clock_in' ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Clocking in...
+                </span>
+              ) : (
+                'Clock In'
+              )}
             </Button>
           ) : (
-            <Button onClick={handleClockOut} className="w-full">
-              Clock Out
+            <Button
+              onClick={handleClockOut}
+              className="w-full"
+              disabled={actionLoading !== null || loading}
+            >
+              {actionLoading === 'clock_out' ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Clocking out...
+                </span>
+              ) : (
+                'Clock Out'
+              )}
             </Button>
           )}
           <p className="mt-3 text-xs text-muted-foreground">
