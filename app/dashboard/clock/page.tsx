@@ -106,7 +106,11 @@ export default function ClockPage() {
         setError(payload.error || 'Clock-in failed');
         return;
       }
-      await fetchSessions();
+      if (payload?.session) {
+        setOpenSession({ id: payload.session.id, clock_in: payload.session.clock_in });
+        setSessions((prev) => [payload.session, ...prev]);
+      }
+      fetchSessions();
     } finally {
       setActionLoading(null);
     }
@@ -122,7 +126,13 @@ export default function ClockPage() {
         setError(payload.error || 'Clock-out failed');
         return;
       }
-      await fetchSessions();
+      if (payload?.session) {
+        setOpenSession(null);
+        setSessions((prev) =>
+          prev.map((s) => (s.id === payload.session.id ? { ...s, clock_out: payload.session.clock_out } : s)),
+        );
+      }
+      fetchSessions();
     } finally {
       setActionLoading(null);
     }
@@ -153,6 +163,12 @@ export default function ClockPage() {
   };
 
   const monthLabel = new Date(`${monthKey}-01T00:00:00Z`).toLocaleDateString([], { year: 'numeric', month: 'long' });
+  const todayLabel = new Date().toLocaleDateString([], {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    weekday: 'short',
+  });
 
   return (
     <div className="page-shell">
@@ -161,6 +177,10 @@ export default function ClockPage() {
           <h1 className="page-title">Clock In/Out</h1>
           <p className="page-subtitle">Track time, work days, and missed punch requests.</p>
         </div>
+        <Card className="surface-card px-4 py-2">
+          <p className="text-xs text-muted-foreground">Current Date</p>
+          <p className="text-sm font-semibold">{todayLabel}</p>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -213,12 +233,12 @@ export default function ClockPage() {
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card className="surface-card p-5 md:col-span-1">
-          <h2 className="text-lg font-semibold mb-3">Today Actions</h2>
+        <Card className="surface-card p-4 md:col-span-1">
+          <h2 className="text-base font-semibold mb-2">Today Actions</h2>
           {!openSession ? (
             <Button
               onClick={handleClockIn}
-              className="w-full"
+              className="w-full h-9"
               disabled={actionLoading !== null || loading}
             >
               {actionLoading === 'clock_in' ? (
@@ -233,7 +253,7 @@ export default function ClockPage() {
           ) : (
             <Button
               onClick={handleClockOut}
-              className="w-full"
+              className="w-full h-9"
               disabled={actionLoading !== null || loading}
             >
               {actionLoading === 'clock_out' ? (

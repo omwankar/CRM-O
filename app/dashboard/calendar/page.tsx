@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Calendar } from '@/components/ui/calendar';
+import { Calendar, CalendarDayButton } from '@/components/ui/calendar';
 import { AlertCircle, CalendarDays, PlusCircle, Users, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/auth';
 
@@ -57,6 +57,7 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [monthCache, setMonthCache] = useState<Record<string, CalendarEvent[]>>({});
 
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(undefined);
   const [role, setRole] = useState<string | null>(null);
@@ -64,13 +65,16 @@ export default function CalendarPage() {
   const [addTitle, setAddTitle] = useState('');
   const [addType, setAddType] = useState<'holiday' | 'meeting'>('holiday');
   const [addDate, setAddDate] = useState('');
-  const [addStartTime, setAddStartTime] = useState('');
-  const [addEndTime, setAddEndTime] = useState('');
   const [addLoading, setAddLoading] = useState(false);
 
-  const fetchEvents = async () => {
+  const fetchEvents = async (force = false) => {
+    if (!force && monthCache[monthKey]) {
+      setEvents(monthCache[monthKey]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    setError('');
     try {
       const res = await fetch(`/api/calendar/events?month=${encodeURIComponent(monthKey)}`, {
         method: 'GET',
@@ -78,7 +82,9 @@ export default function CalendarPage() {
       });
       const payload = (await res.json().catch(() => ({}))) as EventsResponse;
       if (!res.ok) throw new Error(payload?.error || 'Failed to load events');
-      setEvents(payload.events || []);
+      const nextEvents = payload.events || [];
+      setEvents(nextEvents);
+      setMonthCache((prev) => ({ ...prev, [monthKey]: nextEvents }));
     } catch (e: any) {
       setError(e?.message || 'Failed to load events');
     } finally {
@@ -140,23 +146,42 @@ export default function CalendarPage() {
           date: addDate,
           title: addTitle,
           event_type: addType,
-          start_time: addStartTime || undefined,
-          end_time: addEndTime || undefined,
         }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(payload?.error || 'Failed to add event');
 
       setAddTitle('');
-      setAddStartTime('');
-      setAddEndTime('');
-      await fetchEvents();
+      await fetchEvents(true);
     } catch (e: any) {
       setError(e?.message || 'Failed to add event');
     } finally {
       setAddLoading(false);
     }
   };
+
+  const eventMap = useMemo(() => {
+    return events.reduce<Record<string, CalendarEvent[]>>((acc, ev) => {
+      if (!acc[ev.date]) acc[ev.date] = [];
+      acc[ev.date].push(ev);
+      return acc;
+    }, {});
+  }, [events]);
+
+  const meetingDates = useMemo(
+    () => events.filter((ev) => ev.event_type === 'meeting').map((ev) => dateStrToLocalDate(ev.date)),
+    [events],
+  );
+  const holidayDates = useMemo(
+    () => events.filter((ev) => ev.event_type === 'holiday').map((ev) => dateStrToLocalDate(ev.date)),
+    [events],
+  );
+
+  const monthOptions = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+  const yearOptions = Array.from({ length: 7 }, (_, i) => new Date().getFullYear() - 3 + i);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/30">
@@ -173,7 +198,7 @@ export default function CalendarPage() {
         </div>
 
         {/* Month Navigation */}
-        <div className="mb-8 flex items-center justify-between gap-4 bg-card rounded-xl border border-border/50 p-4 shadow-sm">
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-3 bg-card rounded-xl border border-border/50 p-4 shadow-sm">
           <div className="flex items-center gap-2">
             <Button 
               variant="outline" 
@@ -195,7 +220,36 @@ export default function CalendarPage() {
             </Button>
           </div>
           <h2 className="text-xl font-semibold">{monthLabel}</h2>
-          <div className="w-20" />
+          <div className="flex items-center gap-2">
+            <select
+              className="h-9 rounded-md border border-border/70 bg-background px-2 text-sm"
+              value={monthDate.getMonth()}
+              onChange={(e) =>
+                setMonthDate(new Date(monthDate.getFullYear(), Number(e.target.value), 1))
+              }
+              disabled={loading || addLoading}
+            >
+              {monthOptions.map((m, idx) => (
+                <option key={m} value={idx}>
+                  {m}
+                </option>
+              ))}
+            </select>
+            <select
+              className="h-9 rounded-md border border-border/70 bg-background px-2 text-sm"
+              value={monthDate.getFullYear()}
+              onChange={(e) =>
+                setMonthDate(new Date(Number(e.target.value), monthDate.getMonth(), 1))
+              }
+              disabled={loading || addLoading}
+            >
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Error Alert */}
@@ -207,9 +261,8 @@ export default function CalendarPage() {
         )}
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Calendar Card - Takes 2 columns on large screens */}
-          <Card className="lg:col-span-2 border-border/50 shadow-sm hover:shadow-md transition-shadow">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow h-full">
             <div className="p-6 sm:p-8">
               <div className="flex items-center gap-2 mb-6">
                 <CalendarDays className="w-5 h-5 text-primary" />
@@ -219,17 +272,42 @@ export default function CalendarPage() {
               {/* Calendar Component */}
               <div className="mb-8 bg-muted/40 rounded-lg p-4 overflow-x-auto">
                 <Calendar
-                  className="w-full max-w-none"
+                  className="w-full max-w-none [--cell-size:2.3rem]"
                   month={monthDate}
                   mode="single"
                   selected={selectedDay}
                   onSelect={(d) => setSelectedDay(d ?? undefined)}
                   onMonthChange={(m) => setMonthDate(m ?? monthDate)}
                   modifiers={{
-                    hasEvents: events.map((ev) => dateStrToLocalDate(ev.date)),
+                    meetingDay: meetingDates,
+                    holidayDay: holidayDates,
                   }}
                   modifiersClassNames={{
-                    hasEvents: 'bg-primary/20 text-primary font-semibold',
+                    meetingDay: 'bg-blue-100 text-blue-800 font-semibold',
+                    holidayDay: 'bg-amber-100 text-amber-800 font-semibold',
+                  }}
+                  components={{
+                    DayButton: (props: any) => {
+                      const ymd = formatYMDLocal(props.day.date);
+                      const dayEvents = eventMap[ymd] || [];
+                      const firstMeeting = dayEvents.find((ev) => ev.event_type === 'meeting');
+                      const hasHoliday = dayEvents.some((ev) => ev.event_type === 'holiday');
+
+                      return (
+                        <CalendarDayButton {...props}>
+                          {props.children}
+                          {firstMeeting ? (
+                            <span className="max-w-[50px] truncate text-[9px] leading-none text-blue-700">
+                              {firstMeeting.title}
+                            </span>
+                          ) : hasHoliday ? (
+                            <span className="max-w-[50px] truncate text-[9px] leading-none text-amber-700">
+                              Holiday
+                            </span>
+                          ) : null}
+                        </CalendarDayButton>
+                      );
+                    },
                   }}
                 />
               </div>
@@ -282,7 +360,7 @@ export default function CalendarPage() {
           </Card>
 
           {/* Admin Form Card */}
-          <Card className="border-border/50 shadow-sm h-fit sticky top-4 hover:shadow-md transition-shadow">
+          <Card className="border-border/50 shadow-sm h-full hover:shadow-md transition-shadow">
             <div className="p-6 sm:p-8">
               <h3 className="text-xl font-semibold mb-2">Add Event</h3>
               <p className="text-sm text-muted-foreground mb-6">Admin only. Create holidays and meetings.</p>
@@ -322,27 +400,6 @@ export default function CalendarPage() {
                       <option value="meeting">📅 Meeting</option>
                     </select>
                   </FieldGroup>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <FieldGroup>
-                      <FieldLabel className="text-sm font-medium">Start Time</FieldLabel>
-                      <Input
-                        type="time"
-                        value={addStartTime}
-                        onChange={(e) => setAddStartTime(e.target.value)}
-                        className="bg-muted/50 border-border/70"
-                      />
-                    </FieldGroup>
-                    <FieldGroup>
-                      <FieldLabel className="text-sm font-medium">End Time</FieldLabel>
-                      <Input 
-                        type="time" 
-                        value={addEndTime} 
-                        onChange={(e) => setAddEndTime(e.target.value)}
-                        className="bg-muted/50 border-border/70"
-                      />
-                    </FieldGroup>
-                  </div>
 
                   <Button 
                     type="submit" 

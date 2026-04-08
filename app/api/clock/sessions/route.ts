@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     .eq('user_id', user.id)
     .gte('clock_in', start.toISOString())
     .lt('clock_in', endExclusive.toISOString())
-    .order('clock_in', { ascending: true });
+    .order('clock_in', { ascending: false });
 
   if (sessionsErr) {
     return NextResponse.json({ error: sessionsErr.message }, { status: 400 });
