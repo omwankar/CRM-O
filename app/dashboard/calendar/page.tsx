@@ -13,7 +13,7 @@ type CalendarEvent = {
   id: string;
   date: string; // YYYY-MM-DD
   title: string;
-  event_type: 'holiday' | 'meeting';
+  event_type: 'holiday' | 'meeting' | 'leave';
   start_time: string | null;
   end_time: string | null;
   description: string | null;
@@ -66,6 +66,12 @@ export default function CalendarPage() {
   const [addType, setAddType] = useState<'holiday' | 'meeting'>('holiday');
   const [addDate, setAddDate] = useState('');
   const [addLoading, setAddLoading] = useState(false);
+  const [leaveStartDate, setLeaveStartDate] = useState('');
+  const [leaveEndDate, setLeaveEndDate] = useState('');
+  const [leaveReason, setLeaveReason] = useState('');
+  const [leaveLoading, setLeaveLoading] = useState(false);
+  const [myLeaveRequests, setMyLeaveRequests] = useState<any[]>([]);
+  const [myLeaveLoading, setMyLeaveLoading] = useState(false);
 
   const fetchEvents = async (force = false) => {
     if (!force && monthCache[monthKey]) {
@@ -176,12 +182,65 @@ export default function CalendarPage() {
     () => events.filter((ev) => ev.event_type === 'holiday').map((ev) => dateStrToLocalDate(ev.date)),
     [events],
   );
+  const leaveDates = useMemo(
+    () => events.filter((ev) => ev.event_type === 'leave').map((ev) => dateStrToLocalDate(ev.date)),
+    [events],
+  );
 
   const monthOptions = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December',
   ];
   const yearOptions = Array.from({ length: 7 }, (_, i) => new Date().getFullYear() - 3 + i);
+
+  const handleApplyLeave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLeaveLoading(true);
+    try {
+      const res = await fetch('/api/calendar/leave-requests', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          start_date: leaveStartDate,
+          end_date: leaveEndDate,
+          reason: leaveReason || undefined,
+        }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || 'Failed to apply leave');
+
+      setLeaveStartDate('');
+      setLeaveEndDate('');
+      setLeaveReason('');
+      await loadMyLeaveRequests();
+    } catch (e: any) {
+      setError(e?.message || 'Failed to apply leave');
+    } finally {
+      setLeaveLoading(false);
+    }
+  };
+
+  const loadMyLeaveRequests = async () => {
+    setMyLeaveLoading(true);
+    try {
+      const res = await fetch('/api/calendar/leave-requests?scope=mine', {
+        method: 'GET',
+        credentials: 'include',
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setMyLeaveRequests(payload.leave_requests || []);
+      }
+    } finally {
+      setMyLeaveLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadMyLeaveRequests();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/30">
@@ -281,10 +340,12 @@ export default function CalendarPage() {
                   modifiers={{
                     meetingDay: meetingDates,
                     holidayDay: holidayDates,
+                    leaveDay: leaveDates,
                   }}
                   modifiersClassNames={{
                     meetingDay: 'bg-blue-100 text-blue-800 font-semibold',
                     holidayDay: 'bg-amber-100 text-amber-800 font-semibold',
+                    leaveDay: 'bg-emerald-100 text-emerald-800 font-semibold',
                   }}
                   components={{
                     DayButton: (props: any) => {
@@ -292,6 +353,7 @@ export default function CalendarPage() {
                       const dayEvents = eventMap[ymd] || [];
                       const firstMeeting = dayEvents.find((ev) => ev.event_type === 'meeting');
                       const hasHoliday = dayEvents.some((ev) => ev.event_type === 'holiday');
+                      const hasLeave = dayEvents.some((ev) => ev.event_type === 'leave');
 
                       return (
                         <CalendarDayButton {...props}>
@@ -303,6 +365,10 @@ export default function CalendarPage() {
                           ) : hasHoliday ? (
                             <span className="max-w-[50px] truncate text-[9px] leading-none text-amber-700">
                               Holiday
+                            </span>
+                          ) : hasLeave ? (
+                            <span className="max-w-[50px] truncate text-[9px] leading-none text-emerald-700">
+                              Leave
                             </span>
                           ) : null}
                         </CalendarDayButton>
@@ -335,11 +401,17 @@ export default function CalendarPage() {
                           <div className="flex items-start justify-between gap-3 mb-2">
                             <p className="font-semibold text-foreground">{ev.title}</p>
                             <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                              ev.event_type === 'holiday' 
+                              ev.event_type === 'holiday'
                                 ? 'bg-amber-100 text-amber-700' 
-                                : 'bg-blue-100 text-blue-700'
+                                : ev.event_type === 'meeting'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : 'bg-emerald-100 text-emerald-700'
                             }`}>
-                              {ev.event_type === 'holiday' ? '🎉 Holiday' : '📅 Meeting'}
+                              {ev.event_type === 'holiday'
+                                ? '🎉 Holiday'
+                                : ev.event_type === 'meeting'
+                                  ? '📅 Meeting'
+                                  : '🟢 Approved Leave'}
                             </span>
                           </div>
                           {(ev.start_time || ev.end_time) && (
@@ -429,6 +501,94 @@ export default function CalendarPage() {
                   </p>
                 </div>
               )}
+
+              <div className="mt-8 border-t border-border/60 pt-6">
+                <h4 className="text-lg font-semibold mb-2">Apply Leave</h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Employees can apply for leave. Requests are sent to Admin and Super Admin.
+                  Only approved upcoming leaves appear on calendar.
+                </p>
+                <form onSubmit={handleApplyLeave} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <FieldGroup>
+                      <FieldLabel className="text-sm font-medium">Start Date</FieldLabel>
+                      <Input
+                        type="date"
+                        value={leaveStartDate}
+                        onChange={(e) => setLeaveStartDate(e.target.value)}
+                        required
+                        className="bg-muted/50 border-border/70"
+                      />
+                    </FieldGroup>
+                    <FieldGroup>
+                      <FieldLabel className="text-sm font-medium">End Date</FieldLabel>
+                      <Input
+                        type="date"
+                        value={leaveEndDate}
+                        onChange={(e) => setLeaveEndDate(e.target.value)}
+                        required
+                        className="bg-muted/50 border-border/70"
+                      />
+                    </FieldGroup>
+                  </div>
+                  <FieldGroup>
+                    <FieldLabel className="text-sm font-medium">Reason (optional)</FieldLabel>
+                    <Input
+                      value={leaveReason}
+                      onChange={(e) => setLeaveReason(e.target.value)}
+                      placeholder="Leave reason"
+                      className="bg-muted/50 border-border/70"
+                    />
+                  </FieldGroup>
+                  <Button type="submit" className="w-full" disabled={leaveLoading}>
+                    {leaveLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      'Apply Leave'
+                    )}
+                  </Button>
+                </form>
+              </div>
+
+              <div className="mt-8 border-t border-border/60 pt-6">
+                <h4 className="text-lg font-semibold mb-2">My Leave Request Status</h4>
+                {myLeaveLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading leave requests...</p>
+                ) : myLeaveRequests.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No leave requests yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {myLeaveRequests.map((lr) => (
+                      <div
+                        key={lr.id}
+                        className="rounded-lg border border-border/70 bg-muted/20 p-3"
+                      >
+                        <p className="text-sm font-medium">
+                          {lr.start_date} to {lr.end_date}
+                        </p>
+                        {lr.reason ? <p className="text-xs text-muted-foreground mt-1">{lr.reason}</p> : null}
+                        <p className="text-xs mt-1">
+                          Status:{' '}
+                          <span
+                            className={
+                              lr.status === 'approved'
+                                ? 'text-emerald-600 font-medium'
+                                : lr.status === 'rejected'
+                                  ? 'text-rose-600 font-medium'
+                                  : 'text-amber-600 font-medium'
+                            }
+                          >
+                            {lr.status}
+                          </span>
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </Card>
         </div>

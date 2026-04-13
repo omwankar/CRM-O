@@ -35,6 +35,10 @@ export default function DashboardPage() {
   });
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteMessage, setInviteMessage] = useState('');
+  const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
+  const [leaveLoading, setLeaveLoading] = useState(false);
+  const [leaveActionLoadingId, setLeaveActionLoadingId] = useState<string | null>(null);
+  const [leaveMessage, setLeaveMessage] = useState('');
 
   // 🔥 FETCH EVERYTHING
   useEffect(() => {
@@ -71,6 +75,16 @@ export default function DashboardPage() {
             .select('id, email, role');
 
           setUsers(usersData || []);
+        }
+
+        if (userRole === 'super_admin' || userRole === 'admin') {
+          setLeaveLoading(true);
+          const leaveRes = await fetch('/api/calendar/leave-requests');
+          const leavePayload = await leaveRes.json().catch(() => ({}));
+          if (leaveRes.ok) {
+            setLeaveRequests(leavePayload.leave_requests || []);
+          }
+          setLeaveLoading(false);
         }
 
         // 🔹 FETCH STATS
@@ -151,6 +165,36 @@ export default function DashboardPage() {
     setUsers(data || []);
   };
 
+  const refreshLeaveRequests = async () => {
+    const leaveRes = await fetch('/api/calendar/leave-requests');
+    const leavePayload = await leaveRes.json().catch(() => ({}));
+    if (leaveRes.ok) {
+      setLeaveRequests(leavePayload.leave_requests || []);
+    }
+  };
+
+  const handleLeaveDecision = async (id: string, status: 'approved' | 'rejected') => {
+    setLeaveMessage('');
+    setLeaveActionLoadingId(id);
+    try {
+      const res = await fetch('/api/calendar/leave-requests', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(payload?.error || 'Failed to update leave request');
+      }
+      setLeaveMessage(`Leave request ${status}.`);
+      await refreshLeaveRequests();
+    } catch (e: any) {
+      setLeaveMessage(e?.message || 'Failed to update leave request');
+    } finally {
+      setLeaveActionLoadingId(null);
+    }
+  };
+
   const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setInviteMessage('');
@@ -173,7 +217,7 @@ export default function DashboardPage() {
         throw new Error(payload?.error || 'Failed to invite user');
       }
 
-      setInviteMessage('User invited/created successfully.');
+      setInviteMessage('User created successfully.');
       setInviteForm({
         email: '',
         fullName: '',
@@ -282,14 +326,68 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <Card className="surface-card p-6">
-        <h2 className="text-xl font-semibold mb-2">
-          Quick Start
-        </h2>
-        <p className="text-muted-foreground">
-          Manage your business data using modules above.
-        </p>
-      </Card>
+      {(role === 'super_admin' || role === 'admin') ? (
+        <Card className="surface-card p-6">
+          <h2 className="text-xl font-semibold mb-4">Leave Requests Approval</h2>
+          {leaveMessage && <p className="text-sm text-muted-foreground mb-3">{leaveMessage}</p>}
+
+          {leaveLoading ? (
+            <p className="text-sm text-muted-foreground">Loading leave requests...</p>
+          ) : leaveRequests.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No leave requests found.</p>
+          ) : (
+            <div className="space-y-3">
+              {leaveRequests.map((lr) => (
+                <div
+                  key={lr.id}
+                  className="flex flex-col gap-3 rounded-xl border border-border/70 bg-muted/20 p-4 md:flex-row md:items-center md:justify-between"
+                >
+                  <div>
+                    <p className="font-medium">{lr.requester_name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {lr.start_date} to {lr.end_date}
+                    </p>
+                    {lr.reason ? <p className="text-sm mt-1">{lr.reason}</p> : null}
+                    <p className="text-xs mt-1">
+                      Status: <span className="font-medium">{lr.status}</span>
+                    </p>
+                  </div>
+
+                  {lr.status === 'pending' ? (
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="rounded-lg bg-emerald-600 px-3 py-2 text-white disabled:opacity-50"
+                        disabled={leaveActionLoadingId === lr.id}
+                        onClick={() => handleLeaveDecision(lr.id, 'approved')}
+                      >
+                        {leaveActionLoadingId === lr.id ? 'Updating...' : 'Approve'}
+                      </button>
+                      <button
+                        className="rounded-lg bg-rose-600 px-3 py-2 text-white disabled:opacity-50"
+                        disabled={leaveActionLoadingId === lr.id}
+                        onClick={() => handleLeaveDecision(lr.id, 'rejected')}
+                      >
+                        {leaveActionLoadingId === lr.id ? 'Updating...' : 'Reject'}
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Reviewed</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      ) : (
+        <Card className="surface-card p-6">
+          <h2 className="text-xl font-semibold mb-2">
+            Quick Start
+          </h2>
+          <p className="text-muted-foreground">
+            Manage your business data using modules above.
+          </p>
+        </Card>
+      )}
 
       {role === 'super_admin' && users.length > 0 && (
         <Card className="surface-card p-6">
@@ -374,6 +472,7 @@ export default function DashboardPage() {
           </div>
         </Card>
       )}
+
     </div>
   );
 }

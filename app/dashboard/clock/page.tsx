@@ -68,8 +68,10 @@ export default function ClockPage() {
   const [missedReason, setMissedReason] = useState('');
   const [missedLoading, setMissedLoading] = useState(false);
 
-  const fetchSessions = async () => {
-    setLoading(true);
+  const fetchSessions = async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+    }
     setError('');
 
     try {
@@ -110,7 +112,7 @@ export default function ClockPage() {
         setOpenSession({ id: payload.session.id, clock_in: payload.session.clock_in });
         setSessions((prev) => [payload.session, ...prev]);
       }
-      fetchSessions();
+      fetchSessions(true);
     } finally {
       setActionLoading(null);
     }
@@ -132,7 +134,7 @@ export default function ClockPage() {
           prev.map((s) => (s.id === payload.session.id ? { ...s, clock_out: payload.session.clock_out } : s)),
         );
       }
-      fetchSessions();
+      fetchSessions(true);
     } finally {
       setActionLoading(null);
     }
@@ -154,7 +156,7 @@ export default function ClockPage() {
       if (!res.ok) throw new Error(payload.error || 'Failed to submit missed punch');
 
       setMissedReason('');
-      await fetchSessions();
+      await fetchSessions(true);
     } catch (e: any) {
       setError(e?.message || 'Failed to submit missed punch');
     } finally {
@@ -178,7 +180,7 @@ export default function ClockPage() {
           <p className="page-subtitle">Track time, work days, and missed punch requests.</p>
         </div>
         <Card className="surface-card px-4 py-2">
-          <p className="text-xs text-muted-foreground">Current Date</p>
+          <p className="text-xs text-muted-foreground">Today's Date</p>
           <p className="text-sm font-semibold">{todayLabel}</p>
         </Card>
       </div>
@@ -232,49 +234,51 @@ export default function ClockPage() {
         <p className="text-sm text-muted-foreground">Month: {monthLabel}</p>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card className="surface-card p-4 md:col-span-1">
-          <h2 className="text-base font-semibold mb-2">Today Actions</h2>
-          {!openSession ? (
-            <Button
-              onClick={handleClockIn}
-              className="w-full h-9"
-              disabled={actionLoading !== null || loading}
-            >
-              {actionLoading === 'clock_in' ? (
-                <span className="inline-flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Clocking in...
-                </span>
-              ) : (
-                'Clock In'
-              )}
-            </Button>
-          ) : (
-            <Button
-              onClick={handleClockOut}
-              className="w-full h-9"
-              disabled={actionLoading !== null || loading}
-            >
-              {actionLoading === 'clock_out' ? (
-                <span className="inline-flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Clocking out...
-                </span>
-              ) : (
-                'Clock Out'
-              )}
-            </Button>
-          )}
-          <p className="mt-3 text-xs text-muted-foreground">
-            Open session: {openSession ? formatIsoDate(openSession.clock_in) : 'None'}
-          </p>
-        </Card>
-
-        <Card className="surface-card p-5 md:col-span-2">
+      <div className="mt-6">
+        <Card className="surface-card p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">Sessions</h2>
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+          </div>
+
+          <div className="mb-4 rounded-lg border border-border/60 bg-muted/20 p-3 max-w-xl">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-medium">Today Action</p>
+              {!openSession ? (
+                <Button
+                  onClick={handleClockIn}
+                  className="h-8 px-4"
+                  disabled={actionLoading !== null || loading}
+                >
+                  {actionLoading === 'clock_in' ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Clocking in...
+                    </span>
+                  ) : (
+                    'Clock In'
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleClockOut}
+                  className="h-8 px-4"
+                  disabled={actionLoading !== null || loading}
+                >
+                  {actionLoading === 'clock_out' ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Clocking out...
+                    </span>
+                  ) : (
+                    'Clock Out'
+                  )}
+                </Button>
+              )}
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Open session: {openSession ? formatIsoDate(openSession.clock_in) : 'None'}
+            </p>
           </div>
 
           {loading ? (
@@ -282,23 +286,23 @@ export default function ClockPage() {
           ) : sessions.length === 0 ? (
             <p className="text-sm text-muted-foreground">No sessions for this month.</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2 max-w-3xl">
               {sessions.map((s) => {
                 const durationMinutes =
                   s.clock_out && s.clock_in ? (new Date(s.clock_out).getTime() - new Date(s.clock_in).getTime()) / 60000 : null;
 
                 return (
-                  <div key={s.id} className="flex items-start justify-between rounded-xl border border-border/70 bg-muted/20 p-4">
+                  <div key={s.id} className="flex items-start justify-between rounded-xl border border-border/70 bg-muted/20 p-3">
                     <div>
-                      <p className="font-medium">{formatIsoDate(s.clock_in)}</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="font-medium text-sm">{formatIsoDate(s.clock_in)}</p>
+                      <p className="text-xs text-muted-foreground">
                         In: {formatIsoTime(s.clock_in)} | Out: {formatIsoTime(s.clock_out)}
                       </p>
-                      {s.notes ? <p className="text-sm mt-1">{s.notes}</p> : null}
+                      {s.notes ? <p className="text-xs mt-1">{s.notes}</p> : null}
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Duration</p>
-                      <p className="font-semibold">
+                      <p className="text-xs text-muted-foreground">Duration</p>
+                      <p className="font-semibold text-sm">
                         {durationMinutes != null && durationMinutes >= 0 ? `${(durationMinutes / 60).toFixed(2)}h` : '--'}
                       </p>
                     </div>

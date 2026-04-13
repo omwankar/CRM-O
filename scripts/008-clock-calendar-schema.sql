@@ -59,11 +59,27 @@ CREATE TABLE IF NOT EXISTS public.notifications (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ------------------------------------------------------------
+-- leave_requests
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.leave_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  requested_by UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  reason TEXT,
+  status TEXT NOT NULL DEFAULT 'pending', -- pending | approved | rejected
+  reviewed_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  reviewed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Enable RLS
 ALTER TABLE public.clock_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.missed_punch_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.calendar_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.leave_requests ENABLE ROW LEVEL SECURITY;
 
 -- ------------------------------------------------------------
 -- RLS: clock_sessions (user can manage own sessions)
@@ -178,6 +194,56 @@ CREATE POLICY "notifications_insert_self"
   ON public.notifications
   FOR INSERT
   WITH CHECK (auth.uid() = user_id);
+
+-- ------------------------------------------------------------
+-- RLS: leave_requests
+-- ------------------------------------------------------------
+DROP POLICY IF EXISTS "leave_requests_select_own" ON public.leave_requests;
+DROP POLICY IF EXISTS "leave_requests_insert_own" ON public.leave_requests;
+DROP POLICY IF EXISTS "leave_requests_select_heads" ON public.leave_requests;
+DROP POLICY IF EXISTS "leave_requests_update_heads" ON public.leave_requests;
+
+CREATE POLICY "leave_requests_select_own"
+  ON public.leave_requests
+  FOR SELECT
+  USING (auth.uid() = requested_by);
+
+CREATE POLICY "leave_requests_insert_own"
+  ON public.leave_requests
+  FOR INSERT
+  WITH CHECK (auth.uid() = requested_by);
+
+CREATE POLICY "leave_requests_select_heads"
+  ON public.leave_requests
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.users u
+      WHERE u.id = auth.uid()
+        AND u.role IN ('super_admin', 'admin')
+    )
+  );
+
+CREATE POLICY "leave_requests_update_heads"
+  ON public.leave_requests
+  FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.users u
+      WHERE u.id = auth.uid()
+        AND u.role IN ('super_admin', 'admin')
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM public.users u
+      WHERE u.id = auth.uid()
+        AND u.role IN ('super_admin', 'admin')
+    )
+  );
 
 COMMIT;
 

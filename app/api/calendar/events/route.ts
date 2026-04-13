@@ -63,7 +63,53 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  return NextResponse.json({ ok: true, month, events: data || [] }, { status: 200 });
+  // Include only approved upcoming leaves in calendar.
+  const today = new Date().toISOString().slice(0, 10);
+  const monthStart = start.toISOString().slice(0, 10);
+  const monthEnd = endExclusive.toISOString().slice(0, 10);
+
+  const { data: leaves, error: leavesErr } = await supabase
+    .from('leave_requests')
+    .select('id, start_date, end_date, reason, requested_by')
+    .eq('status', 'approved')
+    .gte('end_date', today)
+    .lt('start_date', monthEnd)
+    .gte('end_date', monthStart);
+
+  if (leavesErr) {
+    // If leave_requests table is not created yet, keep calendar functional
+    // and return regular calendar events only.
+    const leaveMsg = String(leavesErr.message || '').toLowerCase();
+    if (leaveMsg.includes('leave_requests') || leaveMsg.includes('does not exist')) {
+      return NextResponse.json({ ok: true, month, events: data || [] }, { status: 200 });
+    }
+    return NextResponse.json({ error: leavesErr.message }, { status: 400 });
+  }
+
+  const leaveUserIds = Array.from(new Set((leaves || []).map((l) => l.requested_by).filter(Boolean)));
+  let userMap: Record<string, string> = {};
+  if (leaveUserIds.length) {
+    const { data: usersData } = await supabase
+      .from('users')
+      .select('id, full_name, email')
+      .in('id', leaveUserIds);
+    userMap = (usersData || []).reduce<Record<string, string>>((acc, u: any) => {
+      acc[u.id] = u.full_name || u.email || 'Employee';
+      return acc;
+    }, {});
+  }
+
+  const leaveEvents = (leaves || []).map((l: any) => ({
+    id: `leave-${l.id}`,
+    date: l.start_date,
+    title: `Leave: ${userMap[l.requested_by] || 'Employee'}`,
+    event_type: 'leave',
+    start_time: null,
+    end_time: null,
+    description: l.reason || null,
+  }));
+
+  return NextResponse.json({ ok: true, month, events: [...(data || []), ...leaveEvents] }, { status: 200 });
 }
 
 export async function POST(request: NextRequest) {
