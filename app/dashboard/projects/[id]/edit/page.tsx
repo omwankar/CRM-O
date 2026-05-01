@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { getProject, updateProject } from '@/lib/api/projects';
 import { Project, UpdateProjectInput } from '@/types/projects';
-import { supabase } from '@/lib/auth';
+import { getUsers } from '@/lib/api/users';
 import { ArrowLeft, Save } from 'lucide-react';
 
 interface User {
@@ -36,10 +36,12 @@ export default function ProjectEditPage() {
   }, [projectId]);
 
   const fetchUsers = async () => {
-    const { data } = await supabase
-      .from('users')
-      .select('id, email, full_name');
-    setUsers(data || []);
+    try {
+      const response = await getUsers({ limit: 200 });
+      setUsers(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    }
   };
 
   const fetchProject = async () => {

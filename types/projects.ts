@@ -6,6 +6,7 @@ export interface Project {
   estimated_end_date: string | null;
   assigned_person_id?: string | null;
   supervisor_id?: string | null;
+  contact_person?: string | null;
   contact_email: string;
   contact_phone: string;
   requirements_notes: string;
@@ -65,8 +66,8 @@ export interface StatusHistory {
 
 export interface CreateProjectInput {
   project_name: string;
-  assigned_person_id?: string;
-  supervisor_id?: string;
+  assigned_person_id?: string | null;
+  supervisor_id?: string | null;
   contact_email?: string;
   contact_phone?: string;
   start_date?: string;
@@ -79,8 +80,8 @@ export interface CreateProjectInput {
 
 export interface UpdateProjectInput {
   project_name?: string;
-  assigned_person_id?: string;
-  supervisor_id?: string;
+  assigned_person_id?: string | null;
+  supervisor_id?: string | null;
   contact_email?: string;
   contact_phone?: string;
   start_date?: string;
@@ -93,7 +94,7 @@ export interface UpdateProjectInput {
 export interface ChangeStatusInput {
   status: 'Active' | 'Planned' | 'On Hold' | 'Closed';
   reason: string;
-  changed_by: string;
+  changed_by?: string;
 }
 
 export interface AddEmployeeInput {

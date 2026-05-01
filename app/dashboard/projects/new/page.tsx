@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
-import { createProject } from '@/lib/api/projects';
+import { createProject, addProjectEmployee, addProjectAttachment } from '@/lib/api/projects';
 import { supabase } from '@/lib/auth';
+import { getUsers } from '@/lib/api/users';
 import { ArrowLeft, ArrowRight, Upload, X } from 'lucide-react';
 
 interface User {
@@ -26,10 +27,12 @@ export default function NewProjectPage() {
   // Fetch users on component mount
   useEffect(() => {
     const fetchUsers = async () => {
-      const { data } = await supabase
-        .from('users')
-        .select('id, email, full_name');
-      setUsers(data || []);
+      try {
+        const response = await getUsers({ limit: 200 });
+        setUsers(response.data || []);
+      } catch (error) {
+        console.error('Failed to fetch users:', error);
+      }
     };
     fetchUsers();
   }, []);
@@ -75,13 +78,8 @@ export default function NewProjectPage() {
     }
 
     try {
-      const { data } = await supabase
-        .from('users')
-        .select('id, email, full_name')
-        .or(`email.ilike.%${searchQuery}%,full_name.ilike.%${searchQuery}%`)
-        .limit(10);
-
-      setSearchResults(data || []);
+      const response = await getUsers({ search: searchQuery, limit: 10 });
+      setSearchResults(response.data || []);
     } catch (error) {
       console.error('Failed to search users:', error);
     }
@@ -105,7 +103,7 @@ export default function NewProjectPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      await createProject({
+      const createdProject = await createProject({
         project_name: basicInfo.project_name,
         assigned_person_id: basicInfo.assigned_person_id || undefined,
         supervisor_id: basicInfo.supervisor_id || undefined,
@@ -118,6 +116,45 @@ export default function NewProjectPage() {
         status: basicInfo.status,
         created_by: user.id,
       });
+
+      const teamMembersToAdd = team.filter((member) => member.userId !== user.id);
+      if (teamMembersToAdd.length > 0) {
+        await Promise.all(
+          teamMembersToAdd.map((member) =>
+            addProjectEmployee(createdProject.id, {
+              user_id: member.userId,
+              role: member.role as any,
+            })
+          )
+        );
+      }
+
+      if (attachments.length > 0) {
+        await Promise.all(
+          attachments.map(async (file) => {
+            const fileExt = file.name.split('.').pop() || 'bin';
+            const path = `projects/${createdProject.id}/${Date.now()}-${Math.random()
+              .toString(36)
+              .slice(2)}.${fileExt}`;
+
+            const { error: uploadError } = await supabase.storage
+              .from('documents')
+              .upload(path, file, { upsert: false });
+
+            if (uploadError) {
+              throw uploadError;
+            }
+
+            await addProjectAttachment(createdProject.id, {
+              file_name: file.name,
+              file_type: file.type || 'application/octet-stream',
+              file_url: path,
+              file_size: file.size,
+              uploaded_by: user.id,
+            });
+          })
+        );
+      }
 
       router.push('/dashboard/projects');
     } catch (error) {

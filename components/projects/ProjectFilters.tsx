@@ -21,7 +21,11 @@ export function ProjectFilters({ filters, onFiltersChange }: ProjectFiltersProps
   };
 
   const handleStatusChange = (value: string) => {
-    onFiltersChange({ ...filters, status: value as any || undefined });
+    onFiltersChange({
+      ...filters,
+      status: value === 'all' ? undefined : (value as any),
+      page: 1,
+    });
   };
 
   const handleSortChange = (value: string) => {

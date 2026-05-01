@@ -3,14 +3,16 @@ import { ProjectStatusPill } from './ProjectStatusPill';
 import { Project } from '@/types/projects';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, UserRoundCheck, UserCog } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface ProjectCardProps {
   project: Project;
+  canChangeStatus?: boolean;
+  onChangeStatus?: (project: Project) => void;
 }
 
-export function ProjectCard({ project }: ProjectCardProps) {
+export function ProjectCard({ project, canChangeStatus = false, onChangeStatus }: ProjectCardProps) {
   const router = useRouter();
 
   return (
@@ -29,16 +31,17 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <ProjectStatusPill status={project.status} />
         </div>
 
-        {/* Contact Info */}
+        {/* Assigned/Supervisor */}
         <div className="space-y-1">
-          <p className="text-[13px] text-foreground">
-            {project.contact_person}
+          <p className="text-[13px] text-foreground flex items-center gap-2">
+            <UserRoundCheck className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-muted-foreground">Assigned:</span>{' '}
+            {project.assigned_person?.name || project.contact_person || '-'}
           </p>
-          {project.contact_email && (
-            <p className="text-[12px] text-muted-foreground">
-              {project.contact_email}
-            </p>
-          )}
+          <p className="text-[12px] text-muted-foreground flex items-center gap-2">
+            <UserCog className="h-3.5 w-3.5" />
+            <span>Supervisor:</span> {project.supervisor?.name || '-'}
+          </p>
         </div>
 
         {/* Dates */}
@@ -69,15 +72,25 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </div>
         )}
 
-        {/* View Button */}
-        <Button
-          variant="ghost"
-          className="w-full justify-between group"
-          onClick={() => router.push(`/dashboard/projects/${project.id}`)}
-        >
-          <span className="text-[13px]">View Details</span>
-          <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          {canChangeStatus && onChangeStatus && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => onChangeStatus(project)}
+            >
+              Change Status
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            className="w-full justify-between group"
+            onClick={() => router.push(`/dashboard/projects/${project.id}`)}
+          >
+            <span className="text-[13px]">View Details</span>
+            <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </Button>
+        </div>
       </div>
     </Card>
   );

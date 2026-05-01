@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { ProjectCard } from '@/components/projects/ProjectCard';
 import { ProjectFilters } from '@/components/projects/ProjectFilters';
 import { ProjectStatusPill } from '@/components/projects/ProjectStatusPill';
-import { getProjects } from '@/lib/api/projects';
+import { StatusChangeModal } from '@/components/projects/StatusChangeModal';
+import { getProjects, changeProjectStatus } from '@/lib/api/projects';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Project, ProjectFilters as Filters } from '@/types/projects';
 import { Plus, LayoutGrid, Table } from 'lucide-react';
 
@@ -16,6 +18,8 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<Filters>({ page: 1, limit: 20 });
   const [viewMode, setViewMode] = useState<'table' | 'card'>('card');
+  const [statusModalProject, setStatusModalProject] = useState<Project | null>(null);
+  const { user } = useCurrentUser();
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
@@ -47,6 +51,26 @@ export default function ProjectsPage() {
 
   const handlePageChange = (newPage: number) => {
     setFilters({ ...filters, page: newPage });
+  };
+
+  const canChangeStatus = true;
+
+  const handleStatusChange = async (status: string, reason: string) => {
+    if (!statusModalProject?.id) return;
+
+    try {
+      await changeProjectStatus(statusModalProject.id, {
+        status: status as any,
+        reason,
+        changed_by: user?.id,
+      });
+      await fetchProjects();
+    } catch (error) {
+      console.error('Failed to change status:', error);
+      alert('Failed to update status. Please try again.');
+    } finally {
+      setStatusModalProject(null);
+    }
   };
 
   return (
@@ -117,7 +141,12 @@ export default function ProjectsPage() {
           {viewMode === 'card' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {projects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  canChangeStatus={canChangeStatus}
+                  onChangeStatus={setStatusModalProject}
+                />
               ))}
             </div>
           )}
@@ -135,7 +164,10 @@ export default function ProjectsPage() {
                       Project Name
                     </th>
                     <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
-                      Contact
+                      Assigned Person
+                    </th>
+                    <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
+                      Supervisor
                     </th>
                     <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
                       Status
@@ -165,10 +197,25 @@ export default function ProjectsPage() {
                         {project.project_name}
                       </td>
                       <td className="px-4 py-3 text-[13px] text-foreground">
-                        {project.contact_person}
+                        {project.assigned_person?.name || project.contact_person || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-[13px] text-foreground">
+                        {project.supervisor?.name || '-'}
                       </td>
                       <td className="px-4 py-3">
-                        <ProjectStatusPill status={project.status} />
+                        {canChangeStatus ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setStatusModalProject(project);
+                            }}
+                            className="hover:opacity-80 transition-opacity"
+                          >
+                            <ProjectStatusPill status={project.status} />
+                          </button>
+                        ) : (
+                          <ProjectStatusPill status={project.status} />
+                        )}
                       </td>
                       <td className="px-4 py-3 text-[13px] text-muted-foreground">
                         {project.start_date
@@ -228,6 +275,14 @@ export default function ProjectsPage() {
             </div>
           )}
         </>
+      )}
+      {statusModalProject && (
+        <StatusChangeModal
+          currentStatus={statusModalProject.status}
+          isOpen={!!statusModalProject}
+          onClose={() => setStatusModalProject(null)}
+          onConfirm={handleStatusChange}
+        />
       )}
     </div>
   );
