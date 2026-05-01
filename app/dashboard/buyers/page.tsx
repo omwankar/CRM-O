@@ -1,134 +1,50 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/auth';
+import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import Link from 'next/link';
-import { Plus, Search, Edit2, Trash2, Globe, ShoppingCart } from 'lucide-react';
+import { getBuyers } from '@/lib/api/buyers';
+import { Plus, Search, LayoutGrid, List, Kanban } from 'lucide-react';
 
-interface Buyer {
-  id: string;
-  buyer_name: string;
-  contact_person: string;
-  email: string;
-  phone: string;
-  company_type: string;
-  last_purchase: string;
-  status: 'active' | 'inactive';
-  buyer_portal_link?: string;
-}
+type ViewMode = 'card' | 'table' | 'kanban';
 
 export default function BuyersPage() {
-  const [buyers, setBuyers] = useState<Buyer[]>([]);
-  const [filteredBuyers, setFilteredBuyers] = useState<Buyer[]>([]);
+  const router = useRouter();
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [role, setRole] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('card');
 
-  const isAdmin = role !== 'user';
+  const { data: buyersData, isLoading } = useQuery({
+    queryKey: ['buyers', search],
+    queryFn: () => getBuyers({ search }),
+  });
 
-  useEffect(() => {
-    fetchBuyers();
-    fetchRole();
-  }, []);
+  const buyers = buyersData?.data || [];
 
-  useEffect(() => {
-    const filtered = buyers.filter(
-      (b) =>
+  const filteredBuyers = search
+    ? buyers.filter((b: any) =>
         b.buyer_name?.toLowerCase().includes(search.toLowerCase()) ||
         b.contact_person?.toLowerCase().includes(search.toLowerCase())
-    );
-    setFilteredBuyers(filtered);
-  }, [search, buyers]);
+      )
+    : buyers;
 
-  const fetchRole = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) return;
-
-    const { data } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    setRole(data?.role || null);
-  };
-
-  const fetchBuyers = async () => {
-    try {
-      setLoading(true);
-
-      const { data, error } = await supabase
-        .from('buyers')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      setBuyers(data || []);
-    } catch (error) {
-      console.error('Failed to fetch buyers:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!isAdmin) return;
-
-    if (!confirm('Are you sure you want to delete this buyer?')) return;
-
-    try {
-      const { error } = await supabase
-        .from('buyers')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      setBuyers((prev) => prev.filter((b) => b.id !== id));
-    } catch (error) {
-      console.error('Failed to delete buyer:', error);
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    return status === 'active'
-      ? 'bg-green-100 text-green-800'
-      : 'bg-gray-100 text-gray-800';
-  };
+  const pipelineStages = ['Lead', 'Contacted', 'Proposal Sent', 'Negotiating', 'Closed Won', 'Closed Lost'];
 
   return (
     <div className="space-y-6">
-
-      {/* HEADER */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Buyers</h1>
-          <p className="text-muted-foreground">
-            {isAdmin
-              ? 'Manage buyer relationships'
-              : 'View buyer information'}
-          </p>
+          <p className="text-muted-foreground">Manage buyer relationships and pipeline</p>
         </div>
-
-        {/* ✅ Only Admin can see */}
-        {isAdmin && (
-          <Link href="/dashboard/buyers/new">
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              New Buyer
-            </Button>
-          </Link>
-        )}
+        <Button onClick={() => router.push('/dashboard/buyers/new')}>
+          <Plus className="w-4 h-4 mr-2" />
+          New Buyer
+        </Button>
       </div>
 
-      {/* SEARCH */}
       <Card className="p-4">
         <div className="flex gap-2 items-center">
           <Search className="w-5 h-5 text-muted-foreground" />
@@ -136,121 +52,131 @@ export default function BuyersPage() {
             placeholder="Search by buyer name or contact..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="border-0 bg-transparent"
+            className="border-0 bg-transparent flex-1"
           />
+          <div className="flex gap-1">
+            <Button
+              variant={viewMode === 'card' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('card')}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+            >
+              <List className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('kanban')}
+            >
+              <Kanban className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </Card>
 
-      {/* LOADING */}
-      {loading ? (
+      {isLoading ? (
         <div className="grid gap-4">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i} className="p-6 animate-pulse">
-              <div className="h-4 bg-muted rounded w-1/2 mb-4"></div>
-              <div className="h-4 bg-muted rounded w-1/3"></div>
-            </Card>
-          ))}
+          {[...Array(3)].map((_, i) => <Card key={i} className="p-6 animate-pulse h-32" />)}
         </div>
       ) : filteredBuyers.length === 0 ? (
-
-        /* EMPTY */
         <div className="flex flex-col items-center justify-center py-12">
-          <ShoppingCart className="w-12 h-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No buyers yet</h3>
-          <p className="text-muted-foreground mb-4">
-            {isAdmin
-              ? 'Create your first buyer to get started'
-              : 'No buyer data available'}
-          </p>
-
-          {isAdmin && (
-            <Link href="/dashboard/buyers/new">
-              <Button>Add Buyer</Button>
-            </Link>
-          )}
+          <p className="text-muted-foreground">No buyers found</p>
         </div>
-
-      ) : (
-
-        /* CARDS */
-        <div className="grid gap-4">
-          {filteredBuyers.map((buyer) => (
-            <Card key={buyer.id} className="p-6">
-              <div className="flex items-start justify-between">
-
-                {/* LEFT */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-semibold">
-                      {buyer.buyer_name}
-                    </h3>
-
-                    <span className={`px-3 py-1 rounded-full text-xs ${getStatusBadge(buyer.status)}`}>
-                      {buyer.status}
-                    </span>
-                  </div>
-
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Type: {buyer.company_type}
-                  </p>
-
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Contact: {buyer.contact_person}
-                  </p>
-
-                  <div className="flex gap-6 text-sm flex-wrap">
-                    <span>Email: {buyer.email}</span>
-                    <span>Phone: {buyer.phone}</span>
-                    <span>
-                      Last Purchase:{' '}
-                      {buyer.last_purchase
-                        ? new Date(buyer.last_purchase).toLocaleDateString()
-                        : 'N/A'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* RIGHT ACTIONS */}
-                <div className="flex gap-2">
-
-                  {/* ✅ Admin Only */}
-                  {isAdmin && (
-                    <>
-                      <Link href={`/dashboard/buyers/${buyer.id}`}>
-                        <Button variant="ghost" size="sm">
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                      </Link>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(buyer.id)}
-                      >
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </Button>
-                    </>
-                  )}
-
-                  {/* 🌐 Portal (Everyone can access) */}
-                  {buyer.buyer_portal_link ? (
-                    <a
-                      href={buyer.buyer_portal_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
+      ) : viewMode === 'kanban' ? (
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {pipelineStages.map((stage) => {
+            const stageBuyers = filteredBuyers.filter((b: any) => b.pipeline_stages?.[0]?.name === stage);
+            return (
+              <div key={stage} className="flex-shrink-0 w-72">
+                <Card className="p-4 mb-3">
+                  <h3 className="font-semibold">{stage}</h3>
+                  <p className="text-sm text-muted-foreground">{stageBuyers.length} buyers</p>
+                </Card>
+                <div className="space-y-3">
+                  {stageBuyers.map((buyer: any) => (
+                    <Card
+                      key={buyer.id}
+                      className="p-4 cursor-pointer hover:border-border/60"
+                      onClick={() => router.push(`/dashboard/buyers/${buyer.id}`)}
                     >
-                      <Button variant="ghost" size="sm" title="Open Buyer Portal">
-                        <Globe className="w-4 h-4 text-blue-500" />
-                      </Button>
-                    </a>
-                  ) : (
-                    <Button variant="ghost" size="sm" disabled title="No Portal">
-                      <Globe className="w-4 h-4 text-gray-400" />
-                    </Button>
-                  )}
-
+                      <h4 className="font-medium mb-1">{buyer.buyer_name}</h4>
+                      <p className="text-sm text-muted-foreground">{buyer.contact_person}</p>
+                      {buyer.pipeline_value && (
+                        <p className="text-sm font-medium mt-2">${buyer.pipeline_value.toLocaleString()}</p>
+                      )}
+                    </Card>
+                  ))}
                 </div>
               </div>
+            );
+          })}
+        </div>
+      ) : viewMode === 'table' ? (
+        <Card className="overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-muted">
+              <tr>
+                <th className="p-4 text-left text-sm font-medium">Name</th>
+                <th className="p-4 text-left text-sm font-medium">Contact</th>
+                <th className="p-4 text-left text-sm font-medium">Email</th>
+                <th className="p-4 text-left text-sm font-medium">Stage</th>
+                <th className="p-4 text-left text-sm font-medium">Value</th>
+                <th className="p-4 text-left text-sm font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredBuyers.map((buyer: any) => (
+                <tr key={buyer.id} className="border-t">
+                  <td className="p-4 font-medium">{buyer.buyer_name}</td>
+                  <td className="p-4">{buyer.contact_person}</td>
+                  <td className="p-4">{buyer.contact_email}</td>
+                  <td className="p-4">
+                    <span
+                      className="px-2 py-1 rounded-full text-xs text-white"
+                      style={{ backgroundColor: buyer.pipeline_stages?.[0]?.color || '#64748b' }}
+                    >
+                      {buyer.pipeline_stages?.[0]?.name || 'Unassigned'}
+                    </span>
+                  </td>
+                  <td className="p-4">{buyer.pipeline_value ? `$${buyer.pipeline_value.toLocaleString()}` : '-'}</td>
+                  <td className="p-4">
+                    <Button variant="ghost" size="sm" onClick={() => router.push(`/dashboard/buyers/${buyer.id}`)}>
+                      View
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredBuyers.map((buyer: any) => (
+            <Card
+              key={buyer.id}
+              className="p-6 cursor-pointer hover:border-border/60"
+              onClick={() => router.push(`/dashboard/buyers/${buyer.id}`)}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <h3 className="text-lg font-semibold">{buyer.buyer_name}</h3>
+                <span
+                  className="px-2 py-1 rounded-full text-xs text-white"
+                  style={{ backgroundColor: buyer.pipeline_stages?.[0]?.color || '#64748b' }}
+                >
+                  {buyer.pipeline_stages?.[0]?.name || 'Unassigned'}
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-2">{buyer.contact_person}</p>
+              <p className="text-sm text-muted-foreground mb-3">{buyer.contact_email}</p>
+              {buyer.pipeline_value && (
+                <p className="text-sm font-medium">${buyer.pipeline_value.toLocaleString()}</p>
+              )}
             </Card>
           ))}
         </div>

@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
   if (profileError) {
     const msg = String(profileError.message || '');
     if (msg.toLowerCase().includes('role_check')) {
-      profileError = undefined;
+      profileError = null;
       const fallbackPayload = { ...upsertPayload, role: 'manager' };
       const retry = await adminClient.from('users').upsert(fallbackPayload, { onConflict: 'id' });
       profileError = retry.error;

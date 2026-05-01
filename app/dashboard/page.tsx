@@ -1,9 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/auth';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { getDashboardStats } from '@/lib/api/dashboard';
+import { getPunchStats } from '@/lib/api/clock';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import {
   Award,
   Users,
@@ -11,468 +14,282 @@ import {
   Package,
   ShoppingCart,
   FileText,
+  TrendingUp,
+  TrendingDown,
+  Clock,
+  Calendar,
+  FolderKanban,
+  AlertTriangle,
+  ArrowRight,
 } from 'lucide-react';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [stats, setStats] = useState({
+  const { role } = useCurrentUser();
+
+  const { data: dashboardData, isLoading } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: getDashboardStats,
+  });
+
+  const { data: punchStats } = useQuery({
+    queryKey: ['punchStats'],
+    queryFn: getPunchStats,
+    enabled: role === 'super_admin',
+  });
+
+  const stats = dashboardData?.stats || {
+    projects: 0,
+    buyers: 0,
+    vendors: 0,
     certifications: 0,
     memberships: 0,
+    partnerships: 0,
     insurance: 0,
-    vendors: 0,
-    buyers: 0,
     documents: 0,
-  });
-
-  const [loading, setLoading] = useState(true);
-  const [role, setRole] = useState<string | null>(null);
-  const [users, setUsers] = useState<any[]>([]);
-  const [inviteForm, setInviteForm] = useState({
-    email: '',
-    fullName: '',
-    password: '',
-    role: 'manager',
-  });
-  const [inviteLoading, setInviteLoading] = useState(false);
-  const [inviteMessage, setInviteMessage] = useState('');
-  const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
-  const [leaveLoading, setLeaveLoading] = useState(false);
-  const [leaveActionLoadingId, setLeaveActionLoadingId] = useState<string | null>(null);
-  const [leaveMessage, setLeaveMessage] = useState('');
-
-  // 🔥 FETCH EVERYTHING
-  useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (!user) return;
-
-        console.log('Auth ID:', user.id);
-
-        // ✅ FETCH ROLE
-        const { data: roleData, error } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        if (error) {
-          console.error('Role fetch error:', error);
-        }
-
-        const userRole = roleData?.role || null;
-        setRole(userRole);
-
-        console.log('ROLE:', userRole);
-
-        // 🔥 ONLY SUPER ADMIN FETCH USERS
-        if (userRole === 'super_admin') {
-          const { data: usersData } = await supabase
-            .from('users')
-            .select('id, email, role');
-
-          setUsers(usersData || []);
-        }
-
-        if (userRole === 'super_admin' || userRole === 'admin') {
-          setLeaveLoading(true);
-          const leaveRes = await fetch('/api/calendar/leave-requests');
-          const leavePayload = await leaveRes.json().catch(() => ({}));
-          if (leaveRes.ok) {
-            setLeaveRequests(leavePayload.leave_requests || []);
-          }
-          setLeaveLoading(false);
-        }
-
-        // 🔹 FETCH STATS
-        const [
-          { count: certCount },
-          { count: membCount },
-          { count: insCount },
-          { count: vendCount },
-          { count: buyCount },
-          { count: docCount },
-        ] = await Promise.all([
-          supabase
-            .from('certifications')
-            .select('*', { count: 'exact', head: true }),
-          supabase
-            .from('memberships')
-            .select('*', { count: 'exact', head: true }),
-          supabase
-            .from('insurance')
-            .select('*', { count: 'exact', head: true }),
-          supabase
-            .from('vendors')
-            .select('*', { count: 'exact', head: true }),
-          supabase
-            .from('buyers')
-            .select('*', { count: 'exact', head: true }),
-          supabase
-            .from('documents')
-            .select('*', { count: 'exact', head: true }),
-        ]);
-
-        setStats({
-          certifications: certCount || 0,
-          memberships: membCount || 0,
-          insurance: insCount || 0,
-          vendors: vendCount || 0,
-          buyers: buyCount || 0,
-          documents: docCount || 0,
-        });
-      } catch (error) {
-        console.error('Dashboard error:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAll();
-  }, []);
-
-  // 🔥 CHANGE ROLE (ONLY SUPER ADMIN)
-  const changeRole = async (id: string, newRole: string) => {
-    // Extra safety: UI is only visible to super_admin, but RLS is the real gate.
-    if (role !== 'super_admin') return;
-
-    // Match your DB enum: ('super_admin', 'admin', 'manager')
-    if (!['super_admin', 'admin', 'manager'].includes(newRole)) return;
-
-    const { error } = await supabase
-      .from('users')
-      .update({ role: newRole })
-      .eq('id', id);
-
-    if (!error) {
-      const { data } = await supabase
-        .from('users')
-        .select('id, email, role');
-
-      setUsers(data || []);
-    } else {
-      console.error('Role update failed:', error);
-    }
+    alerts: 0,
+    hoursToday: 0,
   };
 
-  const refreshUsers = async () => {
-    const { data } = await supabase
-      .from('users')
-      .select('id, email, role');
-    setUsers(data || []);
-  };
+  const pipelineOverview = dashboardData?.pipelineOverview || {};
+  const recentActivity = dashboardData?.recentActivity || [];
+  const upcomingEvents = dashboardData?.upcomingEvents || [];
+  const myTasks = dashboardData?.myTasks || [];
 
-  const refreshLeaveRequests = async () => {
-    const leaveRes = await fetch('/api/calendar/leave-requests');
-    const leavePayload = await leaveRes.json().catch(() => ({}));
-    if (leaveRes.ok) {
-      setLeaveRequests(leavePayload.leave_requests || []);
-    }
-  };
-
-  const handleLeaveDecision = async (id: string, status: 'approved' | 'rejected') => {
-    setLeaveMessage('');
-    setLeaveActionLoadingId(id);
-    try {
-      const res = await fetch('/api/calendar/leave-requests', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status }),
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(payload?.error || 'Failed to update leave request');
-      }
-      setLeaveMessage(`Leave request ${status}.`);
-      await refreshLeaveRequests();
-    } catch (e: any) {
-      setLeaveMessage(e?.message || 'Failed to update leave request');
-    } finally {
-      setLeaveActionLoadingId(null);
-    }
-  };
-
-  const handleInviteUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setInviteMessage('');
-
-    if (role !== 'super_admin') {
-      setInviteMessage('Only super admin can invite users.');
-      return;
-    }
-
-    setInviteLoading(true);
-    try {
-      const response = await fetch('/api/admin/invite-user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(inviteForm),
-      });
-
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Failed to invite user');
-      }
-
-      setInviteMessage('User created successfully.');
-      setInviteForm({
-        email: '',
-        fullName: '',
-        password: '',
-        role: 'manager',
-      });
-      await refreshUsers();
-    } catch (error: any) {
-      setInviteMessage(error?.message || 'Failed to invite user');
-    } finally {
-      setInviteLoading(false);
-    }
-  };
-
-  // 🔥 WIDGETS
-  const widgets = [
-    {
-      label: 'Certifications',
-      value: stats.certifications,
-      icon: Award,
-      href: '/dashboard/certifications',
-    },
-    {
-      label: 'Memberships',
-      value: stats.memberships,
-      icon: Users,
-      href: '/dashboard/memberships',
-    },
-    {
-      label: 'Insurance',
-      value: stats.insurance,
-      icon: Shield,
-      href: '/dashboard/insurance',
-    },
-    {
-      label: 'Vendors',
-      value: stats.vendors,
-      icon: Package,
-      href: '/dashboard/vendors',
-    },
-    {
-      label: 'Buyers',
-      value: stats.buyers,
-      icon: ShoppingCart,
-      href: '/dashboard/buyers',
-    },
-    {
-      label: 'Documents',
-      value: stats.documents,
-      icon: FileText,
-      href: '/dashboard/documents',
-    },
+  const moduleCards = [
+    { name: 'Projects', count: stats.projects, icon: FolderKanban, href: '/dashboard/projects', color: 'text-blue-600', bg: 'bg-blue-500/10' },
+    { name: 'Buyers', count: stats.buyers, icon: ShoppingCart, href: '/dashboard/buyers', color: 'text-purple-600', bg: 'bg-purple-500/10' },
+    { name: 'Vendors', count: stats.vendors, icon: Package, href: '/dashboard/vendors', color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
+    { name: 'Certifications', count: stats.certifications, icon: Award, href: '/dashboard/certifications', color: 'text-amber-600', bg: 'bg-amber-500/10' },
+    { name: 'Memberships', count: stats.memberships, icon: Users, href: '/dashboard/memberships', color: 'text-cyan-600', bg: 'bg-cyan-500/10' },
+    { name: 'Partnerships', count: stats.partnerships, icon: Shield, href: '/dashboard/partnerships', color: 'text-rose-600', bg: 'bg-rose-500/10' },
+    { name: 'Insurance', count: stats.insurance, icon: Shield, href: '/dashboard/insurance', color: 'text-indigo-600', bg: 'bg-indigo-500/10' },
+    { name: 'Documents', count: stats.documents, icon: FileText, href: '/dashboard/documents', color: 'text-gray-600', bg: 'bg-gray-500/10' },
   ];
 
-  // 🔥 ROLE COLORS
-  const getRoleColor = (role: string) => {
-    if (role === 'super_admin') return 'text-red-500';
-    if (role === 'admin') return 'text-blue-500';
-    return 'text-gray-500';
-  };
-
   return (
-    <div className="page-shell">
-      <div className="page-header">
-        <div>
-        <h1 className="page-title">Dashboard</h1>
-        <p className="page-subtitle">
-          Welcome to your CRM portal
-        </p>
-        </div>
-        <p className={`rounded-lg border border-border/70 bg-card px-3 py-2 text-sm font-medium ${getRoleColor(role || '')}`}>
-          Role: {role || 'Loading...'}
-        </p>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-[32px] font-medium text-foreground">Dashboard</h1>
+        <p className="text-[14px] text-muted-foreground">Welcome to your CRM portal</p>
       </div>
 
-      {loading ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {widgets.map((w) => (
-            <Card key={w.label} className="p-6 animate-pulse surface-card" />
-          ))}
+      {isLoading ? (
+        <div className="grid grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => <Card key={i} className="h-32 animate-pulse" />)}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {widgets.map((w) => {
-            const Icon = w.icon;
-            return (
-              <Card
-                key={w.label}
-                className="surface-card cursor-pointer p-6 transition hover:-translate-y-0.5 hover:shadow-md"
-                onClick={() => router.push(w.href)}
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      {w.label}
-                    </p>
-                    <p className="mt-2 text-3xl font-semibold tracking-tight">
-                      {w.value}
-                    </p>
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card className="p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[13px] text-muted-foreground">Total Active Projects</p>
+                  <p className="mt-2 text-[32px] font-medium text-foreground">{stats.projects}</p>
+                  <div className="mt-2 flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3 text-emerald-600" />
+                    <span className="text-[12px] text-emerald-600">+12% this month</span>
                   </div>
-                  <Icon className="h-8 w-8 text-primary/80" />
                 </div>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                <div className="rounded-lg bg-blue-500/10 p-2">
+                  <FolderKanban className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+            </Card>
 
-      {(role === 'super_admin' || role === 'admin') ? (
-        <Card className="surface-card p-6">
-          <h2 className="text-xl font-semibold mb-4">Leave Requests Approval</h2>
-          {leaveMessage && <p className="text-sm text-muted-foreground mb-3">{leaveMessage}</p>}
-
-          {leaveLoading ? (
-            <p className="text-sm text-muted-foreground">Loading leave requests...</p>
-          ) : leaveRequests.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No leave requests found.</p>
-          ) : (
-            <div className="space-y-3">
-              {leaveRequests.map((lr) => (
-                <div
-                  key={lr.id}
-                  className="flex flex-col gap-3 rounded-xl border border-border/70 bg-muted/20 p-4 md:flex-row md:items-center md:justify-between"
-                >
-                  <div>
-                    <p className="font-medium">{lr.requester_name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {lr.start_date} to {lr.end_date}
-                    </p>
-                    {lr.reason ? <p className="text-sm mt-1">{lr.reason}</p> : null}
-                    <p className="text-xs mt-1">
-                      Status: <span className="font-medium">{lr.status}</span>
-                    </p>
+            <Card className="p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[13px] text-muted-foreground">Total Buyers</p>
+                  <p className="mt-2 text-[32px] font-medium text-foreground">{stats.buyers}</p>
+                  <div className="mt-2 flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3 text-emerald-600" />
+                    <span className="text-[12px] text-emerald-600">+8% this month</span>
                   </div>
+                </div>
+                <div className="rounded-lg bg-purple-500/10 p-2">
+                  <ShoppingCart className="h-6 w-6 text-purple-600" />
+                </div>
+              </div>
+            </Card>
 
-                  {lr.status === 'pending' ? (
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="rounded-lg bg-emerald-600 px-3 py-2 text-white disabled:opacity-50"
-                        disabled={leaveActionLoadingId === lr.id}
-                        onClick={() => handleLeaveDecision(lr.id, 'approved')}
-                      >
-                        {leaveActionLoadingId === lr.id ? 'Updating...' : 'Approve'}
-                      </button>
-                      <button
-                        className="rounded-lg bg-rose-600 px-3 py-2 text-white disabled:opacity-50"
-                        disabled={leaveActionLoadingId === lr.id}
-                        onClick={() => handleLeaveDecision(lr.id, 'rejected')}
-                      >
-                        {leaveActionLoadingId === lr.id ? 'Updating...' : 'Reject'}
-                      </button>
+            <Card className="p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[13px] text-muted-foreground">Pending Alerts</p>
+                  <p className="mt-2 text-[32px] font-medium text-foreground">{stats.alerts}</p>
+                  <div className="mt-2 flex items-center gap-1">
+                    <TrendingDown className="h-3 w-3 text-amber-600" />
+                    <span className="text-[12px] text-amber-600">-3% this month</span>
+                  </div>
+                </div>
+                <div className="rounded-lg bg-amber-500/10 p-2">
+                  <AlertTriangle className="h-6 w-6 text-amber-600" />
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[13px] text-muted-foreground">Hours Clocked Today</p>
+                  <p className="mt-2 text-[32px] font-medium text-foreground">{stats.hoursToday.toFixed(1)}</p>
+                  <div className="mt-2 flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3 text-emerald-600" />
+                    <span className="text-[12px] text-emerald-600">+5% this week</span>
+                  </div>
+                </div>
+                <div className="rounded-lg bg-emerald-500/10 p-2">
+                  <Clock className="h-6 w-6 text-emerald-600" />
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Punch Request Alert for Super Admin */}
+          {role === 'super_admin' && punchStats && punchStats.pending > 0 && (
+            <Card className="p-4 border-l-4 border-l-amber-500 bg-amber-50/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-amber-100 rounded-full">
+                    <AlertTriangle className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-amber-900">
+                      {punchStats.pending} punch request{punchStats.pending > 1 ? 's' : ''} need your review
+                    </p>
+                    <p className="text-sm text-amber-700">Employees are waiting for approval</p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push('/dashboard/punch-requests')}
+                  className="border-amber-300 hover:bg-amber-100"
+                >
+                  Review Requests
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+            <Card className="p-5 lg:col-span-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[16px] font-medium text-foreground">Recent Activity</h3>
+                <button className="text-[12px] text-primary hover:underline">View all</button>
+              </div>
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {recentActivity.slice(0, 8).map((activity: any) => (
+                  <div key={activity.id} className="flex items-start gap-3 text-[13px]">
+                    <div className="mt-1 h-2 w-2 rounded-full bg-primary" />
+                    <div className="flex-1">
+                      <p className="text-foreground">
+                        <span className="font-medium">{activity.users?.full_name || 'User'}</span>
+                        <span className="text-muted-foreground"> {activity.action}</span>
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">{new Date(activity.created_at).toLocaleString()}</p>
                     </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Reviewed</p>
-                  )}
+                  </div>
+                ))}
+                {recentActivity.length === 0 && <p className="text-[13px] text-muted-foreground">No recent activity</p>}
+              </div>
+            </Card>
+
+            <Card className="p-5 lg:col-span-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[16px] font-medium text-foreground">This Week</h3>
+                <button className="text-[12px] text-primary hover:underline" onClick={() => router.push('/dashboard/calendar')}>Open calendar</button>
+              </div>
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {upcomingEvents.slice(0, 6).map((event: any) => (
+                  <div key={event.id} className="flex items-start gap-3">
+                    <div className={`mt-1 h-2 w-2 rounded-full ${event.event_type === 'holiday' ? 'bg-gray-400' : 'bg-blue-500'}`} />
+                    <div>
+                      <p className="text-[13px] font-medium text-foreground">{event.title}</p>
+                      <p className="text-[11px] text-muted-foreground">{new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}{event.start_time ? `, ${event.start_time}` : ''}</p>
+                    </div>
+                  </div>
+                ))}
+                {upcomingEvents.length === 0 && <p className="text-[13px] text-muted-foreground">No upcoming events</p>}
+              </div>
+            </Card>
+
+            <Card className="p-5 lg:col-span-3">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[16px] font-medium text-foreground">My Tasks</h3>
+                <button className="text-[12px] text-primary hover:underline">View all</button>
+              </div>
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {myTasks.slice(0, 6).map((task: any) => (
+                  <div key={task.id} className="flex items-start gap-2">
+                    <input type="checkbox" className="mt-1 h-4 w-4 rounded border-border" />
+                    <div className="flex-1">
+                      <p className="text-[13px] font-medium text-foreground">{task.title}</p>
+                      <p className="text-[11px] text-muted-foreground">{task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}</p>
+                    </div>
+                  </div>
+                ))}
+                {myTasks.length === 0 && <p className="text-[13px] text-muted-foreground">No tasks assigned</p>}
+              </div>
+            </Card>
+          </div>
+
+          <div>
+            <h3 className="text-[16px] font-medium text-foreground mb-4">Modules</h3>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-8">
+              {moduleCards.map((card) => {
+                const Icon = card.icon;
+                return (
+                  <Card
+                    key={card.name}
+                    className="cursor-pointer p-4 transition-all hover:border-border/60"
+                    onClick={() => router.push(card.href)}
+                  >
+                    <div className="flex flex-col items-center gap-2 text-center">
+                      <div className={`rounded-lg ${card.bg} p-2`}>
+                        <Icon className={`h-5 w-5 ${card.color}`} />
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-medium text-foreground">{card.name}</p>
+                        <p className="text-[20px] font-bold text-foreground">{card.count}</p>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+
+          <Card className="p-5">
+            <h3 className="text-[16px] font-medium text-foreground mb-4">Buyer Pipeline</h3>
+            <div className="flex items-center gap-2 overflow-x-auto pb-2">
+              {Object.entries(pipelineOverview).map(([stage, data]: [string, any]) => (
+                <div key={stage} className="flex-shrink-0 flex flex-col items-center gap-2">
+                  <div
+                    className="h-8 rounded-full px-4 flex items-center justify-center text-[12px] font-medium text-white"
+                    style={{ backgroundColor: data.color }}
+                  >
+                    {stage} ({data.count})
+                  </div>
                 </div>
               ))}
             </div>
-          )}
-        </Card>
-      ) : (
-        <Card className="surface-card p-6">
-          <h2 className="text-xl font-semibold mb-2">
-            Quick Start
-          </h2>
-          <p className="text-muted-foreground">
-            Manage your business data using modules above.
-          </p>
-        </Card>
-      )}
+          </Card>
 
-      {role === 'super_admin' && users.length > 0 && (
-        <Card className="surface-card p-6">
-          <h2 className="text-xl font-semibold mb-4">
-            User & Admin Management
-          </h2>
-
-          <form onSubmit={handleInviteUser} className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-5">
-            <input
-              type="email"
-              placeholder="Email"
-              className="h-10 rounded-lg border border-border/70 bg-background px-3 py-2"
-              value={inviteForm.email}
-              onChange={(e) => setInviteForm((prev) => ({ ...prev, email: e.target.value }))}
-              required
-            />
-            <input
-              type="text"
-              placeholder="Full name"
-              className="h-10 rounded-lg border border-border/70 bg-background px-3 py-2"
-              value={inviteForm.fullName}
-              onChange={(e) => setInviteForm((prev) => ({ ...prev, fullName: e.target.value }))}
-              required
-            />
-            <input
-              type="password"
-              placeholder="Temporary password"
-              className="h-10 rounded-lg border border-border/70 bg-background px-3 py-2"
-              value={inviteForm.password}
-              onChange={(e) => setInviteForm((prev) => ({ ...prev, password: e.target.value }))}
-              required
-            />
-            <select
-              className="h-10 rounded-lg border border-border/70 bg-background px-3 py-2"
-              value={inviteForm.role}
-              onChange={(e) => setInviteForm((prev) => ({ ...prev, role: e.target.value }))}
-            >
-              <option value="manager">Manager</option>
-              <option value="admin">Admin</option>
-              <option value="super_admin">Super Admin</option>
-            </select>
-            <button
-              type="submit"
-              className="h-10 rounded-lg bg-primary px-3 py-2 text-primary-foreground shadow-sm disabled:opacity-50"
-              disabled={inviteLoading}
-            >
-              {inviteLoading ? 'Creating...' : 'Add User'}
-            </button>
-          </form>
-
-          {inviteMessage && (
-            <p className="text-sm mb-4 text-muted-foreground">{inviteMessage}</p>
-          )}
-
-          <div className="space-y-3">
-            {users.map((u) => (
-              <div
-                key={u.id}
-                className="flex items-center justify-between rounded-xl border border-border/70 bg-muted/20 p-3"
-              >
-                <div>
-                  <p className="font-medium">{u.email}</p>
-                  <p className={`text-sm ${getRoleColor(u.role)}`}>
-                    {u.role}
-                  </p>
+          {stats.alerts > 0 && (
+            <Card className="p-4 bg-amber-50 border-amber-200">
+              <div className="flex items-center gap-4 overflow-x-auto">
+                <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+                <div className="flex gap-3">
+                  <span className="text-[13px] text-amber-900 font-medium">{stats.alerts} pending alerts</span>
+                  <button className="text-[12px] text-amber-700 hover:underline" onClick={() => router.push('/dashboard/alerts')}>View alerts</button>
                 </div>
-
-                <select
-                  value={u.role}
-                  onChange={(e) =>
-                    changeRole(u.id, e.target.value)
-                  }
-                  className="rounded-lg border border-border/70 bg-background px-2 py-1"
-                >
-                  <option value="manager">Manager</option>
-                  <option value="admin">Admin</option>
-                  <option value="super_admin">Super Admin</option>
-                  
-                </select>
               </div>
-            ))}
-          </div>
-        </Card>
+            </Card>
+          )}
+        </>
       )}
-
     </div>
   );
 }

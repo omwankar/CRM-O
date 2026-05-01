@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   LayoutDashboard,
   Award,
@@ -21,32 +22,72 @@ import {
   Menu,
   X,
   Bell,
+  ChevronLeft,
+  ChevronRight,
+  User,
+  FolderKanban,
+  Timer,
 } from 'lucide-react';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useQuery } from '@tanstack/react-query';
+import { getPunchStats } from '@/lib/api/clock';
 
-const menuItems = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Alerts', href: '/dashboard/alerts', icon: Bell },
-  { label: 'Clock In/Out', href: '/dashboard/clock', icon: Clock3 },
-  { label: 'Calendar', href: '/dashboard/calendar', icon: CalendarDays },
-  { label: 'Certifications', href: '/dashboard/certifications', icon: Award },
-  { label: 'Memberships', href: '/dashboard/memberships', icon: Users },
-  { label: 'Partnerships', href: '/dashboard/partnerships', icon: Briefcase },
-  { label: 'Insurance', href: '/dashboard/insurance', icon: Shield },
-  { label: 'Vendors', href: '/dashboard/vendors', icon: Package },
-  { label: 'Buyers', href: '/dashboard/buyers', icon: ShoppingCart },
-  { label: 'Documents', href: '/dashboard/documents', icon: FileText },
-  { label: 'Settings', href: '/dashboard/settings', icon: Settings },
-];
+function getMenuSections(role?: string, pendingCount?: number) {
+  const isSuperAdmin = role === 'super_admin';
+  
+  return [
+    {
+      label: 'OVERVIEW',
+      items: [
+        { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+        { label: 'Alerts', href: '/dashboard/alerts', icon: Bell },
+      ],
+    },
+    {
+      label: 'MANAGE',
+      items: [
+        { label: 'Clock In/Out', href: '/dashboard/clock', icon: Clock3 },
+        { label: 'Calendar', href: '/dashboard/calendar', icon: CalendarDays },
+        ...(isSuperAdmin ? [{ label: 'Punch Requests', href: '/dashboard/punch-requests', icon: Timer, badge: pendingCount }] : []),
+        { label: 'Certifications', href: '/dashboard/certifications', icon: Award },
+        { label: 'Memberships', href: '/dashboard/memberships', icon: Users },
+        { label: 'Partnerships', href: '/dashboard/partnerships', icon: Briefcase },
+        { label: 'Insurance', href: '/dashboard/insurance', icon: Shield },
+        { label: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
+        { label: 'Vendors', href: '/dashboard/vendors', icon: Package },
+        { label: 'Buyers', href: '/dashboard/buyers', icon: ShoppingCart },
+        { label: 'Documents', href: '/dashboard/documents', icon: FileText },
+      ],
+    },
+    {
+      label: 'SETTINGS',
+      items: [
+        ...(isSuperAdmin ? [{ label: 'Users', href: '/dashboard/users', icon: Users }] : []),
+        { label: 'Settings', href: '/dashboard/settings', icon: Settings },
+      ],
+    },
+  ];
+}
 
 export function Sidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const { role, profile, isLoading } = useCurrentUser();
+  
+  const { data: punchStats } = useQuery({
+    queryKey: ['punchStatsSidebar'],
+    queryFn: getPunchStats,
+    enabled: role === 'super_admin',
+    refetchInterval: 60000,
+  });
 
-  // If user navigates while the mobile sidebar is open, ensure the overlay
-  // doesn't remain on top and block clicks.
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
+
+  const pendingCount = punchStats?.pending || 0;
+  const menuSections = getMenuSections(role, pendingCount);
 
   const handleLogout = async () => {
     const { signOut } = await import('@/lib/auth');
@@ -58,83 +99,143 @@ export function Sidebar() {
       {/* Mobile Toggle */}
       <button
         onClick={() => setOpen(!open)}
-        className="fixed top-4 left-4 z-50 md:hidden rounded-lg border border-border/70 bg-card p-2 shadow-sm"
+        className="fixed top-4 left-4 z-50 md:hidden rounded-lg border-[0.5px] border-border bg-card p-2"
       >
         {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
       </button>
 
-      {/* Sidebar */}
+      {/* Sidebar - Desktop: normal flex child, Mobile: fixed overlay */}
       <aside
         className={cn(
-          'fixed left-0 top-0 z-40 h-full w-72 border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform duration-300 ease-in-out',
-          open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+          'flex flex-col h-full shrink-0 border-r border-border bg-card transition-all duration-300 ease-in-out',
+          collapsed ? 'w-16' : 'w-60',
+          // Desktop: always visible, relative positioning
+          'hidden md:flex',
+          // Mobile: fixed overlay when open
+          open && 'md:hidden fixed left-0 top-0 z-40 h-full'
         )}
       >
         <div className="flex flex-col h-full">
-
-          {/* HEADER */}
-          <div className="border-b border-sidebar-border px-5 py-5">
-            <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-sidebar-accent shadow-sm">
-              <img
-                src="/cropped-clarusto-logitics-e1756811318321-85x85 .png"
-                alt="Logo"
-                className="w-full h-full object-contain"
-              />
-            </div>
-
-            <div className="flex flex-col leading-tight">
-              <h1 className="text-sm font-semibold text-sidebar-foreground">
-                CRM Portal
-              </h1>
-              <span className="text-xs text-sidebar-foreground/70">
-                Management System
-              </span>
-            </div>
-            </div>
+          {/* Logo Area - 64px tall */}
+          <div className="h-16 flex items-center px-4 border-b-[0.5px] border-border">
+            {!collapsed && (
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                  <img
+                    src="/cropped-clarusto-logitics-e1756811318321-85x85 .png"
+                    alt="Logo"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <span className="font-serif text-[15px] font-medium text-foreground">CRM</span>
+              </div>
+            )}
+            {collapsed && (
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 mx-auto">
+                <img
+                  src="/cropped-clarusto-logitics-e1756811318321-85x85 .png"
+                  alt="Logo"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            )}
           </div>
 
-          <nav className="flex-1 overflow-y-auto p-3 space-y-1.5">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                pathname === item.href ||
-                pathname.startsWith(item.href + '/');
+          {/* Navigation */}
+          <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+            {menuSections.map((section) => (
+              <div key={section.label}>
+                {!collapsed && (
+                  <p className="px-3 mb-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                    {section.label}
+                  </p>
+                )}
+                <div className="space-y-1">
+                  {section.items.map((item: any) => {
+                    const Icon = item.icon;
+                    const isActive =
+                      pathname === item.href ||
+                      pathname.startsWith(item.href + '/');
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  className={cn(
-                    'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
-                    isActive
-                      ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-sm'
-                      : 'text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                  )}
-                >
-                  <Icon
-                    className={cn(
-                      'w-5 h-5 transition-colors',
-                      isActive
-                        ? 'text-sidebar-primary-foreground'
-                        : 'text-sidebar-foreground/70 group-hover:text-sidebar-accent-foreground'
-                    )}
-                  />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setOpen(false)}
+                        className={cn(
+                          'group relative flex items-center gap-3 rounded-lg h-9 px-3 text-[14px] font-medium transition-all duration-150',
+                          isActive
+                            ? 'bg-primary/10 text-primary'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        )}
+                      >
+                        {isActive && (
+                          <div className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-primary" />
+                        )}
+                        <Icon className="w-4 h-4 flex-shrink-0" />
+                        {!collapsed && (
+                          <>
+                            <span className="flex-1">{item.label}</span>
+                            {item.badge > 0 && (
+                              <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] text-center">
+                                {item.badge}
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
 
-          <div className="border-t border-sidebar-border p-3">
+          {/* Bottom Section */}
+          <div className="border-t-[0.5px] border-border p-3 space-y-2">
+            {!collapsed && (
+              <div className="flex items-center gap-3 px-2 py-2">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-primary/10 text-primary text-[12px] font-medium">
+                    {profile?.full_name ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : <User className="w-4 h-4" />}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col flex-1 min-w-0">
+                  <p className="text-[13px] font-medium text-foreground truncate">
+                    {isLoading ? 'Loading...' : (profile?.full_name || profile?.email || 'User')}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {profile?.role ? `${profile.role}` : (profile?.email || '')}
+                  </p>
+                </div>
+              </div>
+            )}
+            
             <Button
               variant="ghost"
-              className="w-full justify-start gap-3 text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              size={collapsed ? 'icon' : 'default'}
+              className={cn(
+                'w-full justify-start gap-3 text-muted-foreground hover:text-foreground',
+                collapsed && 'justify-center px-0'
+              )}
               onClick={handleLogout}
             >
-              <LogOut className="w-5 h-5" />
-              <span>Sign Out</span>
+              <LogOut className="w-4 h-4" />
+              {!collapsed && <span className="text-[14px]">Sign Out</span>}
+            </Button>
+
+            {/* Collapse Toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-full h-8"
+              onClick={() => setCollapsed(!collapsed)}
+            >
+              {collapsed ? (
+                <ChevronRight className="w-4 h-4" />
+              ) : (
+                <ChevronLeft className="w-4 h-4" />
+              )}
             </Button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { Sidebar } from '@/components/sidebar';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function DashboardLayout({
   children,
@@ -6,20 +7,24 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-background">
-      <div className="hidden md:block w-72 shrink-0">
-        <Sidebar />
-      </div>
+    <div className="flex h-screen w-screen overflow-hidden bg-background">
+      {/* Sidebar — fixed on the left, never overlaps content */}
+      <Sidebar />
 
-      <div className="md:hidden">
-        <Sidebar />
-      </div>
-
-      <main className="flex-1 overflow-auto pt-16 md:pt-0">
-        <div className="mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-10">
-          {children}
+      {/* Main area — takes remaining width, scrolls independently */}
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        {/* Top navbar */}
+        <div className="w-full h-14 flex items-center justify-end px-6 border-b border-border bg-card shrink-0">
+          <ThemeToggle />
         </div>
-      </main>
+
+        {/* Page content */}
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="mx-auto w-full max-w-[1280px]">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
