@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, X } from 'lucide-react';
+import { Search, X, ArrowUpDown } from 'lucide-react';
 import { ProjectFilters as Filters } from '@/types/projects';
 
 interface ProjectFiltersProps {
@@ -24,11 +24,22 @@ export function ProjectFilters({ filters, onFiltersChange }: ProjectFiltersProps
     onFiltersChange({ ...filters, status: value as any || undefined });
   };
 
+  const handleSortChange = (value: string) => {
+    if (value === 'none') {
+      onFiltersChange({ ...filters, sort_by: undefined, sort_order: undefined });
+    } else {
+      const [sort_by, sort_order] = value.split('-');
+      onFiltersChange({ ...filters, sort_by: sort_by as any, sort_order: sort_order as any });
+    }
+  };
+
   const handleClearFilters = () => {
     onFiltersChange({ page: 1, limit: 20 });
   };
 
-  const hasActiveFilters = filters.search || filters.status || filters.start_date || filters.end_date;
+  const hasActiveFilters = filters.search || filters.status || filters.start_date || filters.end_date || filters.sort_by;
+
+  const sortValue = filters.sort_by && filters.sort_order ? `${filters.sort_by}-${filters.sort_order}` : 'none';
 
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-center">
@@ -57,6 +68,24 @@ export function ProjectFilters({ filters, onFiltersChange }: ProjectFiltersProps
           <SelectItem value="Planned">Planned</SelectItem>
           <SelectItem value="On Hold">On Hold</SelectItem>
           <SelectItem value="Closed">Closed</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Select value={sortValue} onValueChange={handleSortChange}>
+        <SelectTrigger className="w-full md:w-[180px]">
+          <ArrowUpDown className="h-4 w-4 mr-2" />
+          <SelectValue placeholder="Sort by..." />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">None</SelectItem>
+          <SelectItem value="created_at-desc">Date Created (Newest)</SelectItem>
+          <SelectItem value="created_at-asc">Date Created (Oldest)</SelectItem>
+          <SelectItem value="start_date-desc">Start Date (Newest)</SelectItem>
+          <SelectItem value="start_date-asc">Start Date (Oldest)</SelectItem>
+          <SelectItem value="estimated_end_date-desc">End Date (Newest)</SelectItem>
+          <SelectItem value="estimated_end_date-asc">End Date (Oldest)</SelectItem>
+          <SelectItem value="project_name-asc">Name (A-Z)</SelectItem>
+          <SelectItem value="project_name-desc">Name (Z-A)</SelectItem>
         </SelectContent>
       </Select>
 

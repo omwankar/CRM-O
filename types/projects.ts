@@ -4,7 +4,8 @@ export interface Project {
   project_name: string;
   start_date: string | null;
   estimated_end_date: string | null;
-  contact_person: string;
+  assigned_person_id?: string | null;
+  supervisor_id?: string | null;
   contact_email: string;
   contact_phone: string;
   requirements_notes: string;
@@ -14,6 +15,8 @@ export interface Project {
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
+  assigned_person?: { id: string; name: string; email: string };
+  supervisor?: { id: string; name: string; email: string };
   employees?: ProjectEmployee[];
   attachments?: ProjectAttachment[];
   emails?: ProjectEmail[];
@@ -62,7 +65,8 @@ export interface StatusHistory {
 
 export interface CreateProjectInput {
   project_name: string;
-  contact_person: string;
+  assigned_person_id?: string;
+  supervisor_id?: string;
   contact_email?: string;
   contact_phone?: string;
   start_date?: string;
@@ -75,7 +79,8 @@ export interface CreateProjectInput {
 
 export interface UpdateProjectInput {
   project_name?: string;
-  contact_person?: string;
+  assigned_person_id?: string;
+  supervisor_id?: string;
   contact_email?: string;
   contact_phone?: string;
   start_date?: string;
@@ -101,6 +106,8 @@ export interface ProjectFilters {
   search?: string;
   start_date?: string;
   end_date?: string;
+  sort_by?: 'created_at' | 'start_date' | 'estimated_end_date' | 'project_name';
+  sort_order?: 'asc' | 'desc';
   page?: number;
   limit?: number;
 }

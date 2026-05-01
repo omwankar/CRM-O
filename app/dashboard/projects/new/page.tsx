@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,15 +11,35 @@ import { createProject } from '@/lib/api/projects';
 import { supabase } from '@/lib/auth';
 import { ArrowLeft, ArrowRight, Upload, X } from 'lucide-react';
 
+interface User {
+  id: string;
+  email: string;
+  full_name: string | null;
+}
+
 export default function NewProjectPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+
+  // Fetch users on component mount
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const { data } = await supabase
+        .from('users')
+        .select('id, email, full_name')
+        .eq('is_active', true);
+      setUsers(data || []);
+    };
+    fetchUsers();
+  }, []);
 
   // Step 1: Basic Info
   const [basicInfo, setBasicInfo] = useState({
     project_name: '',
-    contact_person: '',
+    assigned_person_id: '',
+    supervisor_id: '',
     contact_email: '',
     contact_phone: '',
     start_date: '',
@@ -88,7 +108,8 @@ export default function NewProjectPage() {
 
       await createProject({
         project_name: basicInfo.project_name,
-        contact_person: basicInfo.contact_person,
+        assigned_person_id: basicInfo.assigned_person_id || undefined,
+        supervisor_id: basicInfo.supervisor_id || undefined,
         contact_email: basicInfo.contact_email,
         contact_phone: basicInfo.contact_phone,
         start_date: basicInfo.start_date,
@@ -108,7 +129,7 @@ export default function NewProjectPage() {
     }
   };
 
-  const canProceedToStep2 = basicInfo.project_name && basicInfo.contact_person && basicInfo.start_date;
+  const canProceedToStep2 = basicInfo.project_name && basicInfo.start_date;
   const canProceedToStep3 = true;
 
   return (
@@ -155,12 +176,35 @@ export default function NewProjectPage() {
               </div>
 
               <div>
-                <Label>Contact Person *</Label>
-                <Input
-                  value={basicInfo.contact_person}
-                  onChange={(e) => setBasicInfo({ ...basicInfo, contact_person: e.target.value })}
-                  placeholder="Enter contact person name"
-                />
+                <Label>Assigned Person</Label>
+                <select
+                  value={basicInfo.assigned_person_id}
+                  onChange={(e) => setBasicInfo({ ...basicInfo, assigned_person_id: e.target.value })}
+                  className="w-full h-10 rounded-lg border border-border bg-background px-3 py-2 text-[13px]"
+                >
+                  <option value="">Select employee...</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.full_name || user.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <Label>Supervisor</Label>
+                <select
+                  value={basicInfo.supervisor_id}
+                  onChange={(e) => setBasicInfo({ ...basicInfo, supervisor_id: e.target.value })}
+                  className="w-full h-10 rounded-lg border border-border bg-background px-3 py-2 text-[13px]"
+                >
+                  <option value="">Select supervisor...</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.full_name || user.email}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>

@@ -150,8 +150,16 @@ export default function ProjectDetailPage() {
             <p className="text-[14px] text-foreground mt-1">{project.project_name}</p>
           </div>
           <div>
-            <label className="text-[12px] text-muted-foreground">Contact Person</label>
-            <p className="text-[14px] text-foreground mt-1">{project.contact_person}</p>
+            <label className="text-[12px] text-muted-foreground">Assigned Person</label>
+            <p className="text-[14px] text-foreground mt-1">
+              {project.assigned_person ? project.assigned_person.name : '-'}
+            </p>
+          </div>
+          <div>
+            <label className="text-[12px] text-muted-foreground">Supervisor</label>
+            <p className="text-[14px] text-foreground mt-1">
+              {project.supervisor ? project.supervisor.name : '-'}
+            </p>
           </div>
           <div>
             <label className="text-[12px] text-muted-foreground">Contact Email</label>

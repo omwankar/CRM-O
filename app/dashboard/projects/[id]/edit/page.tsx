@@ -9,7 +9,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { getProject, updateProject } from '@/lib/api/projects';
 import { Project, UpdateProjectInput } from '@/types/projects';
+import { supabase } from '@/lib/auth';
 import { ArrowLeft, Save } from 'lucide-react';
+
+interface User {
+  id: string;
+  email: string;
+  full_name: string | null;
+}
 
 export default function ProjectEditPage() {
   const router = useRouter();
@@ -19,12 +26,22 @@ export default function ProjectEditPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
 
   const [formData, setFormData] = useState<UpdateProjectInput>({});
 
   useEffect(() => {
     fetchProject();
+    fetchUsers();
   }, [projectId]);
+
+  const fetchUsers = async () => {
+    const { data } = await supabase
+      .from('users')
+      .select('id, email, full_name')
+      .eq('is_active', true);
+    setUsers(data || []);
+  };
 
   const fetchProject = async () => {
     setLoading(true);
@@ -33,7 +50,8 @@ export default function ProjectEditPage() {
       setProject(data);
       setFormData({
         project_name: data.project_name,
-        contact_person: data.contact_person,
+        assigned_person_id: data.assigned_person_id || undefined,
+        supervisor_id: data.supervisor_id || undefined,
         contact_email: data.contact_email,
         contact_phone: data.contact_phone,
         start_date: data.start_date || undefined,
@@ -103,13 +121,35 @@ export default function ProjectEditPage() {
             </div>
 
             <div>
-              <Label>Contact Person *</Label>
-              <Input
-                value={formData.contact_person || ''}
-                onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
-                placeholder="Enter contact person name"
-                required
-              />
+              <Label>Assigned Person</Label>
+              <select
+                value={formData.assigned_person_id || ''}
+                onChange={(e) => setFormData({ ...formData, assigned_person_id: e.target.value || undefined })}
+                className="w-full h-10 rounded-lg border border-border bg-background px-3 py-2 text-[13px]"
+              >
+                <option value="">Select employee...</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.full_name || user.email}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <Label>Supervisor</Label>
+              <select
+                value={formData.supervisor_id || ''}
+                onChange={(e) => setFormData({ ...formData, supervisor_id: e.target.value || undefined })}
+                className="w-full h-10 rounded-lg border border-border bg-background px-3 py-2 text-[13px]"
+              >
+                <option value="">Select supervisor...</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.full_name || user.email}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
