@@ -28,8 +28,7 @@ export default function NewProjectPage() {
     const fetchUsers = async () => {
       const { data } = await supabase
         .from('users')
-        .select('id, email, full_name')
-        .eq('is_active', true);
+        .select('id, email, full_name');
       setUsers(data || []);
     };
     fetchUsers();
