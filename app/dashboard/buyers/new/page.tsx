@@ -19,14 +19,16 @@ export default function NewBuyerPage() {
     buyer_name: '',
     company_type: '',
     contact_person: '',
-    email: '',
-    phone: '',
+    contact_email: '',
+    contact_phone: '',
     address: '',
     city: '',
     state: '',
-    zip_code: '',
+    postal_code: '',
+    country: '',
     credit_limit: '',
-    buyer_portal_link: '', // ✅ NEW
+    pipeline_value: '',
+    buyer_portal_link: '',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,6 +46,9 @@ export default function NewBuyerPage() {
         ...formData,
         credit_limit: formData.credit_limit
           ? parseFloat(formData.credit_limit)
+          : null,
+        pipeline_value: formData.pipeline_value
+          ? parseFloat(formData.pipeline_value)
           : null,
       };
 
@@ -68,7 +73,7 @@ export default function NewBuyerPage() {
         Back to Buyers
       </Link>
 
-      <Card className="p-8 max-w-2xl">
+      <Card className="p-8 max-w-3xl">
         <h1 className="text-2xl font-bold mb-6">Add New Buyer</h1>
 
         {error && (
@@ -78,31 +83,44 @@ export default function NewBuyerPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="rounded-lg border border-border/60 bg-muted/20 p-4">
+            <h3 className="mb-3 text-sm font-semibold">Card Information</h3>
+            <p className="text-xs text-muted-foreground">
+              These fields are shown directly on Buyer cards and portal summary.
+            </p>
+          </div>
 
-          <FieldGroup>
-            <FieldLabel>Buyer Name *</FieldLabel>
-            <Input name="buyer_name" value={formData.buyer_name} onChange={handleChange} required />
-          </FieldGroup>
-
-          <FieldGroup>
-            <FieldLabel>Company Type *</FieldLabel>
-            <Input name="company_type" value={formData.company_type} onChange={handleChange} required />
-          </FieldGroup>
-
-          <FieldGroup>
-            <FieldLabel>Contact Person *</FieldLabel>
-            <Input name="contact_person" value={formData.contact_person} onChange={handleChange} required />
-          </FieldGroup>
-
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <FieldGroup>
-              <FieldLabel>Email</FieldLabel>
-              <Input name="email" type="email" value={formData.email} onChange={handleChange} />
+              <FieldLabel>Buyer Name *</FieldLabel>
+              <Input name="buyer_name" value={formData.buyer_name} onChange={handleChange} required />
             </FieldGroup>
-
             <FieldGroup>
-              <FieldLabel>Phone</FieldLabel>
-              <Input name="phone" value={formData.phone} onChange={handleChange} />
+              <FieldLabel>Contact Person *</FieldLabel>
+              <Input name="contact_person" value={formData.contact_person} onChange={handleChange} required />
+            </FieldGroup>
+            <FieldGroup>
+              <FieldLabel>Contact Email</FieldLabel>
+              <Input name="contact_email" type="email" value={formData.contact_email} onChange={handleChange} />
+            </FieldGroup>
+            <FieldGroup>
+              <FieldLabel>Contact Phone</FieldLabel>
+              <Input name="contact_phone" value={formData.contact_phone} onChange={handleChange} />
+            </FieldGroup>
+            <FieldGroup>
+              <FieldLabel>Company Type *</FieldLabel>
+              <Input name="company_type" value={formData.company_type} onChange={handleChange} required />
+            </FieldGroup>
+            <FieldGroup>
+              <FieldLabel>Pipeline Value</FieldLabel>
+              <Input
+                name="pipeline_value"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={formData.pipeline_value}
+                onChange={handleChange}
+              />
             </FieldGroup>
           </div>
 
@@ -111,10 +129,11 @@ export default function NewBuyerPage() {
             <Input name="address" value={formData.address} onChange={handleChange} />
           </FieldGroup>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <Input name="city" placeholder="City" value={formData.city} onChange={handleChange} />
             <Input name="state" placeholder="State" value={formData.state} onChange={handleChange} />
-            <Input name="zip_code" placeholder="ZIP" value={formData.zip_code} onChange={handleChange} />
+            <Input name="postal_code" placeholder="Postal Code" value={formData.postal_code} onChange={handleChange} />
+            <Input name="country" placeholder="Country" value={formData.country} onChange={handleChange} />
           </div>
 
           <FieldGroup>
@@ -128,12 +147,12 @@ export default function NewBuyerPage() {
             />
           </FieldGroup>
 
-          {/* ✅ NEW FIELD */}
           <FieldGroup>
             <FieldLabel>Buyer Portal Link</FieldLabel>
             <Input
               name="buyer_portal_link"
-              placeholder="https://buyer-portal.com"
+              type="url"
+              placeholder="https://buyer-portal.example.com"
               value={formData.buyer_portal_link}
               onChange={handleChange}
             />

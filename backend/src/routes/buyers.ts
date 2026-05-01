@@ -24,6 +24,7 @@ const schema = z.object({
   website: z.string().optional(),
   industry: z.string().optional(),
   description: z.string().optional(),
+  buyer_portal_link: z.string().optional(),
   pipeline_stage_id: z.string().uuid().optional(),
   pipeline_notes: z.string().optional(),
   pipeline_value: z.number().optional(),
@@ -37,7 +38,12 @@ router.get('/', async (req, res) => {
   let query = supabase.from('buyers').select('*, pipeline_stages(name, color)', { count: 'exact' }).is('deleted_at', null);
   if (industry) query = query.eq('industry', industry);
   if (pipeline_stage_id) query = query.eq('pipeline_stage_id', pipeline_stage_id);
-  if (search) query = query.ilike('buyer_name', `%${search}%`);
+  if (search) {
+    const searchValue = String(search).trim();
+    query = query.or(
+      `buyer_name.ilike.%${searchValue}%,contact_person.ilike.%${searchValue}%,contact_email.ilike.%${searchValue}%`
+    );
+  }
   const p = Math.max(1, Number(page)), l = Math.min(100, Number(limit));
   query = query.range((p - 1) * l, p * l - 1).order('created_at', { ascending: false });
   const { data, count, error } = await query;

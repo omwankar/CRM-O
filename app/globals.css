@@ -131,6 +131,17 @@
     font-family: var(--font-sans), sans-serif;
   }
 
+  button,
+  [role='button'],
+  a[href],
+  summary,
+  input[type='button'],
+  input[type='submit'],
+  input[type='reset'],
+  [onclick] {
+    cursor: pointer;
+  }
+
   /* Typography Scale */
   h1 {
     @apply font-serif text-[32px] font-medium leading-tight text-foreground;

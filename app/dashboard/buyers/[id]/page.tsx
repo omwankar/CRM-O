@@ -130,6 +130,7 @@ export default function BuyerDetailPage() {
               <Input placeholder="Phone" value={editForm.contact_phone || ''} onChange={(e) => setEditForm({ ...editForm, contact_phone: e.target.value })} />
               <Input placeholder="Industry" value={editForm.industry || ''} onChange={(e) => setEditForm({ ...editForm, industry: e.target.value })} />
               <Input placeholder="Company Type" value={editForm.company_type || ''} onChange={(e) => setEditForm({ ...editForm, company_type: e.target.value })} />
+              <Input placeholder="Buyer Portal Link" value={editForm.buyer_portal_link || ''} onChange={(e) => setEditForm({ ...editForm, buyer_portal_link: e.target.value })} />
             </div>
             <div className="flex gap-2 mt-4">
               <Button onClick={handleSave} disabled={updateMutation.isPending}>
@@ -163,6 +164,7 @@ export default function BuyerDetailPage() {
                 <p><span className="text-muted-foreground">Industry:</span> {b.industry || '-'}</p>
                 <p><span className="text-muted-foreground">Company Type:</span> {b.company_type || '-'}</p>
                 <p><span className="text-muted-foreground">Website:</span> {b.website || '-'}</p>
+                <p><span className="text-muted-foreground">Buyer Portal Link:</span> {b.buyer_portal_link || '-'}</p>
                 <p><span className="text-muted-foreground">Description:</span> {b.description || '-'}</p>
               </div>
             </div>

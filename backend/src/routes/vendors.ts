@@ -24,6 +24,7 @@ const schema = z.object({
   website: z.string().optional(),
   description: z.string().optional(),
   contract_url: z.string().optional(),
+  vendor_portal_link: z.string().optional(),
 });
 
 const updateSchema = schema.partial();

@@ -130,6 +130,7 @@ export default function VendorDetailPage() {
               <Input placeholder="Phone" value={editForm.contact_phone || ''} onChange={(e) => setEditForm({ ...editForm, contact_phone: e.target.value })} />
               <Input placeholder="Vendor Type" value={editForm.vendor_type || ''} onChange={(e) => setEditForm({ ...editForm, vendor_type: e.target.value })} />
               <Input placeholder="Payment Terms" value={editForm.payment_terms || ''} onChange={(e) => setEditForm({ ...editForm, payment_terms: e.target.value })} />
+              <Input placeholder="Vendor Portal Link" value={editForm.vendor_portal_link || ''} onChange={(e) => setEditForm({ ...editForm, vendor_portal_link: e.target.value })} />
             </div>
             <div className="flex gap-2 mt-4">
               <Button onClick={handleSave} disabled={updateMutation.isPending}>
@@ -164,6 +165,7 @@ export default function VendorDetailPage() {
                 <p><span className="text-muted-foreground">Payment Terms:</span> {v.payment_terms || '-'}</p>
                 <p><span className="text-muted-foreground">Tax ID:</span> {v.tax_id || '-'}</p>
                 <p><span className="text-muted-foreground">Website:</span> {v.website || '-'}</p>
+                <p><span className="text-muted-foreground">Vendor Portal Link:</span> {v.vendor_portal_link || '-'}</p>
               </div>
             </div>
           </div>

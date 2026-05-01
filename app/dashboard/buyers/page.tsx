@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { getBuyers } from '@/lib/api/buyers';
-import { Plus, Search, LayoutGrid, List, Kanban } from 'lucide-react';
+import { Plus, Search, LayoutGrid, List, Kanban, ExternalLink, Mail, Phone, Building2 } from 'lucide-react';
 
 type ViewMode = 'card' | 'table' | 'kanban';
 
@@ -16,7 +16,7 @@ export default function BuyersPage() {
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('card');
 
-  const { data: buyersData, isLoading } = useQuery({
+  const { data: buyersData, isLoading, error } = useQuery({
     queryKey: ['buyers', search],
     queryFn: () => getBuyers({ search }),
   });
@@ -31,6 +31,17 @@ export default function BuyersPage() {
     : buyers;
 
   const pipelineStages = ['Lead', 'Contacted', 'Proposal Sent', 'Negotiating', 'Closed Won', 'Closed Lost'];
+
+  const openBuyerPortal = (buyer: any) => {
+    const rawLink = buyer?.buyer_portal_link?.trim();
+    if (!rawLink) {
+      router.push(`/dashboard/buyers/${buyer.id}`);
+      return;
+    }
+
+    const normalizedLink = /^https?:\/\//i.test(rawLink) ? rawLink : `https://${rawLink}`;
+    window.open(normalizedLink, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <div className="space-y-6">
@@ -84,6 +95,10 @@ export default function BuyersPage() {
         <div className="grid gap-4">
           {[...Array(3)].map((_, i) => <Card key={i} className="p-6 animate-pulse h-32" />)}
         </div>
+      ) : error ? (
+        <Card className="p-6">
+          <p className="text-sm text-destructive">Failed to load buyers. Please refresh the page.</p>
+        </Card>
       ) : filteredBuyers.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12">
           <p className="text-muted-foreground">No buyers found</p>
@@ -172,11 +187,42 @@ export default function BuyersPage() {
                   {buyer.pipeline_stages?.[0]?.name || 'Unassigned'}
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground mb-2">{buyer.contact_person}</p>
-              <p className="text-sm text-muted-foreground mb-3">{buyer.contact_email}</p>
+
+              <div className="space-y-2 mb-4">
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  {buyer.contact_person || 'No contact person'}
+                </p>
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  {buyer.contact_email || 'No email'}
+                </p>
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  {buyer.contact_phone || 'No phone'}
+                </p>
+              </div>
+
               {buyer.pipeline_value && (
-                <p className="text-sm font-medium">${buyer.pipeline_value.toLocaleString()}</p>
+                <p className="text-sm font-medium mb-4">${buyer.pipeline_value.toLocaleString()}</p>
               )}
+
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {buyer.city || buyer.country ? `${buyer.city || ''}${buyer.city && buyer.country ? ', ' : ''}${buyer.country || ''}` : 'Location unavailable'}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openBuyerPortal(buyer);
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4 mr-1" />
+                  Buyer Portal
+                </Button>
+              </div>
             </Card>
           ))}
         </div>

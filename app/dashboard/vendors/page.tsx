@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { getVendors } from '@/lib/api/vendors';
-import { Plus, Search, LayoutGrid, List } from 'lucide-react';
+import { Plus, Search, LayoutGrid, List, ExternalLink, Mail, Phone, Building2 } from 'lucide-react';
 
 type ViewMode = 'card' | 'table';
 
@@ -16,7 +16,7 @@ export default function VendorsPage() {
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('card');
 
-  const { data: vendorsData, isLoading } = useQuery({
+  const { data: vendorsData, isLoading, error } = useQuery({
     queryKey: ['vendors', search],
     queryFn: () => getVendors({ search }),
   });
@@ -29,6 +29,17 @@ export default function VendorsPage() {
         v.contact_person?.toLowerCase().includes(search.toLowerCase())
       )
     : vendors;
+
+  const openVendorPortal = (vendor: any) => {
+    const rawLink = vendor?.vendor_portal_link?.trim();
+    if (!rawLink) {
+      router.push(`/dashboard/vendors/${vendor.id}`);
+      return;
+    }
+
+    const normalizedLink = /^https?:\/\//i.test(rawLink) ? rawLink : `https://${rawLink}`;
+    window.open(normalizedLink, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <div className="space-y-6">
@@ -75,6 +86,10 @@ export default function VendorsPage() {
         <div className="grid gap-4">
           {[...Array(3)].map((_, i) => <Card key={i} className="p-6 animate-pulse h-32" />)}
         </div>
+      ) : error ? (
+        <Card className="p-6">
+          <p className="text-sm text-destructive">Failed to load vendors. Please refresh the page.</p>
+        </Card>
       ) : filteredVendors.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12">
           <p className="text-muted-foreground">No vendors found</p>
@@ -128,9 +143,36 @@ export default function VendorsPage() {
                   {vendor.status}
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground mb-2">{vendor.contact_person}</p>
-              <p className="text-sm text-muted-foreground mb-3">{vendor.contact_email}</p>
-              <p className="text-sm font-medium">{vendor.vendor_type}</p>
+
+              <div className="space-y-2 mb-4">
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  {vendor.contact_person || 'No contact person'}
+                </p>
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  {vendor.contact_email || 'No email'}
+                </p>
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  {vendor.contact_phone || 'No phone'}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium">{vendor.vendor_type || 'Uncategorized'}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openVendorPortal(vendor);
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4 mr-1" />
+                  Vendor Portal
+                </Button>
+              </div>
             </Card>
           ))}
         </div>

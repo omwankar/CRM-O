@@ -17,16 +17,18 @@ export default function NewVendorPage() {
 
   const [formData, setFormData] = useState({
     vendor_name: '',
-    category: '',
+    vendor_type: '',
     contact_person: '',
-    email: '',
-    phone: '',
+    contact_email: '',
+    contact_phone: '',
     address: '',
     city: '',
     state: '',
-    zip_code: '',
+    postal_code: '',
+    country: '',
     payment_terms: '',
-    vendor_portal_link: '', // ✅ NEW FIELD
+    status: 'active',
+    vendor_portal_link: '',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,7 +65,7 @@ export default function NewVendorPage() {
         Back to Vendors
       </Link>
 
-      <Card className="p-8 max-w-2xl">
+      <Card className="p-8 max-w-3xl">
         <h1 className="text-2xl font-bold mb-6">Add New Vendor</h1>
 
         {error && (
@@ -73,31 +75,37 @@ export default function NewVendorPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="rounded-lg border border-border/60 bg-muted/20 p-4">
+            <h3 className="mb-3 text-sm font-semibold">Card Information</h3>
+            <p className="text-xs text-muted-foreground">
+              These fields are shown directly on Vendor cards and portal summary.
+            </p>
+          </div>
 
-          <FieldGroup>
-            <FieldLabel>Vendor Name *</FieldLabel>
-            <Input name="vendor_name" value={formData.vendor_name} onChange={handleChange} required />
-          </FieldGroup>
-
-          <FieldGroup>
-            <FieldLabel>Category *</FieldLabel>
-            <Input name="category" value={formData.category} onChange={handleChange} required />
-          </FieldGroup>
-
-          <FieldGroup>
-            <FieldLabel>Contact Person *</FieldLabel>
-            <Input name="contact_person" value={formData.contact_person} onChange={handleChange} required />
-          </FieldGroup>
-
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <FieldGroup>
-              <FieldLabel>Email</FieldLabel>
-              <Input name="email" type="email" value={formData.email} onChange={handleChange} />
+              <FieldLabel>Vendor Name *</FieldLabel>
+              <Input name="vendor_name" value={formData.vendor_name} onChange={handleChange} required />
             </FieldGroup>
-
             <FieldGroup>
-              <FieldLabel>Phone</FieldLabel>
-              <Input name="phone" value={formData.phone} onChange={handleChange} />
+              <FieldLabel>Contact Person *</FieldLabel>
+              <Input name="contact_person" value={formData.contact_person} onChange={handleChange} required />
+            </FieldGroup>
+            <FieldGroup>
+              <FieldLabel>Contact Email</FieldLabel>
+              <Input name="contact_email" type="email" value={formData.contact_email} onChange={handleChange} />
+            </FieldGroup>
+            <FieldGroup>
+              <FieldLabel>Contact Phone</FieldLabel>
+              <Input name="contact_phone" value={formData.contact_phone} onChange={handleChange} />
+            </FieldGroup>
+            <FieldGroup>
+              <FieldLabel>Vendor Type *</FieldLabel>
+              <Input name="vendor_type" value={formData.vendor_type} onChange={handleChange} required />
+            </FieldGroup>
+            <FieldGroup>
+              <FieldLabel>Status</FieldLabel>
+              <Input name="status" value={formData.status} onChange={handleChange} />
             </FieldGroup>
           </div>
 
@@ -106,10 +114,11 @@ export default function NewVendorPage() {
             <Input name="address" value={formData.address} onChange={handleChange} />
           </FieldGroup>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <Input name="city" placeholder="City" value={formData.city} onChange={handleChange} />
             <Input name="state" placeholder="State" value={formData.state} onChange={handleChange} />
-            <Input name="zip_code" placeholder="ZIP" value={formData.zip_code} onChange={handleChange} />
+            <Input name="postal_code" placeholder="Postal Code" value={formData.postal_code} onChange={handleChange} />
+            <Input name="country" placeholder="Country" value={formData.country} onChange={handleChange} />
           </div>
 
           <FieldGroup>
@@ -117,12 +126,12 @@ export default function NewVendorPage() {
             <Input name="payment_terms" value={formData.payment_terms} onChange={handleChange} />
           </FieldGroup>
 
-          {/* ✅ NEW FIELD */}
           <FieldGroup>
             <FieldLabel>Vendor Portal Link</FieldLabel>
             <Input
               name="vendor_portal_link"
-              placeholder="https://vendor-portal.com"
+              type="url"
+              placeholder="https://vendor-portal.example.com"
               value={formData.vendor_portal_link}
               onChange={handleChange}
             />

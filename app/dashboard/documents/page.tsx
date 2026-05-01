@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { getDocuments, deleteDocument } from '@/lib/api/documents';
+import { supabase } from '@/lib/auth';
 import { Plus, Search, Download, FileText, Trash2 } from 'lucide-react';
 
 export default function DocumentsPage() {
@@ -14,9 +15,27 @@ export default function DocumentsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
 
-  const { data: documentsData, isLoading } = useQuery({
+  const { data: documentsData, isLoading, error } = useQuery({
     queryKey: ['documents'],
-    queryFn: () => getDocuments({}),
+    queryFn: async () => {
+      try {
+        return await getDocuments({});
+      } catch {
+        // Fallback to direct Supabase fetch if backend documents route fails.
+        const orderedResult = await supabase
+          .from('documents')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!orderedResult.error) {
+          return { data: orderedResult.data || [] };
+        }
+
+        const plainResult = await supabase.from('documents').select('*');
+        if (plainResult.error) throw new Error(plainResult.error.message || 'Failed to load documents');
+        return { data: plainResult.data || [] };
+      }
+    },
   });
 
   const deleteMutation = useMutation({
@@ -31,7 +50,7 @@ export default function DocumentsPage() {
   const filteredDocuments = search
     ? documents.filter(
         (doc: any) =>
-          doc.file_name?.toLowerCase().includes(search.toLowerCase()) ||
+          (doc.file_name || doc.document_name)?.toLowerCase().includes(search.toLowerCase()) ||
           doc.module?.toLowerCase().includes(search.toLowerCase())
       )
     : documents;
@@ -77,6 +96,12 @@ export default function DocumentsPage() {
         <div className="grid gap-4">
           {[...Array(3)].map((_, i) => <Card key={i} className="p-6 animate-pulse h-24" />)}
         </div>
+      ) : error ? (
+        <Card className="p-6">
+          <p className="text-sm text-destructive">
+            Failed to load documents: {(error as Error)?.message || 'Please refresh the page.'}
+          </p>
+        </Card>
       ) : filteredDocuments.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12">
           <FileText className="w-12 h-12 text-muted-foreground mb-4" />
@@ -88,8 +113,8 @@ export default function DocumentsPage() {
             <Card key={doc.id} className="p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold">{doc.file_name}</h3>
-                  <p className="text-sm text-muted-foreground">Module: {doc.module}</p>
+                  <h3 className="text-lg font-semibold">{doc.file_name || doc.document_name || 'Untitled document'}</h3>
+                  <p className="text-sm text-muted-foreground">Module: {doc.module || doc.related_table || '-'}</p>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="ghost" size="sm" onClick={() => downloadFile(doc.file_url)}>

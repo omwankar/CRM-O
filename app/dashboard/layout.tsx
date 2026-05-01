@@ -1,5 +1,4 @@
 import { Sidebar } from '@/components/sidebar';
-import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function DashboardLayout({
   children,
@@ -14,9 +13,7 @@ export default function DashboardLayout({
       {/* Main area — takes remaining width, scrolls independently */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Top navbar */}
-        <div className="w-full h-14 flex items-center justify-end px-6 border-b border-border bg-card shrink-0">
-          <ThemeToggle />
-        </div>
+        <div className="w-full h-14 flex items-center justify-end px-6 border-b border-border bg-card shrink-0" />
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto p-6">

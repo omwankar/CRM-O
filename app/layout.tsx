@@ -38,13 +38,14 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${dmSans.variable} ${dmSerifDisplay.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${dmSans.variable} ${dmSerifDisplay.variable} dark`} suppressHydrationWarning>
       <body className="font-sans antialiased bg-background text-foreground">
         <QueryProvider>
           <ThemeProvider
             attribute="class"
-            defaultTheme="light"
-            enableSystem
+            defaultTheme="dark"
+            forcedTheme="dark"
+            enableSystem={false}
             disableTransitionOnChange
           >
             {children}

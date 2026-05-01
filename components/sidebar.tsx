@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -71,6 +71,7 @@ function getMenuSections(role?: string, pendingCount?: number) {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const { role, profile, isLoading } = useCurrentUser();
@@ -90,8 +91,19 @@ export function Sidebar() {
   const menuSections = getMenuSections(role, pendingCount);
 
   const handleLogout = async () => {
-    const { signOut } = await import('@/lib/auth');
-    await signOut();
+    try {
+      const res = await fetch('/api/auth/logout', { method: 'POST' });
+      if (!res.ok) {
+        throw new Error('Logout failed');
+      }
+    } catch (error) {
+      // Fallback to client-side sign out if server logout fails.
+      const { signOut } = await import('@/lib/auth');
+      await signOut();
+    } finally {
+      router.replace('/auth/login');
+      router.refresh();
+    }
   };
 
   return (
