@@ -27,6 +27,7 @@ import {
   User,
   FolderKanban,
   Timer,
+  ListTodo,
 } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useQuery } from '@tanstack/react-query';
@@ -54,6 +55,7 @@ function getMenuSections(role?: string, pendingCount?: number) {
         { label: 'Partnerships', href: '/dashboard/partnerships', icon: Briefcase },
         { label: 'Insurance', href: '/dashboard/insurance', icon: Shield },
         { label: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
+        { label: 'Tasks', href: '/dashboard/tasks', icon: ListTodo },
         { label: 'Vendors', href: '/dashboard/vendors', icon: Package },
         { label: 'Buyers', href: '/dashboard/buyers', icon: ShoppingCart },
         { label: 'Documents', href: '/dashboard/documents', icon: FileText },

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
@@ -55,6 +56,8 @@ export default function DashboardPage() {
   const recentActivity = dashboardData?.recentActivity || [];
   const upcomingEvents = dashboardData?.upcomingEvents || [];
   const myTasks = dashboardData?.myTasks || [];
+  const myProjects = dashboardData?.myProjects || [];
+  const [myPanel, setMyPanel] = useState<'tasks' | 'projects'>('tasks');
 
   const moduleCards = [
     { name: 'Projects', count: stats.projects, icon: FolderKanban, href: '/dashboard/projects', color: 'text-blue-600', bg: 'bg-blue-500/10' },
@@ -217,20 +220,65 @@ export default function DashboardPage() {
 
             <Card className="p-5 lg:col-span-3">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-[16px] font-medium text-foreground">My Tasks</h3>
-                <button className="text-[12px] text-primary hover:underline">View all</button>
+                <div className="flex items-center gap-2">
+                  <button
+                    className={myPanel === 'tasks' ? 'text-[16px] font-medium text-foreground' : 'text-[16px] font-medium text-muted-foreground hover:text-foreground'}
+                    onClick={() => setMyPanel('tasks')}
+                  >
+                    My Tasks
+                  </button>
+                  <span className="text-muted-foreground">/</span>
+                  <button
+                    className={myPanel === 'projects' ? 'text-[16px] font-medium text-foreground' : 'text-[16px] font-medium text-muted-foreground hover:text-foreground'}
+                    onClick={() => setMyPanel('projects')}
+                  >
+                    My Projects
+                  </button>
+                </div>
+                <button
+                  className="text-[12px] text-primary hover:underline"
+                  onClick={() => router.push(myPanel === 'tasks' ? '/dashboard/tasks' : '/dashboard/projects')}
+                >
+                  View all
+                </button>
               </div>
               <div className="space-y-3 max-h-64 overflow-y-auto">
-                {myTasks.slice(0, 6).map((task: any) => (
-                  <div key={task.id} className="flex items-start gap-2">
-                    <input type="checkbox" className="mt-1 h-4 w-4 rounded border-border" />
-                    <div className="flex-1">
-                      <p className="text-[13px] font-medium text-foreground">{task.title}</p>
-                      <p className="text-[11px] text-muted-foreground">{task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}</p>
-                    </div>
-                  </div>
-                ))}
-                {myTasks.length === 0 && <p className="text-[13px] text-muted-foreground">No tasks assigned</p>}
+                {myPanel === 'tasks' ? (
+                  <>
+                    {myTasks.slice(0, 6).map((task: any) => (
+                      <div
+                        key={task.id}
+                        className="flex items-start gap-2 cursor-pointer hover:bg-muted/40 rounded-md p-2 -mx-2"
+                        onClick={() => router.push(`/dashboard/tasks/${task.id}`)}
+                      >
+                        <input type="checkbox" className="mt-1 h-4 w-4 rounded border-border" onClick={(e) => e.stopPropagation()} />
+                        <div className="flex-1">
+                          <p className="text-[13px] font-medium text-foreground">{task.title}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                    {myTasks.length === 0 && <p className="text-[13px] text-muted-foreground">No tasks assigned</p>}
+                  </>
+                ) : (
+                  <>
+                    {myProjects.slice(0, 6).map((project: any) => (
+                      <div
+                        key={project.id}
+                        className="cursor-pointer hover:bg-muted/40 rounded-md p-2 -mx-2"
+                        onClick={() => router.push(`/dashboard/projects/${project.id}`)}
+                      >
+                        <p className="text-[13px] font-medium text-foreground">{project.name}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {project.end_date ? `End: ${new Date(project.end_date).toLocaleDateString()}` : 'No end date'}
+                        </p>
+                      </div>
+                    ))}
+                    {myProjects.length === 0 && <p className="text-[13px] text-muted-foreground">No projects assigned</p>}
+                  </>
+                )}
               </div>
             </Card>
           </div>
