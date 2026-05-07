@@ -11,7 +11,7 @@ export interface Project {
   contact_phone: string;
   requirements_notes: string;
   linked_email: string | null;
-  status: 'Active' | 'Planned' | 'On Hold' | 'Closed';
+  status: 'Active' | 'Planned' | 'On Hold' | 'Closed' | 'Cancelled';
   created_by: string | null;
   deleted_at: string | null;
   created_at: string;
@@ -74,7 +74,7 @@ export interface CreateProjectInput {
   estimated_end_date?: string;
   requirements_notes?: string;
   linked_email?: string;
-  status?: 'Active' | 'Planned' | 'On Hold' | 'Closed';
+  status?: 'Active' | 'Planned' | 'On Hold' | 'Closed' | 'Cancelled';
   created_by: string;
 }
 
@@ -88,11 +88,11 @@ export interface UpdateProjectInput {
   estimated_end_date?: string;
   requirements_notes?: string;
   linked_email?: string;
-  status?: 'Active' | 'Planned' | 'On Hold' | 'Closed';
+  status?: 'Active' | 'Planned' | 'On Hold' | 'Closed' | 'Cancelled';
 }
 
 export interface ChangeStatusInput {
-  status: 'Active' | 'Planned' | 'On Hold' | 'Closed';
+  status: 'Active' | 'Planned' | 'On Hold' | 'Closed' | 'Cancelled';
   reason: string;
   changed_by?: string;
 }
@@ -103,7 +103,7 @@ export interface AddEmployeeInput {
 }
 
 export interface ProjectFilters {
-  status?: 'Active' | 'Planned' | 'On Hold' | 'Closed';
+  status?: 'Active' | 'Planned' | 'On Hold' | 'Closed' | 'Cancelled';
   search?: string;
   start_date?: string;
   end_date?: string;

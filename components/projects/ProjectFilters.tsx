@@ -71,7 +71,8 @@ export function ProjectFilters({ filters, onFiltersChange }: ProjectFiltersProps
           <SelectItem value="Active">Active</SelectItem>
           <SelectItem value="Planned">Planned</SelectItem>
           <SelectItem value="On Hold">On Hold</SelectItem>
-          <SelectItem value="Closed">Closed</SelectItem>
+          <SelectItem value="Closed">Completed</SelectItem>
+          <SelectItem value="Cancelled">Cancelled</SelectItem>
         </SelectContent>
       </Select>
 

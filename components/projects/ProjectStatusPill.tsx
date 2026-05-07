@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils';
 import { CheckCircle2, Clock, PauseCircle, XCircle } from 'lucide-react';
 
 interface ProjectStatusPillProps {
-  status: 'Active' | 'Planned' | 'On Hold' | 'Closed';
+  status: 'Active' | 'Planned' | 'On Hold' | 'Closed' | 'Cancelled';
   className?: string;
 }
 
@@ -31,11 +31,18 @@ const statusConfig = {
     icon: XCircle,
     description: 'Project has been completed or cancelled',
   },
+  Cancelled: {
+    color: 'bg-red-500/10 text-red-700 dark:text-red-400',
+    dotColor: 'bg-red-500',
+    icon: XCircle,
+    description: 'Project was cancelled',
+  },
 };
 
 export function ProjectStatusPill({ status, className }: ProjectStatusPillProps) {
   const config = statusConfig[status];
   const Icon = config.icon;
+  const label = status === 'Closed' ? 'Completed' : status;
 
   return (
     <span
@@ -46,7 +53,7 @@ export function ProjectStatusPill({ status, className }: ProjectStatusPillProps)
       )}
     >
       <Icon className="h-3.5 w-3.5" />
-      {status}
+      {label}
     </span>
   );
 }

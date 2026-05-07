@@ -18,6 +18,7 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<Filters>({ page: 1, limit: 20 });
   const [viewMode, setViewMode] = useState<'table' | 'card'>('card');
+  const [cardSection, setCardSection] = useState<'ongoing' | 'completed' | 'cancelled'>('ongoing');
   const [statusModalProject, setStatusModalProject] = useState<Project | null>(null);
   const { user } = useCurrentUser();
   const [pagination, setPagination] = useState({
@@ -54,6 +55,13 @@ export default function ProjectsPage() {
   };
 
   const canChangeStatus = true;
+  const showArchivedToggles = !filters.status || filters.status === ('all' as any);
+
+  const ongoingProjects = showArchivedToggles
+    ? projects.filter((p) => p.status !== 'Closed' && p.status !== ('Cancelled' as any))
+    : projects;
+  const completedProjects = showArchivedToggles ? projects.filter((p) => p.status === 'Closed') : [];
+  const cancelledProjects = showArchivedToggles ? projects.filter((p) => p.status === ('Cancelled' as any)) : [];
 
   const handleStatusChange = async (status: string, reason: string) => {
     if (!statusModalProject?.id) return;
@@ -99,7 +107,7 @@ export default function ProjectsPage() {
             <div key={i} className="surface-card p-5 animate-pulse rounded-lg" />
           ))}
         </div>
-      ) : projects.length === 0 ? (
+      ) : ongoingProjects.length === 0 && completedProjects.length === 0 && cancelledProjects.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <LayoutGrid className="h-16 w-16 text-muted-foreground mb-4" />
           <h3 className="text-[18px] font-medium text-foreground mb-2">
@@ -139,52 +147,127 @@ export default function ProjectsPage() {
 
           {/* Card View */}
           {viewMode === 'card' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {projects.map((project) => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                  canChangeStatus={canChangeStatus}
-                  onChangeStatus={setStatusModalProject}
-                />
-              ))}
+            <div className="space-y-6">
+              {showArchivedToggles && (
+                <div className="flex items-center justify-between gap-3 border border-border rounded-lg p-1 w-fit">
+                  <Button
+                    variant={cardSection === 'ongoing' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setCardSection('ongoing')}
+                  >
+                    Ongoing ({ongoingProjects.length})
+                  </Button>
+                  <Button
+                    variant={cardSection === 'completed' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setCardSection('completed')}
+                  >
+                    Completed ({completedProjects.length})
+                  </Button>
+                  <Button
+                    variant={cardSection === 'cancelled' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setCardSection('cancelled')}
+                  >
+                    Cancelled ({cancelledProjects.length})
+                  </Button>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {(showArchivedToggles
+                  ? cardSection === 'completed'
+                    ? completedProjects
+                    : cardSection === 'cancelled'
+                      ? cancelledProjects
+                      : ongoingProjects
+                  : ongoingProjects
+                ).map((project) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    canChangeStatus={canChangeStatus}
+                    onChangeStatus={setStatusModalProject}
+                  />
+                ))}
+              </div>
             </div>
           )}
 
           {/* Table View */}
           {viewMode === 'table' && (
-            <div className="border border-border rounded-lg overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
-                      Project ID
-                    </th>
-                    <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
-                      Project Name
-                    </th>
-                    <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
-                      Assigned Person
-                    </th>
-                    <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
-                      Supervisor
-                    </th>
-                    <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
-                      Start Date
-                    </th>
-                    <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
-                      Est. End
-                    </th>
-                    <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {projects.map((project) => (
+            <div className="space-y-6">
+              {showArchivedToggles && (
+                <div className="flex items-center justify-between gap-3 border border-border rounded-lg p-1 w-fit">
+                  <Button
+                    variant={cardSection === 'ongoing' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setCardSection('ongoing')}
+                  >
+                    Ongoing ({ongoingProjects.length})
+                  </Button>
+                  <Button
+                    variant={cardSection === 'completed' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setCardSection('completed')}
+                  >
+                    Completed ({completedProjects.length})
+                  </Button>
+                  <Button
+                    variant={cardSection === 'cancelled' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setCardSection('cancelled')}
+                  >
+                    Cancelled ({cancelledProjects.length})
+                  </Button>
+                </div>
+              )}
+
+              <div className="border border-border rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
+                        Project ID
+                      </th>
+                      <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
+                        Project Name
+                      </th>
+                      <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
+                        Assigned Person
+                      </th>
+                      <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
+                        Supervisor
+                      </th>
+                      <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
+                        Start Date
+                      </th>
+                      <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
+                        Est. End
+                      </th>
+                      <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(showArchivedToggles
+                      ? cardSection === 'completed'
+                        ? completedProjects
+                        : cardSection === 'cancelled'
+                          ? cancelledProjects
+                          : ongoingProjects
+                      : ongoingProjects
+                    ).map((project) => (
                     <tr
                       key={project.id}
                       className="border-t border-border hover:bg-muted/50 cursor-pointer"
@@ -241,8 +324,9 @@ export default function ProjectsPage() {
                       </td>
                     </tr>
                   ))}
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 

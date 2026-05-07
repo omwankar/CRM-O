@@ -5,7 +5,7 @@ import { CheckCircle2, Clock, PauseCircle, XCircle, X } from 'lucide-react';
 import { ProjectStatusPill } from './ProjectStatusPill';
 
 interface StatusChangeModalProps {
-  currentStatus: 'Active' | 'Planned' | 'On Hold' | 'Closed';
+  currentStatus: 'Active' | 'Planned' | 'On Hold' | 'Closed' | 'Cancelled';
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (status: string, reason: string) => void;
@@ -32,8 +32,14 @@ const statusOptions = [
   },
   {
     value: 'Closed',
-    label: 'Closed',
-    description: 'Project has been completed or cancelled',
+    label: 'Completed',
+    description: 'Project has been completed',
+    icon: XCircle,
+  },
+  {
+    value: 'Cancelled',
+    label: 'Cancelled',
+    description: 'Project was cancelled',
     icon: XCircle,
   },
 ];

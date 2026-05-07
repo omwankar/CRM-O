@@ -18,6 +18,7 @@ export default function TasksPage() {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<Filters>({ page: 1, limit: 20 });
   const [viewMode, setViewMode] = useState<'table' | 'card'>('card');
+  const [cardSection, setCardSection] = useState<'ongoing' | 'completed' | 'cancelled'>('ongoing');
   const [statusModalTask, setStatusModalTask] = useState<Task | null>(null);
   const { user } = useCurrentUser();
   const [pagination, setPagination] = useState({
@@ -54,6 +55,13 @@ export default function TasksPage() {
   };
 
   const canChangeStatus = true;
+  const showArchivedToggles = !filters.status || filters.status === ('all' as any);
+
+  const ongoingTasks = showArchivedToggles
+    ? tasks.filter((t) => t.status !== 'Completed' && t.status !== 'Cancelled')
+    : tasks;
+  const completedTasks = showArchivedToggles ? tasks.filter((t) => t.status === 'Completed') : [];
+  const cancelledTasks = showArchivedToggles ? tasks.filter((t) => t.status === 'Cancelled') : [];
 
   const handleStatusChange = async (status: string, reason: string) => {
     if (!statusModalTask?.id) return;
@@ -98,7 +106,7 @@ export default function TasksPage() {
             <div key={i} className="surface-card p-5 animate-pulse rounded-lg" />
           ))}
         </div>
-      ) : tasks.length === 0 ? (
+      ) : ongoingTasks.length === 0 && completedTasks.length === 0 && cancelledTasks.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <LayoutGrid className="h-16 w-16 text-muted-foreground mb-4" />
           <h3 className="text-[18px] font-medium text-foreground mb-2">No tasks yet</h3>
@@ -124,36 +132,111 @@ export default function TasksPage() {
 
           {/* Card View */}
           {viewMode === 'card' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {tasks.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  canChangeStatus={canChangeStatus}
-                  onChangeStatus={setStatusModalTask}
-                />
-              ))}
+            <div className="space-y-6">
+              {showArchivedToggles && (
+                <div className="flex items-center justify-between gap-3 border border-border rounded-lg p-1 w-fit">
+                  <Button
+                    variant={cardSection === 'ongoing' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setCardSection('ongoing')}
+                  >
+                    Ongoing ({ongoingTasks.length})
+                  </Button>
+                  <Button
+                    variant={cardSection === 'completed' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setCardSection('completed')}
+                  >
+                    Completed ({completedTasks.length})
+                  </Button>
+                  <Button
+                    variant={cardSection === 'cancelled' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setCardSection('cancelled')}
+                  >
+                    Cancelled ({cancelledTasks.length})
+                  </Button>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {(showArchivedToggles
+                  ? cardSection === 'completed'
+                    ? completedTasks
+                    : cardSection === 'cancelled'
+                      ? cancelledTasks
+                      : ongoingTasks
+                  : ongoingTasks
+                ).map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    canChangeStatus={canChangeStatus}
+                    onChangeStatus={setStatusModalTask}
+                  />
+                ))}
+              </div>
             </div>
           )}
 
           {/* Table View */}
           {viewMode === 'table' && (
-            <div className="border border-border rounded-lg overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">Task ID</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">Title</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">Type</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">Assigned</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">Supervisor</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">Status</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">Due Date</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tasks.map((task) => (
+            <div className="space-y-6">
+              {showArchivedToggles && (
+                <div className="flex items-center justify-between gap-3 border border-border rounded-lg p-1 w-fit">
+                  <Button
+                    variant={cardSection === 'ongoing' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setCardSection('ongoing')}
+                  >
+                    Ongoing ({ongoingTasks.length})
+                  </Button>
+                  <Button
+                    variant={cardSection === 'completed' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setCardSection('completed')}
+                  >
+                    Completed ({completedTasks.length})
+                  </Button>
+                  <Button
+                    variant={cardSection === 'cancelled' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setCardSection('cancelled')}
+                  >
+                    Cancelled ({cancelledTasks.length})
+                  </Button>
+                </div>
+              )}
+
+              <div className="border border-border rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">Task ID</th>
+                      <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">Title</th>
+                      <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">Type</th>
+                      <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">Assigned</th>
+                      <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">Supervisor</th>
+                      <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">Status</th>
+                      <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">Due Date</th>
+                      <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(showArchivedToggles
+                      ? cardSection === 'completed'
+                        ? completedTasks
+                        : cardSection === 'cancelled'
+                          ? cancelledTasks
+                          : ongoingTasks
+                      : ongoingTasks
+                    ).map((task) => (
                     <tr
                       key={task.id}
                       className="border-t border-border hover:bg-muted/50 cursor-pointer"
@@ -187,8 +270,9 @@ export default function TasksPage() {
                       </td>
                     </tr>
                   ))}
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
