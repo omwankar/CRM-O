@@ -1,38 +1,39 @@
 import { apiRequest } from '@/lib/api/client';
 
-export async function getClockSessions() {
-  return apiRequest('/clock/sessions');
+async function sameOriginJson(path: string, init?: RequestInit) {
+  const res = await fetch(path, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(init?.headers || {}),
+    },
+    credentials: 'include',
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body?.error || 'Request failed');
+  return body;
 }
 
-export async function getCurrentSession() {
-  return apiRequest('/clock/sessions/current');
+// Employee clock in/out uses same-origin Next.js routes (works in production without NEXT_PUBLIC_API_URL).
+export async function getClockSessions(month?: string) {
+  const qs = month ? `?month=${encodeURIComponent(month)}` : '';
+  return sameOriginJson(`/api/clock/sessions${qs}`);
 }
 
-export async function clockIn(notes?: string) {
-  return apiRequest('/clock/clock-in', { method: 'POST', body: JSON.stringify({ notes }) });
+export async function clockIn() {
+  return sameOriginJson('/api/clock/clock-in', { method: 'POST' });
 }
 
-export async function clockOut(notes?: string) {
-  return apiRequest('/clock/clock-out', { method: 'POST', body: JSON.stringify({ notes }) });
-}
-
-export async function getMissedPunchRequests() {
-  return apiRequest('/clock/missed-punch-requests');
+export async function clockOut() {
+  return sameOriginJson('/api/clock/clock-out', { method: 'POST' });
 }
 
 export async function createMissedPunchRequest(data: { type: 'clock_in' | 'clock_out'; requested_at: string; reason?: string }) {
-  return apiRequest('/clock/missed-punch-requests', { method: 'POST', body: JSON.stringify(data) });
+  return sameOriginJson('/api/clock/missed-punch', { method: 'POST', body: JSON.stringify(data) });
 }
 
-export async function approveMissedPunch(id: string) {
-  return apiRequest(`/clock/missed-punch-requests/${id}/approve`, { method: 'PUT' });
-}
-
-export async function rejectMissedPunch(id: string) {
-  return apiRequest(`/clock/missed-punch-requests/${id}/reject`, { method: 'PUT' });
-}
-
-// Super Admin: Punch Request Management
+// Super Admin: Punch Request Management (kept on backend API)
 export async function getPunchRequests(params?: { status?: string; page?: number; limit?: number; search?: string }) {
   const query = new URLSearchParams();
   if (params?.status) query.append('status', params.status);

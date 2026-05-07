@@ -1,0 +1,96 @@
+import { apiRequest } from '@/lib/api/client';
+import type {
+  CreateQuotationInput,
+  Quotation,
+  QuotationStatus,
+  UpdateQuotationInput,
+  VendorQuote,
+} from '@/types/quotations';
+
+export async function getQuotations(filters?: {
+  status?: QuotationStatus;
+  project_id?: string;
+  enquiry_lead?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const params = new URLSearchParams();
+  if (filters?.status) params.append('status', filters.status);
+  if (filters?.project_id) params.append('project_id', filters.project_id);
+  if (filters?.enquiry_lead) params.append('enquiry_lead', filters.enquiry_lead);
+  if (filters?.search) params.append('search', filters.search);
+  if (filters?.page) params.append('page', String(filters.page));
+  if (filters?.limit) params.append('limit', String(filters.limit));
+  return apiRequest(`/quotations?${params.toString()}`);
+}
+
+export async function getQuotationById(id: string): Promise<Quotation> {
+  return apiRequest(`/quotations/${id}`);
+}
+
+export async function getQuotationStats(): Promise<{
+  total: number;
+  by_status: Record<QuotationStatus, number>;
+  overdue: number;
+  this_month: number;
+}> {
+  return apiRequest('/quotations/stats');
+}
+
+export async function createQuotation(data: CreateQuotationInput): Promise<Quotation> {
+  return apiRequest('/quotations', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateQuotation(id: string, data: UpdateQuotationInput): Promise<Quotation> {
+  return apiRequest(`/quotations/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteQuotation(id: string): Promise<void> {
+  await apiRequest(`/quotations/${id}`, { method: 'DELETE' });
+}
+
+export async function addVendorQuote(
+  quotation_id: string,
+  data: Omit<VendorQuote, 'id' | 'quotation_id' | 'created_at' | 'is_chosen'>
+) {
+  return apiRequest(`/quotations/${quotation_id}/vendor-quotes`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateVendorQuote(id: string, data: Partial<VendorQuote>) {
+  return apiRequest(`/quotations/vendor-quotes/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteVendorQuote(id: string) {
+  return apiRequest(`/quotations/vendor-quotes/${id}`, { method: 'DELETE' });
+}
+
+export async function chooseVendorQuote(quotation_id: string, vendor_quote_id: string) {
+  return apiRequest(`/quotations/${quotation_id}/choose-vendor-quote`, {
+    method: 'POST',
+    body: JSON.stringify({ vendor_quote_id }),
+  });
+}
+
+export async function addRevision(
+  quotation_id: string,
+  data: { revised_price: number; currency: string; notes: string }
+) {
+  return apiRequest(`/quotations/${quotation_id}/revisions`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+

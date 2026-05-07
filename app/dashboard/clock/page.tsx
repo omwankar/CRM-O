@@ -5,8 +5,8 @@ import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { getClockSessions, getCurrentSession, clockIn, clockOut, getMissedPunchRequests, createMissedPunchRequest } from '@/lib/api/clock';
-import { Clock3, Loader2, MinusCircle, PlusCircle, AlertCircle } from 'lucide-react';
+import { getClockSessions, clockIn, clockOut, createMissedPunchRequest } from '@/lib/api/clock';
+import { Clock3, Loader2, MinusCircle, PlusCircle } from 'lucide-react';
 
 function formatMonthKey(d: Date) {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
@@ -39,32 +39,19 @@ export default function ClockPage() {
 
   const { data: sessionsData, isLoading } = useQuery({
     queryKey: ['clock-sessions', monthKey],
-    queryFn: () => getClockSessions(),
-  });
-
-  const { data: currentSession } = useQuery({
-    queryKey: ['current-clock-session'],
-    queryFn: getCurrentSession,
-    refetchInterval: 30000,
-  });
-
-  const { data: missedPunches } = useQuery({
-    queryKey: ['missed-punch-requests'],
-    queryFn: getMissedPunchRequests,
+    queryFn: () => getClockSessions(monthKey),
   });
 
   const clockInMutation = useMutation({
-    mutationFn: (notes?: string) => clockIn(notes),
+    mutationFn: () => clockIn(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['current-clock-session'] });
       queryClient.invalidateQueries({ queryKey: ['clock-sessions'] });
     },
   });
 
   const clockOutMutation = useMutation({
-    mutationFn: (notes?: string) => clockOut(notes),
+    mutationFn: () => clockOut(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['current-clock-session'] });
       queryClient.invalidateQueries({ queryKey: ['clock-sessions'] });
     },
   });
@@ -72,13 +59,13 @@ export default function ClockPage() {
   const missedPunchMutation = useMutation({
     mutationFn: (data: { type: 'clock_in' | 'clock_out'; requested_at: string; reason?: string }) => createMissedPunchRequest(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['missed-punch-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['clock-sessions'] });
       setMissedReason('');
     },
   });
 
-  const sessions = sessionsData?.data || [];
-  const openSession = currentSession?.data || null;
+  const sessions = sessionsData?.sessions || [];
+  const openSession = sessionsData?.openSession || null;
 
   const totalHours = sessions.reduce((acc: number, s: any) => {
     if (s.clock_out && s.clock_in) {
@@ -89,7 +76,7 @@ export default function ClockPage() {
   }, 0);
 
   const workDays = new Set(sessions.map((s: any) => new Date(s.clock_in).toDateString())).size;
-  const missedPunchCount = missedPunches?.data?.length || 0;
+  const missedPunchCount = sessionsData?.summary?.missedPunchCount || 0;
 
   const submitMissedPunch = (e: React.FormEvent) => {
     e.preventDefault();

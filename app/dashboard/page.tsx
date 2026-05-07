@@ -22,6 +22,7 @@ import {
   FolderKanban,
   AlertTriangle,
   ArrowRight,
+  FileSearch,
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -48,6 +49,7 @@ export default function DashboardPage() {
     partnerships: 0,
     insurance: 0,
     documents: 0,
+    quotations: 0,
     alerts: 0,
     hoursToday: 0,
   };
@@ -67,6 +69,7 @@ export default function DashboardPage() {
     { name: 'Memberships', count: stats.memberships, icon: Users, href: '/dashboard/memberships', color: 'text-cyan-600', bg: 'bg-cyan-500/10' },
     { name: 'Partnerships', count: stats.partnerships, icon: Shield, href: '/dashboard/partnerships', color: 'text-rose-600', bg: 'bg-rose-500/10' },
     { name: 'Insurance', count: stats.insurance, icon: Shield, href: '/dashboard/insurance', color: 'text-indigo-600', bg: 'bg-indigo-500/10' },
+    { name: 'Quotations', count: stats.quotations, icon: FileSearch, href: '/dashboard/quotations', color: 'text-teal-600', bg: 'bg-teal-500/10' },
     { name: 'Documents', count: stats.documents, icon: FileText, href: '/dashboard/documents', color: 'text-gray-600', bg: 'bg-gray-500/10' },
   ];
 
