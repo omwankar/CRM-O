@@ -5,12 +5,14 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { getQuotations, getQuotationStats, deleteQuotation } from '@/lib/api/quotations';
+import { getQuotations, getQuotationStats, deleteQuotation, updateQuotation } from '@/lib/api/quotations';
 import { QuotationStatusBadge } from '@/components/quotations/QuotationStatusBadge';
 import { QuotationFilters, type QuotationFiltersState } from '@/components/quotations/QuotationFilters';
 import { Plus, FileText, Trash2, Pencil, Eye, LayoutGrid, Table } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { QuotationCard } from '@/components/quotations/QuotationCard';
+import { QuotationStatusChangeModal } from '@/components/quotations/QuotationStatusChangeModal';
+import type { Quotation, QuotationStatus } from '@/types/quotations';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +33,7 @@ export default function QuotationsPage() {
   const [page, setPage] = useState(1);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'card'>('card');
+  const [statusModalQuotation, setStatusModalQuotation] = useState<Quotation | null>(null);
 
   const { data: statsData } = useQuery({
     queryKey: ['quotation-stats'],
@@ -52,6 +55,14 @@ export default function QuotationsPage() {
     },
   });
 
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: QuotationStatus }) => updateQuotation(id, { status }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['quotations'] });
+      await qc.invalidateQueries({ queryKey: ['quotation-stats'] });
+    },
+  });
+
   const rows = data?.data || [];
   const totalPages = data?.totalPages || 0;
 
@@ -67,6 +78,7 @@ export default function QuotationsPage() {
   }, [statsData]);
 
   const canDelete = role === 'super_admin';
+  const canChangeStatus = role === 'super_admin' || role === 'admin';
 
   const deadlineTone = (deadline?: string | null) => {
     if (!deadline) return 'text-muted-foreground';
@@ -166,7 +178,12 @@ export default function QuotationsPage() {
           {viewMode === 'card' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {rows.map((q: any) => (
-                <QuotationCard key={q.id} quotation={q} />
+                <QuotationCard
+                  key={q.id}
+                  quotation={q}
+                  canChangeStatus={canChangeStatus}
+                  onChangeStatus={(qt) => setStatusModalQuotation(qt)}
+                />
               ))}
             </div>
           ) : (
@@ -199,12 +216,16 @@ export default function QuotationsPage() {
                         <QuotationStatusBadge status={q.status} />
                       </td>
                       <td className="px-4 py-3 text-sm text-foreground">{q.users?.full_name || '—'}</td>
-                      <td className="px-4 py-3 text-sm text-foreground">{q.projects?.project_name || '—'}</td>
+                      <td className="px-4 py-3 text-sm text-foreground">
+                        {q.projects?.project_name || q.standalone_project_name || '—'}
+                      </td>
                       <td className={`px-4 py-3 text-sm ${deadlineTone(q.deadline)}`}>
                         {q.deadline ? new Date(q.deadline).toLocaleDateString() : '—'}
                       </td>
                       <td className="px-4 py-3 text-sm font-medium tabular-nums">
-                        {(q.quotation_vendor_quotes || []).length}
+                        {typeof q.vendor_quotes_count === 'number'
+                          ? q.vendor_quotes_count
+                          : (q.quotation_vendor_quotes || []).length}
                       </td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
@@ -267,6 +288,17 @@ export default function QuotationsPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+      )}
+
+      {statusModalQuotation && (
+        <QuotationStatusChangeModal
+          isOpen={!!statusModalQuotation}
+          currentStatus={statusModalQuotation.status as QuotationStatus}
+          onClose={() => setStatusModalQuotation(null)}
+          onConfirm={async (status) => {
+            await statusMutation.mutateAsync({ id: statusModalQuotation.id, status });
+          }}
+        />
       )}
     </div>
   );

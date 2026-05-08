@@ -60,6 +60,7 @@ export interface Quotation {
   requirement: string;
   enquiry_lead?: string | null;
   project_id?: string | null;
+  standalone_project_name?: string | null;
   client_budget?: number | null;
   client_currency: string;
   client_price_notes?: string | null;
@@ -89,6 +90,7 @@ export interface CreateQuotationInput {
   status: QuotationStatus;
   enquiry_lead?: string;
   project_id?: string;
+  standalone_project_name?: string;
   client_budget?: number;
   client_currency?: string;
   client_price_notes?: string;

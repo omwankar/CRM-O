@@ -4,8 +4,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, Pencil, FileText, User2, CalendarDays, Briefcase, BadgeIndianRupee } from 'lucide-react';
-import { getQuotationById, addVendorQuote, updateVendorQuote, deleteVendorQuote, chooseVendorQuote } from '@/lib/api/quotations';
+import { ArrowLeft, Pencil, FileText, User2, CalendarDays, Briefcase, BadgeIndianRupee, Send, Edit3 } from 'lucide-react';
+import { getQuotationById, addVendorQuote, updateVendorQuote, deleteVendorQuote, chooseVendorQuote, updateQuotation } from '@/lib/api/quotations';
 import { QuotationStatusBadge } from '@/components/quotations/QuotationStatusBadge';
 import { VendorQuoteTable } from '@/components/quotations/VendorQuoteTable';
 import { VendorQuoteForm } from '@/components/quotations/VendorQuoteForm';
@@ -22,6 +22,17 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 function formatCurrency(amount?: number | null, currency?: string | null) {
   if (amount == null) return '—';
@@ -41,6 +52,12 @@ export default function QuotationDetailPage() {
   const [quoteSheetOpen, setQuoteSheetOpen] = useState(false);
   const [editingQuote, setEditingQuote] = useState<VendorQuote | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<VendorQuote | null>(null);
+  const [clarustoOpen, setClarustoOpen] = useState(false);
+  const [clarustoDraft, setClarustoDraft] = useState({
+    clarusto_final_price: '',
+    clarusto_final_currency: 'INR',
+    clarusto_final_notes: '',
+  });
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['quotation', id],
@@ -67,6 +84,11 @@ export default function QuotationDetailPage() {
 
   const chooseQuoteMutation = useMutation({
     mutationFn: (quoteId: string) => chooseVendorQuote(id, quoteId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['quotation', id] }),
+  });
+
+  const updateClarustoMutation = useMutation({
+    mutationFn: (payload: any) => updateQuotation(id, payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['quotation', id] }),
   });
 
@@ -129,8 +151,12 @@ export default function QuotationDetailPage() {
 
                 <div className="rounded-xl border border-border p-3 bg-background/30">
                   <p className="text-[11px] text-muted-foreground flex items-center gap-2">
-                    {q.projects?.id ? <Briefcase className="h-3.5 w-3.5" /> : <BadgeIndianRupee className="h-3.5 w-3.5" />}
-                    {q.projects?.id ? 'Project' : 'Client Budget'}
+                    {q.projects?.id || q.standalone_project_name ? (
+                      <Briefcase className="h-3.5 w-3.5" />
+                    ) : (
+                      <BadgeIndianRupee className="h-3.5 w-3.5" />
+                    )}
+                    {q.projects?.id || q.standalone_project_name ? 'Project' : 'Client Budget'}
                   </p>
                   <p className="text-sm font-medium text-foreground mt-1">
                     {q.projects?.id ? (
@@ -140,6 +166,8 @@ export default function QuotationDetailPage() {
                       >
                         {q.projects.project_name}
                       </button>
+                    ) : q.standalone_project_name ? (
+                      q.standalone_project_name
                     ) : (
                       formatCurrency(q.client_budget, q.client_currency)
                     )}
@@ -213,6 +241,36 @@ export default function QuotationDetailPage() {
                   <h3 className="text-base font-medium">Clarusto Final Quotation</h3>
                   <p className="text-xs text-muted-foreground">Internal final price & sent status</p>
                 </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setClarustoDraft({
+                        clarusto_final_price: q?.clarusto_final_price == null ? '' : String(q.clarusto_final_price),
+                        clarusto_final_currency: q?.clarusto_final_currency || 'INR',
+                        clarusto_final_notes: q?.clarusto_final_notes || '',
+                      });
+                      setClarustoOpen(true);
+                    }}
+                  >
+                    <Edit3 className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    disabled={!!q?.clarusto_quote_sent_at || updateClarustoMutation.isPending}
+                    onClick={async () => {
+                      await updateClarustoMutation.mutateAsync({
+                        clarusto_quote_sent_at: new Date().toISOString(),
+                      });
+                    }}
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    {q?.clarusto_quote_sent_at ? 'Sent' : 'Mark as Sent'}
+                  </Button>
+                </div>
               </div>
               <div className="grid grid-cols-1 gap-3">
                 <div className="rounded-xl border border-border bg-muted/20 p-4">
@@ -257,6 +315,82 @@ export default function QuotationDetailPage() {
           </div>
         </div>
       )}
+
+      <Dialog open={clarustoOpen} onOpenChange={setClarustoOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Clarusto Final Quotation</DialogTitle>
+            <DialogDescription>Set final price, currency, and notes.</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div>
+                <Label>Final Price</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  className="mt-2"
+                  value={clarustoDraft.clarusto_final_price}
+                  onChange={(e) =>
+                    setClarustoDraft((s) => ({ ...s, clarusto_final_price: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <Label>Currency</Label>
+                <select
+                  className="mt-2 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
+                  value={clarustoDraft.clarusto_final_currency}
+                  onChange={(e) =>
+                    setClarustoDraft((s) => ({ ...s, clarusto_final_currency: e.target.value }))
+                  }
+                >
+                  {['INR', 'USD', 'EUR', 'AED'].map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <Label>Notes</Label>
+              <Textarea
+                className="mt-2"
+                rows={4}
+                value={clarustoDraft.clarusto_final_notes}
+                onChange={(e) =>
+                  setClarustoDraft((s) => ({ ...s, clarusto_final_notes: e.target.value }))
+                }
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClarustoOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                await updateClarustoMutation.mutateAsync({
+                  clarusto_final_price:
+                    clarustoDraft.clarusto_final_price === ''
+                      ? null
+                      : Number(clarustoDraft.clarusto_final_price),
+                  clarusto_final_currency: clarustoDraft.clarusto_final_currency || 'INR',
+                  clarusto_final_notes: clarustoDraft.clarusto_final_notes || null,
+                });
+                setClarustoOpen(false);
+              }}
+              disabled={updateClarustoMutation.isPending}
+            >
+              {updateClarustoMutation.isPending ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <VendorQuoteForm
         open={quoteSheetOpen}

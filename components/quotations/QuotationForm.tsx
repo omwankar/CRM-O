@@ -35,6 +35,7 @@ const schema = z.object({
   enquiry_lead: z.string().optional(),
   mode: z.enum(['project', 'standalone']),
   project_id: z.string().optional(),
+  standalone_project_name: z.string().optional(),
   client_budget: z.coerce.number().optional(),
   client_currency: z.string().optional(),
   client_price_notes: z.string().optional(),
@@ -65,6 +66,7 @@ export function QuotationForm({
       enquiry_lead: quotation?.enquiry_lead || '',
       mode: isProject ? 'project' : 'standalone',
       project_id: quotation?.project_id || '',
+      standalone_project_name: quotation?.standalone_project_name || '',
       client_budget: quotation?.client_budget ?? undefined,
       client_currency: quotation?.client_currency || 'INR',
       client_price_notes: quotation?.client_price_notes || '',
@@ -102,6 +104,8 @@ export function QuotationForm({
       deadline: values.deadline || undefined,
       enquiry_lead: values.enquiry_lead || undefined,
       project_id: values.mode === 'project' ? values.project_id || undefined : undefined,
+      standalone_project_name:
+        values.mode === 'standalone' ? values.standalone_project_name?.trim() || undefined : undefined,
       client_budget: values.mode === 'standalone' ? values.client_budget : undefined,
       client_currency: values.mode === 'standalone' ? values.client_currency || 'INR' : undefined,
       client_price_notes: values.mode === 'standalone' ? values.client_price_notes || undefined : undefined,
@@ -285,6 +289,19 @@ export function QuotationForm({
             />
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="standalone_project_name"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Project Name (Standalone)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter project name..." value={field.value || ''} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="client_budget"

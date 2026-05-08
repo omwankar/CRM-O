@@ -2,7 +2,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { QuotationStatusBadge } from '@/components/quotations/QuotationStatusBadge';
-import type { Quotation } from '@/types/quotations';
+import type { Quotation, QuotationStatus } from '@/types/quotations';
 import { ChevronRight, Calendar, Users, Briefcase, Building2 } from 'lucide-react';
 
 function formatCurrency(amount?: number | null, currency?: string | null) {
@@ -14,11 +14,22 @@ function formatCurrency(amount?: number | null, currency?: string | null) {
   }
 }
 
-export function QuotationCard({ quotation }: { quotation: Quotation & any }) {
+export function QuotationCard({
+  quotation,
+  canChangeStatus,
+  onChangeStatus,
+}: {
+  quotation: Quotation & any;
+  canChangeStatus?: boolean;
+  onChangeStatus?: (q: Quotation) => void;
+}) {
   const router = useRouter();
 
   const requirement = String(quotation.requirement || '');
-  const vendorsCount = (quotation.quotation_vendor_quotes || []).length;
+  const vendorsCount =
+    typeof quotation.vendor_quotes_count === 'number'
+      ? quotation.vendor_quotes_count
+      : (quotation.quotation_vendor_quotes || []).length;
 
   return (
     <Card
@@ -33,7 +44,21 @@ export function QuotationCard({ quotation }: { quotation: Quotation & any }) {
             </h3>
             <code className="text-[11px] text-muted-foreground">{quotation.quotation_number}</code>
           </div>
-          <QuotationStatusBadge status={quotation.status} />
+          {canChangeStatus && onChangeStatus ? (
+            <button
+              type="button"
+              className="hover:opacity-80 transition-opacity"
+              onClick={(e) => {
+                e.stopPropagation();
+                onChangeStatus(quotation as any);
+              }}
+              title="Change status"
+            >
+              <QuotationStatusBadge status={quotation.status as QuotationStatus} />
+            </button>
+          ) : (
+            <QuotationStatusBadge status={quotation.status as QuotationStatus} />
+          )}
         </div>
 
         <div className="space-y-1">
@@ -43,7 +68,10 @@ export function QuotationCard({ quotation }: { quotation: Quotation & any }) {
           </p>
           <p className="text-[12px] text-muted-foreground flex items-center gap-2">
             <Briefcase className="h-3.5 w-3.5" />
-            <span>Project:</span> {quotation.projects?.project_name || (quotation.project_id ? 'Linked' : '—')}
+            <span>Project:</span>{' '}
+            {quotation.projects?.project_name ||
+              quotation.standalone_project_name ||
+              (quotation.project_id ? 'Linked' : '—')}
           </p>
           {!quotation.project_id && (
             <p className="text-[12px] text-muted-foreground flex items-center gap-2">
