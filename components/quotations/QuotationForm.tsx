@@ -23,14 +23,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { QUOTATION_STATUS_LABELS, type Quotation, type QuotationStatus } from '@/types/quotations';
+import {
+  ENQUIRY_STAGE_LABELS,
+  ENQUIRY_STAGES_ORDER,
+  normalizeEnquiryStage,
+  buildOutcomeString,
+  closureKindToCrmStatus,
+  type ClosureKind,
+  type EnquiryStage,
+  type Quotation,
+  type QuotationStatus,
+} from '@/types/quotations';
+import { ClosureOutcomePicker } from '@/components/quotations/ClosureOutcomePicker';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { getUsers } from '@/lib/api/users';
 import { getProjects } from '@/lib/api/projects';
 
+const enquiryStageSchema = z.enum(
+  ENQUIRY_STAGES_ORDER as [EnquiryStage, EnquiryStage, ...EnquiryStage[]],
+);
+
 const schema = z.object({
   requirement: z.string().min(10, 'Requirement must be at least 10 characters'),
-  status: z.custom<QuotationStatus>(),
+  enquiry_stage: enquiryStageSchema,
   deadline: z.string().optional(),
   enquiry_lead: z.string().optional(),
   mode: z.enum(['project', 'standalone']),
@@ -39,6 +54,8 @@ const schema = z.object({
   client_budget: z.coerce.number().optional(),
   client_currency: z.string().optional(),
   client_price_notes: z.string().optional(),
+  closure_kind: z.enum(['won', 'lost', 'closed']).optional(),
+  closure_detail: z.string().optional(),
 }).refine((v) => v.mode !== 'standalone' || (v.client_budget != null && !Number.isNaN(v.client_budget)), {
   path: ['client_budget'],
   message: 'Client budget is required for standalone quotations',
@@ -61,7 +78,7 @@ export function QuotationForm({
     const isProject = !!quotation?.project_id;
     return {
       requirement: quotation?.requirement || '',
-      status: (quotation?.status || 'waiting_from_companies') as QuotationStatus,
+      enquiry_stage: quotation ? normalizeEnquiryStage(quotation) : 'new_enquiry',
       deadline: quotation?.deadline || '',
       enquiry_lead: quotation?.enquiry_lead || '',
       mode: isProject ? 'project' : 'standalone',
@@ -70,6 +87,8 @@ export function QuotationForm({
       client_budget: quotation?.client_budget ?? undefined,
       client_currency: quotation?.client_currency || 'INR',
       client_price_notes: quotation?.client_price_notes || '',
+      closure_kind: undefined as ClosureKind | undefined,
+      closure_detail: '',
     };
   }, [quotation]);
 
@@ -79,6 +98,7 @@ export function QuotationForm({
   });
 
   const mode = form.watch('mode');
+  const enquiryStageWatch = form.watch('enquiry_stage');
 
   const loadUsers = async () => {
     const res = await getUsers({ limit: 200 });
@@ -98,9 +118,18 @@ export function QuotationForm({
 
   const submit = async (values: FormValues) => {
     if (!user?.id) throw new Error('Not authenticated');
-    const payload = {
+    const closingFresh =
+      values.enquiry_stage === 'won_lost_closed' &&
+      (!quotation?.id || normalizeEnquiryStage(quotation) !== 'won_lost_closed');
+
+    if (closingFresh && !values.closure_kind) {
+      alert('Choose Won, Lost, or Closed when the enquiry stage is set to Won / Lost / Closed.');
+      return;
+    }
+
+    const payload: Record<string, unknown> = {
       requirement: values.requirement,
-      status: values.status,
+      enquiry_stage: values.enquiry_stage,
       deadline: values.deadline || undefined,
       enquiry_lead: values.enquiry_lead || undefined,
       project_id: values.mode === 'project' ? values.project_id || undefined : undefined,
@@ -111,12 +140,22 @@ export function QuotationForm({
       client_price_notes: values.mode === 'standalone' ? values.client_price_notes || undefined : undefined,
     };
 
+    if (closingFresh && values.closure_kind) {
+      payload.outcome = buildOutcomeString(values.closure_kind, values.closure_detail);
+      payload.status = closureKindToCrmStatus(values.closure_kind);
+    }
+
+    delete payload.closure_kind;
+    delete payload.closure_detail;
+
     if (quotation?.id) {
       const { updateQuotation } = await import('@/lib/api/quotations');
-      await updateQuotation(quotation.id, payload);
+      await updateQuotation(quotation.id, payload as never);
     } else {
       const { createQuotation } = await import('@/lib/api/quotations');
-      await createQuotation(payload);
+      const CRM_DEFAULT: QuotationStatus = 'waiting_from_companies';
+      const status = (payload.status as QuotationStatus | undefined) || CRM_DEFAULT;
+      await createQuotation({ ...payload, status } as never);
     }
 
     onSuccess();
@@ -139,7 +178,7 @@ export function QuotationForm({
         <Card className="rounded-2xl border border-border bg-card p-6 space-y-6">
           <div>
             <h2 className="text-lg font-semibold">Basic Info</h2>
-            <p className="text-sm text-muted-foreground">Requirement, status and owner</p>
+            <p className="text-sm text-muted-foreground">Requirement, enquiry workflow stage, and owner</p>
           </div>
 
           <FormField
@@ -156,31 +195,93 @@ export function QuotationForm({
             )}
           />
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {mode === 'standalone' && (
             <FormField
               control={form.control}
-              name="status"
+              name="standalone_project_name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {(Object.keys(QUOTATION_STATUS_LABELS) as QuotationStatus[]).map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {QUOTATION_STATUS_LABELS[s]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Customer name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. company or site name" value={field.value ?? ''} onChange={field.onChange} onBlur={field.onBlur} name={field.name} ref={field.ref} />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    Shown on the quotation tracker and list cards. Required for standalone enquiries if you want it to appear in search.
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}
             />
+          )}
+
+          {mode === 'project' && (
+            <p className="text-sm text-muted-foreground rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2">
+              Customer name on the tracker comes from the <span className="font-medium text-foreground">project</span> you select below.
+            </p>
+          )}
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="enquiry_stage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Enquiry stage</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select stage" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="z-[120]">
+                      {ENQUIRY_STAGES_ORDER.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {ENQUIRY_STAGE_LABELS[s]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Same workflow as the quotation tracker stepper.</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {enquiryStageWatch === 'won_lost_closed' &&
+            (!quotation?.id || normalizeEnquiryStage(quotation) !== 'won_lost_closed') ? (
+              <div className="md:col-span-2 space-y-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 dark:bg-amber-950/20">
+                <p className="text-sm font-medium text-foreground">Closing this enquiry — pick the result</p>
+                <FormField
+                  control={form.control}
+                  name="closure_kind"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-muted-foreground">Won, lost, or closed?</FormLabel>
+                      <FormControl>
+                        <ClosureOutcomePicker
+                          value={(field.value as ClosureKind | undefined) || null}
+                          onChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="closure_detail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-muted-foreground">Details (optional)</FormLabel>
+                      <FormControl>
+                        <Textarea rows={2} placeholder="e.g. PO number, reason…" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            ) : null}
 
             <FormField
               control={form.control}
@@ -289,19 +390,6 @@ export function QuotationForm({
             />
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="standalone_project_name"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>Project Name (Standalone)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter project name..." value={field.value || ''} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <FormField
                 control={form.control}
                 name="client_budget"

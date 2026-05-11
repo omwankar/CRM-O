@@ -6,13 +6,14 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { getQuotations, getQuotationStats, deleteQuotation, updateQuotation } from '@/lib/api/quotations';
-import { QuotationStatusBadge } from '@/components/quotations/QuotationStatusBadge';
 import { QuotationFilters, type QuotationFiltersState } from '@/components/quotations/QuotationFilters';
 import { Plus, FileText, Trash2, Pencil, Eye, LayoutGrid, Table } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { QuotationCard } from '@/components/quotations/QuotationCard';
-import { QuotationStatusChangeModal } from '@/components/quotations/QuotationStatusChangeModal';
-import type { Quotation, QuotationStatus } from '@/types/quotations';
+import { EnquiryStageChangeModal } from '@/components/quotations/EnquiryStageChangeModal';
+import { EnquiryStageBadge } from '@/components/quotations/EnquiryStageBadge';
+import { PriorityBadge } from '@/components/quotations/PriorityBadge';
+import type { EnquiryStage, Quotation, QuotationStatus, UpdateQuotationInput } from '@/types/quotations';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,7 +34,7 @@ export default function QuotationsPage() {
   const [page, setPage] = useState(1);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'card'>('card');
-  const [statusModalQuotation, setStatusModalQuotation] = useState<Quotation | null>(null);
+  const [stageModalQuotation, setStageModalQuotation] = useState<Quotation | null>(null);
 
   const { data: statsData } = useQuery({
     queryKey: ['quotation-stats'],
@@ -55,11 +56,12 @@ export default function QuotationsPage() {
     },
   });
 
-  const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: QuotationStatus }) => updateQuotation(id, { status }),
-    onSuccess: async () => {
+  const enquiryStageMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateQuotationInput }) => updateQuotation(id, data),
+    onSuccess: async (_data, vars) => {
       await qc.invalidateQueries({ queryKey: ['quotations'] });
       await qc.invalidateQueries({ queryKey: ['quotation-stats'] });
+      await qc.invalidateQueries({ queryKey: ['quotation', vars.id] });
     },
   });
 
@@ -78,7 +80,7 @@ export default function QuotationsPage() {
   }, [statsData]);
 
   const canDelete = role === 'super_admin';
-  const canChangeStatus = role === 'super_admin' || role === 'admin';
+  const canChangeEnquiryStage = role === 'super_admin' || role === 'admin';
 
   const deadlineTone = (deadline?: string | null) => {
     if (!deadline) return 'text-muted-foreground';
@@ -181,8 +183,8 @@ export default function QuotationsPage() {
                 <QuotationCard
                   key={q.id}
                   quotation={q}
-                  canChangeStatus={canChangeStatus}
-                  onChangeStatus={(qt) => setStatusModalQuotation(qt)}
+                  canChangeEnquiryStage={canChangeEnquiryStage}
+                  onChangeEnquiryStage={(qt) => setStageModalQuotation(qt)}
                 />
               ))}
             </div>
@@ -193,7 +195,8 @@ export default function QuotationsPage() {
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-medium">QT Number</th>
                     <th className="px-4 py-3 text-left text-sm font-medium">Requirement</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Stage</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Priority</th>
                     <th className="px-4 py-3 text-left text-sm font-medium">Lead</th>
                     <th className="px-4 py-3 text-left text-sm font-medium">Project</th>
                     <th className="px-4 py-3 text-left text-sm font-medium">Deadline</th>
@@ -213,7 +216,10 @@ export default function QuotationsPage() {
                         {(q.requirement || '').length > 40 ? `${q.requirement.slice(0, 40)}…` : q.requirement}
                       </td>
                       <td className="px-4 py-3">
-                        <QuotationStatusBadge status={q.status} />
+                        <EnquiryStageBadge quotation={q} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <PriorityBadge priority={q.priority} />
                       </td>
                       <td className="px-4 py-3 text-sm text-foreground">{q.users?.full_name || '—'}</td>
                       <td className="px-4 py-3 text-sm text-foreground">
@@ -290,13 +296,13 @@ export default function QuotationsPage() {
         </AlertDialog>
       )}
 
-      {statusModalQuotation && (
-        <QuotationStatusChangeModal
-          isOpen={!!statusModalQuotation}
-          currentStatus={statusModalQuotation.status as QuotationStatus}
-          onClose={() => setStatusModalQuotation(null)}
-          onConfirm={async (status) => {
-            await statusMutation.mutateAsync({ id: statusModalQuotation.id, status });
+      {stageModalQuotation && (
+        <EnquiryStageChangeModal
+          isOpen={!!stageModalQuotation}
+          quotation={stageModalQuotation}
+          onClose={() => setStageModalQuotation(null)}
+          onConfirm={async (patch) => {
+            await enquiryStageMutation.mutateAsync({ id: stageModalQuotation.id, data: patch });
           }}
         />
       )}

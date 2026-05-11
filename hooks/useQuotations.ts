@@ -1,12 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CreateQuotationInput, UpdateQuotationInput } from '@/types/quotations';
+import type { CreateFollowupInput, CreateQuotationInput, UpdateFollowupInput, UpdateQuotationInput } from '@/types/quotations';
 import {
+  addFollowup,
   addRevision,
   chooseVendorQuote,
   createQuotation,
+  deleteFollowup,
   deleteQuotation,
+  getFollowups,
   getQuotationById,
   getQuotations,
+  updateFollowup,
   updateQuotation,
 } from '@/lib/api/quotations';
 
@@ -75,6 +79,49 @@ export function useAddRevision() {
       addRevision(quotation_id, data),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['quotation', vars.quotation_id] });
+    },
+  });
+}
+
+export function useQuotationFollowups(id: string) {
+  return useQuery({
+    queryKey: ['quotation-followups', id],
+    queryFn: () => getFollowups(id),
+    enabled: !!id,
+  });
+}
+
+export function useAddFollowup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ quotation_id, data }: { quotation_id: string; data: CreateFollowupInput }) =>
+      addFollowup(quotation_id, data),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['quotation', vars.quotation_id] });
+      qc.invalidateQueries({ queryKey: ['quotation-followups', vars.quotation_id] });
+    },
+  });
+}
+
+export function useUpdateFollowup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { followupId: string; quotationId: string; data: UpdateFollowupInput }) =>
+      updateFollowup(vars.followupId, vars.data),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['quotation', vars.quotationId] });
+      qc.invalidateQueries({ queryKey: ['quotation-followups', vars.quotationId] });
+    },
+  });
+}
+
+export function useDeleteFollowup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { followupId: string; quotationId: string }) => deleteFollowup(vars.followupId),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['quotation', vars.quotationId] });
+      qc.invalidateQueries({ queryKey: ['quotation-followups', vars.quotationId] });
     },
   });
 }

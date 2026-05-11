@@ -1,8 +1,9 @@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { QuotationStatusBadge } from '@/components/quotations/QuotationStatusBadge';
-import type { Quotation, QuotationStatus } from '@/types/quotations';
+import { EnquiryStageBadge } from '@/components/quotations/EnquiryStageBadge';
+import { PriorityBadge } from '@/components/quotations/PriorityBadge';
+import type { Quotation } from '@/types/quotations';
 import { ChevronRight, Calendar, Users, Briefcase, Building2 } from 'lucide-react';
 
 function formatCurrency(amount?: number | null, currency?: string | null) {
@@ -16,12 +17,12 @@ function formatCurrency(amount?: number | null, currency?: string | null) {
 
 export function QuotationCard({
   quotation,
-  canChangeStatus,
-  onChangeStatus,
+  canChangeEnquiryStage,
+  onChangeEnquiryStage,
 }: {
   quotation: Quotation & any;
-  canChangeStatus?: boolean;
-  onChangeStatus?: (q: Quotation) => void;
+  canChangeEnquiryStage?: boolean;
+  onChangeEnquiryStage?: (q: Quotation) => void;
 }) {
   const router = useRouter();
 
@@ -44,21 +45,24 @@ export function QuotationCard({
             </h3>
             <code className="text-[11px] text-muted-foreground">{quotation.quotation_number}</code>
           </div>
-          {canChangeStatus && onChangeStatus ? (
-            <button
-              type="button"
-              className="hover:opacity-80 transition-opacity"
-              onClick={(e) => {
-                e.stopPropagation();
-                onChangeStatus(quotation as any);
-              }}
-              title="Change status"
-            >
-              <QuotationStatusBadge status={quotation.status as QuotationStatus} />
-            </button>
-          ) : (
-            <QuotationStatusBadge status={quotation.status as QuotationStatus} />
-          )}
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            <PriorityBadge priority={quotation.priority} />
+            {canChangeEnquiryStage && onChangeEnquiryStage ? (
+              <button
+                type="button"
+                className="max-w-[min(100%,12rem)] text-right hover:opacity-80 transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChangeEnquiryStage(quotation as Quotation);
+                }}
+                title="Change enquiry stage"
+              >
+                <EnquiryStageBadge quotation={quotation} />
+              </button>
+            ) : (
+              <EnquiryStageBadge quotation={quotation} />
+            )}
+          </div>
         </div>
 
         <div className="space-y-1">
@@ -106,4 +110,3 @@ export function QuotationCard({
     </Card>
   );
 }
-

@@ -1,8 +1,11 @@
 import { apiRequest } from '@/lib/api/client';
 import type {
+  CreateFollowupInput,
   CreateQuotationInput,
   Quotation,
+  QuotationFollowup,
   QuotationStatus,
+  UpdateFollowupInput,
   UpdateQuotationInput,
   VendorQuote,
 } from '@/types/quotations';
@@ -92,5 +95,27 @@ export async function addRevision(
     method: 'POST',
     body: JSON.stringify(data),
   });
+}
+
+export async function getFollowups(quotationId: string): Promise<{ data: QuotationFollowup[] }> {
+  return apiRequest(`/quotations/${quotationId}/followups`);
+}
+
+export async function addFollowup(quotationId: string, data: CreateFollowupInput): Promise<QuotationFollowup> {
+  return apiRequest(`/quotations/${quotationId}/followups`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateFollowup(followupId: string, data: UpdateFollowupInput): Promise<QuotationFollowup> {
+  return apiRequest(`/quotations/followups/${followupId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteFollowup(followupId: string): Promise<void> {
+  await apiRequest(`/quotations/followups/${followupId}`, { method: 'DELETE' });
 }
 
