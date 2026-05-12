@@ -15,8 +15,8 @@ export default function NewQuotationPage() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">New Quotation</h1>
-          <p className="text-muted-foreground">Create a new quotation request</p>
+          <h1 className="text-3xl font-bold">New enquiry</h1>
+          <p className="text-muted-foreground">Create a new quotation enquiry</p>
         </div>
       </div>
 

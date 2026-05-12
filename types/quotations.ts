@@ -13,7 +13,8 @@ export type EnquiryStage =
   | 'preparing'
   | 'quote_sent'
   | 'follow_up'
-  | 'won_lost_closed';
+  | 'won_closed'
+  | 'lost_closed';
 
 export const ENQUIRY_STAGE_LABELS: Record<EnquiryStage, string> = {
   new_enquiry: 'New Enquiry',
@@ -21,7 +22,8 @@ export const ENQUIRY_STAGE_LABELS: Record<EnquiryStage, string> = {
   preparing: 'Preparing',
   quote_sent: 'Quote Sent',
   follow_up: 'Follow-up',
-  won_lost_closed: 'Won / Lost / Closed',
+  won_closed: 'Won & Closed',
+  lost_closed: 'Lost & Closed',
 };
 
 export const ENQUIRY_STAGES_ORDER: EnquiryStage[] = [
@@ -30,7 +32,8 @@ export const ENQUIRY_STAGES_ORDER: EnquiryStage[] = [
   'preparing',
   'quote_sent',
   'follow_up',
-  'won_lost_closed',
+  'won_closed',
+  'lost_closed',
 ];
 
 /** Badge colors aligned with the detail stepper / tracker UX */
@@ -40,8 +43,12 @@ export const ENQUIRY_STAGE_BADGE_CLASSES: Record<EnquiryStage, string> = {
   preparing: 'border border-violet-500/35 bg-violet-500/12 text-violet-900 dark:text-violet-200',
   quote_sent: 'border border-sky-500/35 bg-sky-500/12 text-sky-900 dark:text-sky-200',
   follow_up: 'border border-slate-500/35 bg-slate-500/12 text-slate-800 dark:text-slate-200',
-  won_lost_closed: 'border border-emerald-500/35 bg-emerald-500/12 text-emerald-900 dark:text-emerald-200',
+  won_closed: 'border border-emerald-500/35 bg-emerald-500/12 text-emerald-900 dark:text-emerald-200',
+  lost_closed: 'border border-red-500/35 bg-red-500/12 text-red-900 dark:text-red-200',
 };
+
+export const QUOTATION_CURRENCIES = ['INR', 'USD', 'EUR', 'AED', 'GBP'] as const;
+export type QuotationCurrency = (typeof QUOTATION_CURRENCIES)[number];
 
 export const PRIORITY_BADGE_CLASSES: Record<'low' | 'medium' | 'high', string> = {
   low: 'border border-zinc-400/40 bg-zinc-500/10 text-zinc-700 dark:text-zinc-300',
@@ -49,10 +56,32 @@ export const PRIORITY_BADGE_CLASSES: Record<'low' | 'medium' | 'high', string> =
   high: 'border border-red-500/40 bg-red-500/12 text-red-800 dark:text-red-200',
 };
 
-export function normalizeEnquiryStage(q: { enquiry_stage?: EnquiryStage | null } | null | undefined): EnquiryStage {
+export function normalizeEnquiryStage(
+  q: { enquiry_stage?: string | null; outcome?: string | null } | null | undefined,
+): EnquiryStage {
   const s = q?.enquiry_stage;
-  if (s && ENQUIRY_STAGES_ORDER.includes(s)) return s;
+  if (s === 'won_lost_closed') {
+    const kind = parseClosureKindFromOutcome(q?.outcome);
+    if (kind === 'lost' || kind === 'closed') return 'lost_closed';
+    return 'won_closed';
+  }
+  if (s && ENQUIRY_STAGES_ORDER.includes(s as EnquiryStage)) return s as EnquiryStage;
   return 'new_enquiry';
+}
+
+export function isTerminalEnquiryStage(stage: EnquiryStage): boolean {
+  return stage === 'won_closed' || stage === 'lost_closed';
+}
+
+export function closureKindForEnquiryStage(stage: EnquiryStage): ClosureKind | null {
+  if (stage === 'won_closed') return 'won';
+  if (stage === 'lost_closed') return 'lost';
+  return null;
+}
+
+export function enquiryStageForClosureKind(kind: ClosureKind): EnquiryStage {
+  if (kind === 'won') return 'won_closed';
+  return 'lost_closed';
 }
 
 /** How the enquiry ended once it reaches Won / Lost / Closed */
@@ -148,6 +177,7 @@ export interface QuotationRevision {
 export interface QuotationFollowup {
   id: string;
   quotation_id: string;
+  vendor_quote_id?: string | null;
   followup_date: string;
   method: FollowupMethod;
   customer_response?: string | null;
@@ -164,6 +194,7 @@ export interface CreateFollowupInput {
   customer_response?: string;
   next_followup_date?: string;
   reminder_status?: ReminderStatus;
+  vendor_quote_id?: string | null;
 }
 
 export interface UpdateFollowupInput extends Partial<CreateFollowupInput> {}

@@ -32,28 +32,42 @@ type Props = {
   followups: QuotationFollowup[];
   currentUserId?: string;
   isSuperAdmin?: boolean;
-  onAdd: () => void;
+  onAdd?: () => void;
   onEdit: (f: QuotationFollowup) => void;
   onDelete: (f: QuotationFollowup) => void;
+  emptyMessage?: string;
+  addHint?: string;
 };
 
-export function FollowUpTable({ followups, currentUserId, isSuperAdmin, onAdd, onEdit, onDelete }: Props) {
+export function FollowUpTable({
+  followups,
+  currentUserId,
+  isSuperAdmin,
+  onAdd,
+  onEdit,
+  onDelete,
+  emptyMessage = 'No follow-ups recorded yet.',
+  addHint,
+}: Props) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-base font-semibold">Follow-ups</h3>
-        <Button
-          size="sm"
-          variant="outline"
-          className="border-blue-600 bg-white font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-500 dark:bg-transparent dark:text-blue-400 dark:hover:bg-blue-950/30"
-          onClick={onAdd}
-        >
-          + Add Follow-up
-        </Button>
+        {onAdd ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-blue-600 bg-white font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-500 dark:bg-transparent dark:text-blue-400 dark:hover:bg-blue-950/30"
+            onClick={onAdd}
+          >
+            + Add Follow-up
+          </Button>
+        ) : null}
       </div>
+      {addHint ? <p className="text-xs text-muted-foreground">{addHint}</p> : null}
 
       {followups.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No follow-ups recorded yet.</p>
+        <p className="text-sm text-muted-foreground">{emptyMessage}</p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-zinc-200/90 bg-white dark:border-border dark:bg-card">
           <Table>

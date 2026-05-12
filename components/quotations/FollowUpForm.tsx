@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { CreateFollowupInput, QuotationFollowup, ReminderStatus } from '@/types/quotations';
+import { notifyQuotationError } from '@/lib/quotation-notify';
 
 const methods = ['Call', 'Email', 'Meeting'] as const;
 
@@ -67,6 +68,8 @@ export function FollowUpForm({ open, onOpenChange, initial, onSubmit }: Props) {
         reminder_status,
       });
       onOpenChange(false);
+    } catch (error) {
+      notifyQuotationError(error, 'Could not save this follow-up.');
     } finally {
       setSaving(false);
     }

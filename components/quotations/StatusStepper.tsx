@@ -9,7 +9,7 @@ function FutureStageIcon({ stage }: { stage: EnquiryStage }) {
   if (stage === 'follow_up') {
     return <Hourglass className="h-4 w-4 text-muted-foreground/80" strokeWidth={2} />;
   }
-  if (stage === 'won_lost_closed') {
+  if (stage === 'won_closed' || stage === 'lost_closed') {
     return <Flag className="h-4 w-4 text-muted-foreground/80" strokeWidth={2} />;
   }
   return <Circle className="h-3.5 w-3.5 text-muted-foreground/40" strokeWidth={2} />;
@@ -26,7 +26,7 @@ export function StatusStepper({ current, disabled, onStageChange }: Props) {
 
   return (
     <div className="w-full overflow-x-auto pb-1 pt-1">
-      <div className="flex min-w-[720px] items-start justify-between gap-0 px-1">
+      <div className="flex min-w-[840px] items-start justify-between gap-0 px-1">
         {ENQUIRY_STAGES_ORDER.map((stage, index) => {
           const completed = index < activeIndex;
           const active = index === activeIndex;

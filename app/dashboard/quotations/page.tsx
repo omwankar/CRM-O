@@ -13,7 +13,8 @@ import { QuotationCard } from '@/components/quotations/QuotationCard';
 import { EnquiryStageChangeModal } from '@/components/quotations/EnquiryStageChangeModal';
 import { EnquiryStageBadge } from '@/components/quotations/EnquiryStageBadge';
 import { PriorityBadge } from '@/components/quotations/PriorityBadge';
-import type { EnquiryStage, Quotation, QuotationStatus, UpdateQuotationInput } from '@/types/quotations';
+import type { Quotation, UpdateQuotationInput } from '@/types/quotations';
+import { notifyQuotationError } from '@/lib/quotation-notify';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,6 +55,7 @@ export default function QuotationsPage() {
       await qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
       setDeleteId(null);
     },
+    onError: (error) => notifyQuotationError(error, 'Could not delete this enquiry.'),
   });
 
   const enquiryStageMutation = useMutation({
@@ -70,7 +72,7 @@ export default function QuotationsPage() {
 
   const stats = useMemo(() => {
     const total = statsData?.total || 0;
-    const by = statsData?.by_status || {};
+    const by = (statsData?.by_status || {}) as Record<string, number>;
     return {
       total,
       waiting: by.waiting_from_companies || 0,
@@ -96,12 +98,12 @@ export default function QuotationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Quotations</h1>
-          <p className="text-muted-foreground">Track vendor quotes, revisions, and approvals</p>
+          <h1 className="text-3xl font-bold">Quotation tracker</h1>
+          <p className="text-muted-foreground">Track enquiries, vendor quotes, follow-ups, and outcomes</p>
         </div>
         <Button onClick={() => router.push('/dashboard/quotations/new')}>
           <Plus className="w-4 h-4 mr-2" />
-          New Quotation
+          New enquiry
         </Button>
       </div>
 

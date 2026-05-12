@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "dev:frontend": "next dev",
+    "dev": "next dev --webpack",
+    "dev:frontend": "next dev --webpack",
+    "dev:turbo": "next dev --turbopack",
     "dev:backend": "npm --prefix backend run dev",
     "dev:all": "concurrently -n frontend,backend -c blue,green \"npm run dev:frontend\" \"npm run dev:backend\"",
     "build": "next build",

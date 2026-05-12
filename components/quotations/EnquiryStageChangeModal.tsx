@@ -19,17 +19,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ClosureOutcomePicker } from '@/components/quotations/ClosureOutcomePicker';
 import {
   ENQUIRY_STAGE_LABELS,
   ENQUIRY_STAGES_ORDER,
   normalizeEnquiryStage,
+  isTerminalEnquiryStage,
+  closureKindForEnquiryStage,
   buildOutcomeString,
   closureKindToCrmStatus,
-  type ClosureKind,
   type EnquiryStage,
   type UpdateQuotationInput,
 } from '@/types/quotations';
+import { notifyQuotationError } from '@/lib/quotation-notify';
 
 export function EnquiryStageChangeModal({
   isOpen,
@@ -39,35 +40,43 @@ export function EnquiryStageChangeModal({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  quotation: { enquiry_stage?: EnquiryStage | null } | null;
+  quotation: { enquiry_stage?: EnquiryStage | null; outcome?: string | null } | null;
   onConfirm: (patch: UpdateQuotationInput) => Promise<void> | void;
 }) {
   const previousStage = normalizeEnquiryStage(quotation);
   const [stage, setStage] = useState<EnquiryStage>(previousStage);
-  const [closureKind, setClosureKind] = useState<ClosureKind | null>(null);
   const [closureDetail, setClosureDetail] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
     setStage(normalizeEnquiryStage(quotation));
-    setClosureKind(null);
     setClosureDetail('');
   }, [isOpen, quotation]);
 
-  const needsClosure = stage === 'won_lost_closed' && previousStage !== 'won_lost_closed';
+  const needsClosure =
+    isTerminalEnquiryStage(stage) && (!isTerminalEnquiryStage(previousStage) || stage !== previousStage);
 
   const save = async () => {
     const patch: UpdateQuotationInput = { enquiry_stage: stage };
     if (needsClosure) {
-      if (!closureKind) {
-        alert('Choose Won, Lost, or Closed before saving.');
+      const kind = closureKindForEnquiryStage(stage);
+      if (!kind) {
+        notifyQuotationError('Choose Won & Closed or Lost & Closed.');
         return;
       }
-      patch.outcome = buildOutcomeString(closureKind, closureDetail);
-      patch.status = closureKindToCrmStatus(closureKind);
+      patch.outcome = buildOutcomeString(kind, closureDetail);
+      patch.status = closureKindToCrmStatus(kind);
     }
-    await onConfirm(patch);
-    onClose();
+    setSaving(true);
+    try {
+      await onConfirm(patch);
+      onClose();
+    } catch (error) {
+      notifyQuotationError(error, 'Could not update enquiry stage.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -80,7 +89,7 @@ export function EnquiryStageChangeModal({
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Change enquiry stage</DialogTitle>
-          <DialogDescription>Same workflow as the quotation tracker. Closing an enquiry requires an outcome.</DialogDescription>
+          <DialogDescription>Same workflow as the quotation tracker. Closing requires an outcome.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -101,9 +110,8 @@ export function EnquiryStageChangeModal({
           </div>
 
           {needsClosure ? (
-            <div className="space-y-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 dark:bg-amber-950/20">
-              <p className="text-sm font-medium text-foreground">How did this enquiry end?</p>
-              <ClosureOutcomePicker value={closureKind} onChange={setClosureKind} />
+            <div className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 dark:bg-amber-950/20">
+              <p className="text-sm font-medium text-foreground">Outcome: {ENQUIRY_STAGE_LABELS[stage]}</p>
               <div>
                 <Label htmlFor="card-closure-detail" className="text-xs text-muted-foreground">
                   Details (optional)
@@ -122,11 +130,11 @@ export function EnquiryStageChangeModal({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button type="button" onClick={save}>
-            Update
+          <Button type="button" onClick={save} disabled={saving}>
+            {saving ? 'Updating…' : 'Update'}
           </Button>
         </DialogFooter>
       </DialogContent>

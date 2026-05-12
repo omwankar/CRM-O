@@ -15,6 +15,8 @@ export async function getQuotations(filters?: {
   project_id?: string;
   enquiry_lead?: string;
   search?: string;
+  from_deadline?: string;
+  to_deadline?: string;
   page?: number;
   limit?: number;
 }) {
@@ -23,6 +25,8 @@ export async function getQuotations(filters?: {
   if (filters?.project_id) params.append('project_id', filters.project_id);
   if (filters?.enquiry_lead) params.append('enquiry_lead', filters.enquiry_lead);
   if (filters?.search) params.append('search', filters.search);
+  if (filters?.from_deadline) params.append('from_deadline', filters.from_deadline);
+  if (filters?.to_deadline) params.append('to_deadline', filters.to_deadline);
   if (filters?.page) params.append('page', String(filters.page));
   if (filters?.limit) params.append('limit', String(filters.limit));
   return apiRequest(`/quotations?${params.toString()}`);
@@ -85,20 +89,6 @@ export async function chooseVendorQuote(quotation_id: string, vendor_quote_id: s
     method: 'POST',
     body: JSON.stringify({ vendor_quote_id }),
   });
-}
-
-export async function addRevision(
-  quotation_id: string,
-  data: { revised_price: number; currency: string; notes: string }
-) {
-  return apiRequest(`/quotations/${quotation_id}/revisions`, {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-}
-
-export async function getFollowups(quotationId: string): Promise<{ data: QuotationFollowup[] }> {
-  return apiRequest(`/quotations/${quotationId}/followups`);
 }
 
 export async function addFollowup(quotationId: string, data: CreateFollowupInput): Promise<QuotationFollowup> {

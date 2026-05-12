@@ -6,29 +6,23 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import {
   ArrowLeft,
-  Bell,
   Pencil,
-  Send,
-  Edit3,
   Search,
 } from 'lucide-react';
 import {
   addVendorQuote,
   updateVendorQuote,
   deleteVendorQuote,
-  updateQuotation,
 } from '@/lib/api/quotations';
 import type { EnquiryStage, Quotation, QuotationFollowup, UpdateQuotationInput, VendorQuote } from '@/types/quotations';
-import { normalizeEnquiryStage, buildOutcomeString, closureKindToCrmStatus } from '@/types/quotations';
+import { normalizeEnquiryStage, buildOutcomeString, closureKindToCrmStatus, isTerminalEnquiryStage, closureKindForEnquiryStage, enquiryStageForClosureKind } from '@/types/quotations';
 import { EnquiryOutcomeModal } from '@/components/quotations/EnquiryOutcomeModal';
+import { FinalizeQuotationModal } from '@/components/quotations/FinalizeQuotationModal';
 import { VendorQuoteTable } from '@/components/quotations/VendorQuoteTable';
-import { VendorQuoteForm } from '@/components/quotations/VendorQuoteForm';
+import { VendorQuoteDetailSection } from '@/components/quotations/VendorQuoteDetailSection';
 import { EnquiryInfoPanel } from '@/components/quotations/EnquiryInfoPanel';
-import { FollowUpTable } from '@/components/quotations/FollowUpTable';
 import { FollowUpForm } from '@/components/quotations/FollowUpForm';
 import { QuotationStatusBar } from '@/components/quotations/QuotationStatusBar';
 import {
@@ -40,6 +34,7 @@ import {
   useDeleteFollowup,
 } from '@/hooks/useQuotations';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { notifyQuotationError } from '@/lib/quotation-notify';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,23 +45,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-
-function formatCurrency(amount?: number | null, currency?: string | null) {
-  if (amount == null) return '—';
-  try {
-    return new Intl.NumberFormat(undefined, { style: 'currency', currency: currency || 'INR' }).format(amount);
-  } catch {
-    return String(amount);
-  }
-}
 
 export default function QuotationDetailPage() {
   const router = useRouter();
@@ -76,20 +54,16 @@ export default function QuotationDetailPage() {
   const { user, role } = useCurrentUser();
 
   const [searchQ, setSearchQ] = useState('');
-  const [quoteSheetOpen, setQuoteSheetOpen] = useState(false);
+  const [vendorDetailMode, setVendorDetailMode] = useState<'none' | 'add' | 'edit'>('none');
   const [editingQuote, setEditingQuote] = useState<VendorQuote | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<VendorQuote | null>(null);
-  const [clarustoOpen, setClarustoOpen] = useState(false);
-  const [clarustoDraft, setClarustoDraft] = useState({
-    clarusto_final_price: '',
-    clarusto_final_currency: 'INR',
-    clarusto_final_notes: '',
-  });
+  const [finalizeOpen, setFinalizeOpen] = useState(false);
   const [followupOpen, setFollowupOpen] = useState(false);
+  const [followupVendorQuoteId, setFollowupVendorQuoteId] = useState<string | null>(null);
   const [editingFollowup, setEditingFollowup] = useState<QuotationFollowup | null>(null);
   const [deleteFollowupTarget, setDeleteFollowupTarget] = useState<QuotationFollowup | null>(null);
   const [closureOpen, setClosureOpen] = useState(false);
-  const [closureAdjustOnly, setClosureAdjustOnly] = useState(false);
+  const [pendingClosureStage, setPendingClosureStage] = useState<EnquiryStage | null>(null);
 
   const { data: q, isLoading, error } = useQuotation(id || '');
 
@@ -102,26 +76,34 @@ export default function QuotationDetailPage() {
   const addQuoteMutation = useMutation({
     mutationFn: (payload: Record<string, unknown>) => addVendorQuote(id!, payload as never),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['quotation', id] }),
+    onError: (error) => notifyQuotationError(error, 'Could not save this company quotation.'),
   });
 
   const updateQuoteMutation = useMutation({
     mutationFn: ({ quoteId, payload }: { quoteId: string; payload: Record<string, unknown> }) =>
       updateVendorQuote(quoteId, payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['quotation', id] }),
+    onError: (error) => notifyQuotationError(error, 'Could not update this company quotation.'),
   });
 
   const deleteQuoteMutation = useMutation({
     mutationFn: (quoteId: string) => deleteVendorQuote(quoteId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['quotation', id] }),
-  });
-
-  const updateClarustoMutation = useMutation({
-    mutationFn: (payload: Record<string, unknown>) => updateQuotation(id!, payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['quotation', id] }),
+    onError: (error) => notifyQuotationError(error, 'Could not delete this company quotation.'),
   });
 
   const quotation = q as Quotation | undefined;
   const enquiryStage = useMemo(() => (quotation ? normalizeEnquiryStage(quotation) : 'new_enquiry'), [quotation]);
+
+  const chosenVendorQuote = useMemo(() => {
+    if (!quotation) return null;
+    const quotes = (quotation.quotation_vendor_quotes || []) as VendorQuote[];
+    return (
+      quotes.find((quote) => quote.id === quotation.chosen_quote_id) ||
+      quotes.find((quote) => quote.is_chosen) ||
+      null
+    );
+  }, [quotation]);
 
   const followups = quotation?.quotation_followups || [];
 
@@ -133,7 +115,7 @@ export default function QuotationDetailPage() {
 
   return (
     <div className="min-h-0 space-y-6 pb-8">
-      <header className="sticky top-0 z-40 -mx-6 border-b border-zinc-200/90 bg-white px-6 py-3.5 shadow-sm dark:border-border dark:bg-background">
+      <header className="border-b border-border bg-card py-3.5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <Button variant="ghost" size="icon" className="shrink-0 -ml-1" onClick={() => router.push('/dashboard/quotations')}>
@@ -154,16 +136,13 @@ export default function QuotationDetailPage() {
                 }}
               />
             </div>
-            <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0 text-zinc-600" aria-label="Notifications">
-              <Bell className="h-5 w-5" />
-            </Button>
             <Button
               type="button"
               size="sm"
               className="h-10 shrink-0 bg-blue-600 px-4 font-semibold text-white shadow-sm hover:bg-blue-700"
               onClick={() => router.push('/dashboard/quotations/new')}
             >
-              + Add Enquiry
+              + Add enquiry
             </Button>
             {id ? (
               <Button variant="outline" size="sm" className="h-10 shrink-0 border-zinc-300" onClick={() => router.push(`/dashboard/quotations/${id}/edit`)}>
@@ -199,27 +178,23 @@ export default function QuotationDetailPage() {
             }}
             onStageChange={async (stage) => {
               if (!id) return;
-              if (stage === 'won_lost_closed' && enquiryStage !== 'won_lost_closed') {
-                setClosureAdjustOnly(false);
+              if (isTerminalEnquiryStage(stage) && stage !== enquiryStage) {
+                setPendingClosureStage(stage);
                 setClosureOpen(true);
                 return;
               }
               await updateQuotationMut.mutateAsync({ id, data: { enquiry_stage: stage } });
             }}
-            onRequestCloseEnquiry={() => {
-              setClosureAdjustOnly(false);
-              setClosureOpen(true);
-            }}
-            onRequestAdjustOutcome={() => {
-              setClosureAdjustOnly(true);
-              setClosureOpen(true);
-            }}
           />
 
           <EnquiryOutcomeModal
             open={closureOpen}
-            onOpenChange={setClosureOpen}
-            adjustOnly={closureAdjustOnly}
+            onOpenChange={(open) => {
+              setClosureOpen(open);
+              if (!open) setPendingClosureStage(null);
+            }}
+            adjustOnly={false}
+            presetClosureKind={pendingClosureStage ? closureKindForEnquiryStage(pendingClosureStage) : null}
             currentOutcome={quotation.outcome}
             onConfirm={async (kind, detail) => {
               if (!id) return;
@@ -227,8 +202,10 @@ export default function QuotationDetailPage() {
                 outcome: buildOutcomeString(kind, detail),
                 status: closureKindToCrmStatus(kind),
               };
-              if (!closureAdjustOnly) {
-                data.enquiry_stage = 'won_lost_closed';
+              if (pendingClosureStage) {
+                data.enquiry_stage = pendingClosureStage;
+              } else {
+                data.enquiry_stage = enquiryStageForClosureKind(kind);
               }
               await updateQuotationMut.mutateAsync({ id, data });
             }}
@@ -238,203 +215,103 @@ export default function QuotationDetailPage() {
             <VendorQuoteTable
               quotes={(quotation.quotation_vendor_quotes || []) as VendorQuote[]}
               chosenQuoteId={quotation.chosen_quote_id}
+              selectedQuoteId={vendorDetailMode === 'edit' ? editingQuote?.id : null}
               onAdd={() => {
                 setEditingQuote(null);
-                setQuoteSheetOpen(true);
+                setVendorDetailMode('add');
               }}
               onEdit={(vq) => {
                 setEditingQuote(vq);
-                setQuoteSheetOpen(true);
+                setVendorDetailMode('edit');
               }}
               onDelete={(vq) => setDeleteTarget(vq)}
-              onChoose={(vq) => id && chooseQuoteMut.mutate({ quotation_id: id, vendor_quote_id: vq.id })}
-            />
-          </Card>
-
-          <Card className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm sm:p-5">
-            <FollowUpTable
-              followups={followups}
-              currentUserId={user?.id}
-              isSuperAdmin={role === 'super_admin'}
-              onAdd={() => {
-                setEditingFollowup(null);
-                setFollowupOpen(true);
+              onChoose={(vq) => {
+                if (!id || vq.id === quotation.chosen_quote_id || vq.is_chosen) return;
+                chooseQuoteMut.mutate({ quotation_id: id, vendor_quote_id: vq.id });
               }}
-              onEdit={(f) => {
-                setEditingFollowup(f);
-                setFollowupOpen(true);
-              }}
-              onDelete={(f) => setDeleteFollowupTarget(f)}
             />
-          </Card>
 
-          <Card className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm sm:p-5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0 space-y-0.5">
-                <h3 className="text-base font-semibold tracking-tight text-foreground">Clarusto Final Quotation</h3>
-                <p className="text-xs text-muted-foreground">Internal final price and sent status</p>
-              </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9"
-                  onClick={() => {
-                    setClarustoDraft({
-                      clarusto_final_price:
-                        quotation?.clarusto_final_price == null ? '' : String(quotation.clarusto_final_price),
-                      clarusto_final_currency: quotation?.clarusto_final_currency || 'INR',
-                      clarusto_final_notes: quotation?.clarusto_final_notes || '',
-                    });
-                    setClarustoOpen(true);
-                  }}
-                >
-                  <Edit3 className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="h-9"
-                  disabled={!!quotation?.clarusto_quote_sent_at || updateClarustoMutation.isPending}
-                  onClick={async () => {
-                    await updateClarustoMutation.mutateAsync({
-                      clarusto_quote_sent_at: new Date().toISOString(),
-                    });
-                  }}
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  {quotation?.clarusto_quote_sent_at ? 'Sent' : 'Mark as Sent'}
-                </Button>
-              </div>
-            </div>
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border border-border/50 bg-muted/10 px-3 py-3 sm:px-4">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Final price</p>
-                <p className="mt-1 text-lg font-semibold tabular-nums tracking-tight">
-                  {formatCurrency(quotation.clarusto_final_price, quotation.clarusto_final_currency)}
-                </p>
-              </div>
-              <div className="rounded-lg border border-border/50 bg-muted/10 px-3 py-3 sm:px-4">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Sent at</p>
-                <p className="mt-1 text-sm font-medium tabular-nums text-foreground">
-                  {quotation.clarusto_quote_sent_at
-                    ? new Date(quotation.clarusto_quote_sent_at).toLocaleString()
-                    : '—'}
-                </p>
-              </div>
-            </div>
-            {quotation.clarusto_final_notes ? (
-              <div className="mt-3 rounded-lg border border-border/50 bg-muted/10 px-3 py-3 sm:px-4">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Notes</p>
-                <p className="mt-1 text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                  {quotation.clarusto_final_notes}
-                </p>
-              </div>
+            {vendorDetailMode !== 'none' ? (
+              <VendorQuoteDetailSection
+                mode={vendorDetailMode === 'add' ? 'add' : 'edit'}
+                quotationId={id || undefined}
+                customerDisplayName={
+                  quotation?.projects?.project_name || quotation?.standalone_project_name || undefined
+                }
+                initial={editingQuote}
+                followups={followups}
+                currentUserId={user?.id}
+                isSuperAdmin={role === 'super_admin'}
+                onClose={() => {
+                  setVendorDetailMode('none');
+                  setEditingQuote(null);
+                }}
+                onSubmit={async (payload) => {
+                  if (!id) return;
+                  if (editingQuote?.id) {
+                    await updateQuoteMutation.mutateAsync({ quoteId: editingQuote.id, payload });
+                    return;
+                  }
+                  const created = (await addQuoteMutation.mutateAsync(payload)) as VendorQuote;
+                  setEditingQuote(created);
+                  setVendorDetailMode('edit');
+                }}
+                onAddFollowup={() => {
+                  if (!editingQuote?.id) return;
+                  setFollowupVendorQuoteId(editingQuote.id);
+                  setEditingFollowup(null);
+                  setFollowupOpen(true);
+                }}
+                onEditFollowup={(f) => {
+                  setFollowupVendorQuoteId(f.vendor_quote_id || editingQuote?.id || null);
+                  setEditingFollowup(f);
+                  setFollowupOpen(true);
+                }}
+                onDeleteFollowup={(f) => setDeleteFollowupTarget(f)}
+              />
             ) : null}
           </Card>
 
-          <QuotationStatusBar quotation={quotation} enquiryStage={enquiryStage} />
+          <QuotationStatusBar
+            quotation={quotation}
+            enquiryStage={enquiryStage}
+            chosenVendorQuote={chosenVendorQuote}
+            onFinalize={isTerminalEnquiryStage(enquiryStage) ? undefined : () => setFinalizeOpen(true)}
+            finalizeDisabled={!chosenVendorQuote || updateQuotationMut.isPending}
+          />
         </>
       )}
 
-      <Dialog open={clarustoOpen} onOpenChange={setClarustoOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Update Clarusto Final Quotation</DialogTitle>
-            <DialogDescription>Set final price, currency, and notes.</DialogDescription>
-          </DialogHeader>
-
-          <div className="grid grid-cols-1 gap-4">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <div>
-                <Label>Final Price</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  className="mt-2"
-                  value={clarustoDraft.clarusto_final_price}
-                  onChange={(e) =>
-                    setClarustoDraft((s) => ({ ...s, clarusto_final_price: e.target.value }))
-                  }
-                />
-              </div>
-              <div>
-                <Label>Currency</Label>
-                <select
-                  className="mt-2 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
-                  value={clarustoDraft.clarusto_final_currency}
-                  onChange={(e) =>
-                    setClarustoDraft((s) => ({ ...s, clarusto_final_currency: e.target.value }))
-                  }
-                >
-                  {['INR', 'USD', 'EUR', 'AED'].map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <Label>Notes</Label>
-              <Textarea
-                className="mt-2"
-                rows={4}
-                value={clarustoDraft.clarusto_final_notes}
-                onChange={(e) =>
-                  setClarustoDraft((s) => ({ ...s, clarusto_final_notes: e.target.value }))
-                }
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setClarustoOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={async () => {
-                await updateClarustoMutation.mutateAsync({
-                  clarusto_final_price:
-                    clarustoDraft.clarusto_final_price === ''
-                      ? null
-                      : Number(clarustoDraft.clarusto_final_price),
-                  clarusto_final_currency: clarustoDraft.clarusto_final_currency || 'INR',
-                  clarusto_final_notes: clarustoDraft.clarusto_final_notes || null,
-                });
-                setClarustoOpen(false);
-              }}
-              disabled={updateClarustoMutation.isPending}
-            >
-              {updateClarustoMutation.isPending ? 'Saving...' : 'Save'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <VendorQuoteForm
-        open={quoteSheetOpen}
-        onOpenChange={setQuoteSheetOpen}
-        quotationId={id || undefined}
-        customerDisplayName={
-          quotation?.projects?.project_name || quotation?.standalone_project_name || undefined
-        }
-        initial={editingQuote}
-        onSubmit={async (payload) => {
-          if (!id) return;
-          if (editingQuote?.id) {
-            await updateQuoteMutation.mutateAsync({ quoteId: editingQuote.id, payload });
-          } else {
-            await addQuoteMutation.mutateAsync(payload);
-          }
+      <FinalizeQuotationModal
+        open={finalizeOpen}
+        onOpenChange={setFinalizeOpen}
+        defaultSendPrice={quotation?.revised_price ?? chosenVendorQuote?.quoted_price ?? null}
+        defaultSendCurrency={quotation?.revised_currency ?? chosenVendorQuote?.currency ?? 'INR'}
+        onConfirm={async ({ kind, detail, sendPrice, sendCurrency }) => {
+          if (!id || !chosenVendorQuote) return;
+          const data: UpdateQuotationInput = {
+            outcome: buildOutcomeString(kind, detail),
+            status: closureKindToCrmStatus(kind),
+            enquiry_stage: enquiryStageForClosureKind(kind),
+            revised_price: sendPrice,
+            revised_currency: sendCurrency,
+            clarusto_final_price: chosenVendorQuote.quoted_price ?? undefined,
+            clarusto_final_currency: chosenVendorQuote.currency || 'INR',
+            clarusto_quote_sent_at: new Date().toISOString(),
+          };
+          await updateQuotationMut.mutateAsync({ id, data });
         }}
       />
 
       <FollowUpForm
         open={followupOpen}
-        onOpenChange={setFollowupOpen}
+        onOpenChange={(open) => {
+          setFollowupOpen(open);
+          if (!open) {
+            setEditingFollowup(null);
+            setFollowupVendorQuoteId(null);
+          }
+        }}
         initial={editingFollowup}
         onSubmit={async (data) => {
           if (!id) return;
@@ -444,9 +321,13 @@ export default function QuotationDetailPage() {
               quotationId: id,
               data,
             });
-          } else {
-            await addFollowupMut.mutateAsync({ quotation_id: id, data });
+            return;
           }
+          if (!followupVendorQuoteId) return;
+          await addFollowupMut.mutateAsync({
+            quotation_id: id,
+            data: { ...data, vendor_quote_id: followupVendorQuoteId },
+          });
         }}
       />
 

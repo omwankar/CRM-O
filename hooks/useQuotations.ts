@@ -1,42 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CreateFollowupInput, CreateQuotationInput, UpdateFollowupInput, UpdateQuotationInput } from '@/types/quotations';
+import type { CreateFollowupInput, Quotation, UpdateFollowupInput, UpdateQuotationInput } from '@/types/quotations';
 import {
   addFollowup,
-  addRevision,
   chooseVendorQuote,
-  createQuotation,
   deleteFollowup,
-  deleteQuotation,
-  getFollowups,
   getQuotationById,
-  getQuotations,
   updateFollowup,
   updateQuotation,
 } from '@/lib/api/quotations';
-
-export function useQuotations(filters?: Parameters<typeof getQuotations>[0]) {
-  return useQuery({
-    queryKey: ['quotations', filters],
-    queryFn: () => getQuotations(filters),
-  });
-}
+import { notifyQuotationError } from '@/lib/quotation-notify';
 
 export function useQuotation(id: string) {
   return useQuery({
     queryKey: ['quotation', id],
     queryFn: () => getQuotationById(id),
     enabled: !!id,
-  });
-}
-
-export function useCreateQuotation() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: CreateQuotationInput) => createQuotation(data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['quotations'] });
-      qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
-    },
   });
 }
 
@@ -47,17 +25,9 @@ export function useUpdateQuotation() {
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['quotations'] });
       qc.invalidateQueries({ queryKey: ['quotation', vars.id] });
+      qc.invalidateQueries({ queryKey: ['quotation-stats'] });
     },
-  });
-}
-
-export function useDeleteQuotation() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => deleteQuotation(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['quotations'] });
-    },
+    onError: (error) => notifyQuotationError(error, 'Could not update this enquiry.'),
   });
 }
 
@@ -66,28 +36,42 @@ export function useChooseVendorQuote() {
   return useMutation({
     mutationFn: ({ quotation_id, vendor_quote_id }: { quotation_id: string; vendor_quote_id: string }) =>
       chooseVendorQuote(quotation_id, vendor_quote_id),
-    onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: ['quotation', vars.quotation_id] });
+    onMutate: async (vars) => {
+      await qc.cancelQueries({ queryKey: ['quotation', vars.quotation_id] });
+      const previous = qc.getQueryData<Quotation>(['quotation', vars.quotation_id]);
+      if (previous) {
+        qc.setQueryData<Quotation>(['quotation', vars.quotation_id], {
+          ...previous,
+          chosen_quote_id: vars.vendor_quote_id,
+          quotation_vendor_quotes: (previous.quotation_vendor_quotes || []).map((quote) => ({
+            ...quote,
+            is_chosen: quote.id === vars.vendor_quote_id,
+            quote_line_status: quote.id === vars.vendor_quote_id ? 'finalised' : quote.quote_line_status,
+          })),
+        });
+      }
+      return { previous };
     },
-  });
-}
-
-export function useAddRevision() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ quotation_id, data }: { quotation_id: string; data: { revised_price: number; currency: string; notes: string } }) =>
-      addRevision(quotation_id, data),
-    onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: ['quotation', vars.quotation_id] });
+    onSuccess: (data, vars) => {
+      qc.setQueryData<Quotation | undefined>(['quotation', vars.quotation_id], (current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          ...data,
+          quotation_vendor_quotes: (current.quotation_vendor_quotes || []).map((quote) => ({
+            ...quote,
+            is_chosen: quote.id === vars.vendor_quote_id,
+            quote_line_status: quote.id === vars.vendor_quote_id ? 'finalised' : quote.quote_line_status,
+          })),
+        };
+      });
     },
-  });
-}
-
-export function useQuotationFollowups(id: string) {
-  return useQuery({
-    queryKey: ['quotation-followups', id],
-    queryFn: () => getFollowups(id),
-    enabled: !!id,
+    onError: (error, vars, context) => {
+      if (context?.previous) {
+        qc.setQueryData(['quotation', vars.quotation_id], context.previous);
+      }
+      notifyQuotationError(error, 'Could not update the final vendor selection.');
+    },
   });
 }
 
@@ -98,8 +82,8 @@ export function useAddFollowup() {
       addFollowup(quotation_id, data),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['quotation', vars.quotation_id] });
-      qc.invalidateQueries({ queryKey: ['quotation-followups', vars.quotation_id] });
     },
+    onError: (error) => notifyQuotationError(error, 'Could not save this follow-up.'),
   });
 }
 
@@ -110,8 +94,8 @@ export function useUpdateFollowup() {
       updateFollowup(vars.followupId, vars.data),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['quotation', vars.quotationId] });
-      qc.invalidateQueries({ queryKey: ['quotation-followups', vars.quotationId] });
     },
+    onError: (error) => notifyQuotationError(error, 'Could not update this follow-up.'),
   });
 }
 
@@ -121,8 +105,7 @@ export function useDeleteFollowup() {
     mutationFn: (vars: { followupId: string; quotationId: string }) => deleteFollowup(vars.followupId),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['quotation', vars.quotationId] });
-      qc.invalidateQueries({ queryKey: ['quotation-followups', vars.quotationId] });
     },
+    onError: (error) => notifyQuotationError(error, 'Could not delete this follow-up.'),
   });
 }
-

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
@@ -29,15 +30,18 @@ import {
   normalizeEnquiryStage,
   buildOutcomeString,
   closureKindToCrmStatus,
+  isTerminalEnquiryStage,
+  closureKindForEnquiryStage,
+  QUOTATION_CURRENCIES,
   type ClosureKind,
   type EnquiryStage,
   type Quotation,
   type QuotationStatus,
 } from '@/types/quotations';
-import { ClosureOutcomePicker } from '@/components/quotations/ClosureOutcomePicker';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { getUsers } from '@/lib/api/users';
 import { getProjects } from '@/lib/api/projects';
+import { notifyQuotationError } from '@/lib/quotation-notify';
 
 const enquiryStageSchema = z.enum(
   ENQUIRY_STAGES_ORDER as [EnquiryStage, EnquiryStage, ...EnquiryStage[]],
@@ -71,6 +75,7 @@ export function QuotationForm({
   onSuccess: () => void;
 }) {
   const { user } = useCurrentUser();
+  const qc = useQueryClient();
   const [users, setUsers] = useState<Array<{ id: string; full_name: string | null; email: string }>>([]);
   const [projects, setProjectsList] = useState<Array<{ id: string; project_name: string; project_id: string }>>([]);
 
@@ -101,13 +106,21 @@ export function QuotationForm({
   const enquiryStageWatch = form.watch('enquiry_stage');
 
   const loadUsers = async () => {
-    const res = await getUsers({ limit: 200 });
-    setUsers(res.data || []);
+    try {
+      const res = await getUsers({ limit: 200 });
+      setUsers(res.data || []);
+    } catch (error) {
+      notifyQuotationError(error, 'Could not load users.');
+    }
   };
 
   const loadProjects = async () => {
-    const res = await getProjects({ limit: 50 });
-    setProjectsList(res.projects || []);
+    try {
+      const res = await getProjects({ limit: 50 });
+      setProjectsList(res.projects || []);
+    } catch (error) {
+      notifyQuotationError(error, 'Could not load projects.');
+    }
   };
 
   // Lazy load when field is focused (keeps this component lightweight)
@@ -119,13 +132,8 @@ export function QuotationForm({
   const submit = async (values: FormValues) => {
     if (!user?.id) throw new Error('Not authenticated');
     const closingFresh =
-      values.enquiry_stage === 'won_lost_closed' &&
-      (!quotation?.id || normalizeEnquiryStage(quotation) !== 'won_lost_closed');
-
-    if (closingFresh && !values.closure_kind) {
-      alert('Choose Won, Lost, or Closed when the enquiry stage is set to Won / Lost / Closed.');
-      return;
-    }
+      isTerminalEnquiryStage(values.enquiry_stage) &&
+      (!quotation?.id || !isTerminalEnquiryStage(normalizeEnquiryStage(quotation)));
 
     const payload: Record<string, unknown> = {
       requirement: values.requirement,
@@ -140,9 +148,14 @@ export function QuotationForm({
       client_price_notes: values.mode === 'standalone' ? values.client_price_notes || undefined : undefined,
     };
 
-    if (closingFresh && values.closure_kind) {
-      payload.outcome = buildOutcomeString(values.closure_kind, values.closure_detail);
-      payload.status = closureKindToCrmStatus(values.closure_kind);
+    if (closingFresh) {
+      const kind = closureKindForEnquiryStage(values.enquiry_stage);
+      if (!kind) {
+        notifyQuotationError('Choose Won & Closed or Lost & Closed for the enquiry stage.');
+        return;
+      }
+      payload.outcome = buildOutcomeString(kind, values.closure_detail);
+      payload.status = closureKindToCrmStatus(kind);
     }
 
     delete payload.closure_kind;
@@ -151,11 +164,17 @@ export function QuotationForm({
     if (quotation?.id) {
       const { updateQuotation } = await import('@/lib/api/quotations');
       await updateQuotation(quotation.id, payload as never);
+      await qc.invalidateQueries({ queryKey: ['quotations'] });
+      await qc.invalidateQueries({ queryKey: ['quotation-stats'] });
+      await qc.invalidateQueries({ queryKey: ['quotation', quotation.id] });
     } else {
       const { createQuotation } = await import('@/lib/api/quotations');
       const CRM_DEFAULT: QuotationStatus = 'waiting_from_companies';
       const status = (payload.status as QuotationStatus | undefined) || CRM_DEFAULT;
       await createQuotation({ ...payload, status } as never);
+      await qc.invalidateQueries({ queryKey: ['quotations'] });
+      await qc.invalidateQueries({ queryKey: ['quotation-stats'] });
+      await qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
     }
 
     onSuccess();
@@ -168,9 +187,7 @@ export function QuotationForm({
           try {
             await submit(v);
           } catch (e) {
-            // eslint-disable-next-line no-console
-            console.error(e);
-            alert('Failed to save quotation. Please try again.');
+            notifyQuotationError(e, 'Failed to save quotation. Please try again.');
           }
         })}
         className="space-y-6"
@@ -247,26 +264,12 @@ export function QuotationForm({
               )}
             />
 
-            {enquiryStageWatch === 'won_lost_closed' &&
-            (!quotation?.id || normalizeEnquiryStage(quotation) !== 'won_lost_closed') ? (
+            {isTerminalEnquiryStage(enquiryStageWatch) &&
+            (!quotation?.id || !isTerminalEnquiryStage(normalizeEnquiryStage(quotation))) ? (
               <div className="md:col-span-2 space-y-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 dark:bg-amber-950/20">
-                <p className="text-sm font-medium text-foreground">Closing this enquiry — pick the result</p>
-                <FormField
-                  control={form.control}
-                  name="closure_kind"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-muted-foreground">Won, lost, or closed?</FormLabel>
-                      <FormControl>
-                        <ClosureOutcomePicker
-                          value={(field.value as ClosureKind | undefined) || null}
-                          onChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <p className="text-sm font-medium text-foreground">
+                  Closing outcome: {ENQUIRY_STAGE_LABELS[enquiryStageWatch]}
+                </p>
                 <FormField
                   control={form.control}
                   name="closure_detail"
@@ -422,7 +425,7 @@ export function QuotationForm({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {['INR', 'USD', 'EUR', 'AED'].map((c) => (
+                        {QUOTATION_CURRENCIES.map((c) => (
                           <SelectItem key={c} value={c}>
                             {c}
                           </SelectItem>

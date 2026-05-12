@@ -4,9 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { CalendarDays } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { QuotationOutcomeBadge } from '@/components/quotations/QuotationOutcomeBadge';
 import {
   Select,
   SelectContent,
@@ -15,6 +12,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { EnquiryStage, Quotation, UpdateQuotationInput } from '@/types/quotations';
+import { PRIORITY_BADGE_CLASSES } from '@/types/quotations';
+import { PriorityBadge } from '@/components/quotations/PriorityBadge';
 import { StatusStepper } from '@/components/quotations/StatusStepper';
 import { cn } from '@/lib/utils';
 import { getUsers } from '@/lib/api/users';
@@ -40,10 +39,6 @@ type Props = {
   isSaving?: boolean;
   onPatch: (data: UpdateQuotationInput) => Promise<void>;
   onStageChange?: (stage: EnquiryStage) => void;
-  /** Opens closure dialog (sets stage + outcome) without using the stepper */
-  onRequestCloseEnquiry?: () => void;
-  /** Opens closure dialog to change Won/Lost/Closed outcome only */
-  onRequestAdjustOutcome?: () => void;
 };
 
 export function EnquiryInfoPanel({
@@ -52,8 +47,6 @@ export function EnquiryInfoPanel({
   isSaving,
   onPatch,
   onStageChange,
-  onRequestCloseEnquiry,
-  onRequestAdjustOutcome,
 }: Props) {
   const pending = !!isSaving;
 
@@ -104,33 +97,7 @@ export function EnquiryInfoPanel({
   const contactLine = contactParts.length ? contactParts.join(' | ') : '—';
 
   const priorityValue = quotation.priority || 'medium';
-
-  const [finalPrice, setFinalPrice] = useState('');
-  const [finalCur, setFinalCur] = useState('INR');
-  const [sendPrice, setSendPrice] = useState('');
-  const [sendCur, setSendCur] = useState('INR');
-  useEffect(() => {
-    setFinalPrice(
-      quotation.clarusto_final_price == null || Number.isNaN(Number(quotation.clarusto_final_price))
-        ? ''
-        : String(quotation.clarusto_final_price),
-    );
-    setFinalCur(quotation.clarusto_final_currency || 'INR');
-    setSendPrice(
-      quotation.revised_price == null || Number.isNaN(Number(quotation.revised_price))
-        ? ''
-        : String(quotation.revised_price),
-    );
-    setSendCur(quotation.revised_currency || 'INR');
-  }, [
-    quotation.id,
-    quotation.clarusto_final_price,
-    quotation.clarusto_final_currency,
-    quotation.revised_price,
-    quotation.revised_currency,
-  ]);
-
-  const curOpts = ['INR', 'USD', 'EUR', 'AED'] as const;
+  const priorityKey = priorityValue === 'low' || priorityValue === 'high' ? priorityValue : 'medium';
 
   return (
     <Card className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-card shadow-sm dark:border-border">
@@ -203,23 +170,31 @@ export function EnquiryInfoPanel({
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:col-span-5 lg:grid-cols-1 lg:gap-5">
               <div>
-                <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Priority</p>
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Priority</p>
+                  <PriorityBadge priority={priorityKey} />
+                </div>
                 <Select
                   value={priorityValue}
                   disabled={pending}
                   onValueChange={(v) => void onPatch({ priority: v as 'low' | 'medium' | 'high' })}
                 >
-                  <SelectTrigger className="h-10 w-full rounded-lg border-input bg-background font-medium capitalize shadow-sm">
+                  <SelectTrigger
+                    className={cn(
+                      'h-10 w-full rounded-lg font-semibold capitalize shadow-sm',
+                      PRIORITY_BADGE_CLASSES[priorityKey],
+                    )}
+                  >
                     <SelectValue placeholder="Priority" />
                   </SelectTrigger>
                   <SelectContent className="z-[100]">
-                    <SelectItem value="low" className="font-medium">
+                    <SelectItem value="low" className={cn('font-semibold capitalize', PRIORITY_BADGE_CLASSES.low)}>
                       Low
                     </SelectItem>
-                    <SelectItem value="medium" className="font-medium">
+                    <SelectItem value="medium" className={cn('font-semibold capitalize', PRIORITY_BADGE_CLASSES.medium)}>
                       Medium
                     </SelectItem>
-                    <SelectItem value="high" className="font-medium">
+                    <SelectItem value="high" className={cn('font-semibold capitalize', PRIORITY_BADGE_CLASSES.high)}>
                       High
                     </SelectItem>
                   </SelectContent>
@@ -265,131 +240,6 @@ export function EnquiryInfoPanel({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="border-t border-border/80 px-5 py-4">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Pricing & outcome</p>
-          <p className="mb-3 text-xs text-muted-foreground">
-            Final price and send price are saved to this enquiry (same as Clarusto final and revised send price). Outcome is
-            chosen when you close the enquiry from the stepper, list card, or the button below.
-          </p>
-
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Outcome</span>
-            <QuotationOutcomeBadge outcome={quotation.outcome} />
-            {enquiryStage === 'won_lost_closed' ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8"
-                disabled={pending || !onRequestAdjustOutcome}
-                onClick={() => onRequestAdjustOutcome?.()}
-              >
-                Change outcome
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8"
-                disabled={pending || !onRequestCloseEnquiry}
-                onClick={() => onRequestCloseEnquiry?.()}
-              >
-                Close enquiry…
-              </Button>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <Label htmlFor="q-final-price" className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                Final price (internal)
-              </Label>
-              <div className="mt-1.5 flex gap-2">
-                <Input
-                  id="q-final-price"
-                  type="number"
-                  step="0.01"
-                  disabled={pending}
-                  className="h-10 min-w-0 flex-1 rounded-lg border-input bg-background font-medium tabular-nums shadow-sm"
-                  value={finalPrice}
-                  onChange={(e) => setFinalPrice(e.target.value)}
-                  onBlur={() => {
-                    const raw = finalPrice.trim();
-                    const num = raw === '' ? null : Number(raw);
-                    const prev = quotation.clarusto_final_price;
-                    const prevNum = prev == null || Number.isNaN(Number(prev)) ? null : Number(prev);
-                    if (num === prevNum && finalCur === (quotation.clarusto_final_currency || 'INR')) return;
-                    void onPatch({
-                      clarusto_final_price: num == null || Number.isNaN(num) ? undefined : num,
-                      clarusto_final_currency: finalCur || 'INR',
-                    });
-                  }}
-                />
-                <select
-                  className="h-10 w-[5.5rem] shrink-0 rounded-lg border border-input bg-background px-2 text-sm font-medium shadow-sm"
-                  disabled={pending}
-                  value={finalCur}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setFinalCur(v);
-                    void onPatch({ clarusto_final_currency: v || 'INR' });
-                  }}
-                >
-                  {curOpts.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="q-send-price" className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                Send price (to customer)
-              </Label>
-              <div className="mt-1.5 flex gap-2">
-                <Input
-                  id="q-send-price"
-                  type="number"
-                  step="0.01"
-                  disabled={pending}
-                  className="h-10 min-w-0 flex-1 rounded-lg border-input bg-background font-medium tabular-nums shadow-sm"
-                  value={sendPrice}
-                  onChange={(e) => setSendPrice(e.target.value)}
-                  onBlur={() => {
-                    const raw = sendPrice.trim();
-                    const num = raw === '' ? null : Number(raw);
-                    const prev = quotation.revised_price;
-                    const prevNum = prev == null || Number.isNaN(Number(prev)) ? null : Number(prev);
-                    if (num === prevNum && sendCur === (quotation.revised_currency || 'INR')) return;
-                    void onPatch({
-                      revised_price: num == null || Number.isNaN(num) ? undefined : num,
-                      revised_currency: sendCur || 'INR',
-                    });
-                  }}
-                />
-                <select
-                  className="h-10 w-[5.5rem] shrink-0 rounded-lg border border-input bg-background px-2 text-sm font-medium shadow-sm"
-                  disabled={pending}
-                  value={sendCur}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setSendCur(v);
-                    void onPatch({ revised_currency: v || 'INR' });
-                  }}
-                >
-                  {curOpts.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
               </div>
             </div>
           </div>
