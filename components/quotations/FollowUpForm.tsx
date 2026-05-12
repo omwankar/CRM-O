@@ -104,7 +104,7 @@ export function FollowUpForm({ open, onOpenChange, initial, onSubmit }: Props) {
             </Select>
           </div>
           <div>
-            <Label>Customer Response</Label>
+            <Label>Response</Label>
             <Textarea className="mt-2" rows={3} value={customer_response} onChange={(e) => setCustomerResponse(e.target.value)} />
           </div>
           <div>

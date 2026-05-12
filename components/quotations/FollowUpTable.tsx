@@ -75,7 +75,7 @@ export function FollowUpTable({
               <TableRow className="border-b bg-zinc-50/90 hover:bg-zinc-50/90 dark:bg-muted/50">
                 <TableHead>Follow-up Date</TableHead>
                 <TableHead>Method</TableHead>
-                <TableHead>Customer Response</TableHead>
+                <TableHead>Response</TableHead>
                 <TableHead>Next Follow-up Date</TableHead>
                 <TableHead>Reminder</TableHead>
                 <TableHead className="text-right">Action</TableHead>
