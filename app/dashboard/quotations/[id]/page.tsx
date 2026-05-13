@@ -114,7 +114,7 @@ export default function QuotationDetailPage() {
   };
 
   return (
-    <div className="min-h-0 space-y-6 pb-8">
+    <div className="min-h-0 space-y-6">
       <header className="border-b border-border bg-card py-3.5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3 min-w-0">
