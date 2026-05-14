@@ -14,11 +14,13 @@ import { getUsers } from '@/lib/api/users';
 import { supabase } from '@/lib/auth';
 import { Task, TaskStatusHistory } from '@/types/tasks';
 import { ArrowLeft, Edit, UserRoundCheck, UserCog, Link2, Upload, X, Mail, Users, Plus, Trash2 } from 'lucide-react';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 export default function TaskDetailPage() {
   const router = useRouter();
   const params = useParams();
   const taskId = params.id as string;
+  const { canEditTask } = useCurrentUser();
 
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
@@ -250,18 +252,24 @@ export default function TaskDetailPage() {
             <TaskStatusPill status={task.status} />
           </div>
         </div>
-        <Button onClick={() => router.push(`/dashboard/tasks/${taskId}/edit`)}>
-          <Edit className="h-4 w-4 mr-2" />
-          Edit
-        </Button>
+        {canEditTask(task) && (
+          <Button onClick={() => router.push(`/dashboard/tasks/${taskId}/edit`)}>
+            <Edit className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
+        )}
       </div>
 
       {/* Status Change */}
       <div className="flex items-center gap-4">
         <span className="text-[14px] text-muted-foreground">Status:</span>
-        <button onClick={() => setShowStatusModal(true)} className="hover:opacity-80 transition-opacity">
+        {canEditTask(task) ? (
+          <button onClick={() => setShowStatusModal(true)} className="hover:opacity-80 transition-opacity">
+            <TaskStatusPill status={task.status} />
+          </button>
+        ) : (
           <TaskStatusPill status={task.status} />
-        </button>
+        )}
       </div>
 
       {/* Task Details */}

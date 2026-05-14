@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { getVendors } from '@/lib/api/vendors';
 import { Plus, Search, LayoutGrid, List, ExternalLink, Mail, Phone, Building2 } from 'lucide-react';
+import { CanWrite } from '@/components/auth/Can';
 
 type ViewMode = 'card' | 'table';
 
@@ -48,10 +49,12 @@ export default function VendorsPage() {
           <h1 className="text-3xl font-bold">Vendors</h1>
           <p className="text-muted-foreground">Manage vendor relationships</p>
         </div>
-        <Button onClick={() => router.push('/dashboard/vendors/new')}>
-          <Plus className="w-4 h-4 mr-2" />
-          New Vendor
-        </Button>
+        <CanWrite>
+          <Button onClick={() => router.push('/dashboard/vendors/new')}>
+            <Plus className="w-4 h-4 mr-2" />
+            New Vendor
+          </Button>
+        </CanWrite>
       </div>
 
       <Card className="p-4">

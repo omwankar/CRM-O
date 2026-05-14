@@ -22,6 +22,26 @@ export async function inviteUser(data: { email: string; full_name: string; role:
   return apiRequest('/users/invite', { method: 'POST', body: JSON.stringify(data) });
 }
 
+/**
+ * Instantly create a user (super_admin only). No email confirmation - the
+ * new user can sign in with the returned credentials right away.
+ * `password` is optional; if omitted, the backend generates and returns one.
+ */
+export async function createUser(data: {
+  email: string;
+  full_name: string;
+  role: string;
+  password?: string;
+  department?: string;
+  phone?: string;
+}): Promise<{
+  user: any;
+  credentials: { email: string; password: string; password_was_generated: boolean };
+  message: string;
+}> {
+  return apiRequest('/users', { method: 'POST', body: JSON.stringify(data) });
+}
+
 export async function updateUser(id: string, data: { full_name?: string; role?: string; department?: string; phone?: string; is_active?: boolean }) {
   return apiRequest(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 }

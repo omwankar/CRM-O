@@ -9,6 +9,7 @@ import { getQuotations, getQuotationStats, deleteQuotation, updateQuotation } fr
 import { QuotationFilters, type QuotationFiltersState } from '@/components/quotations/QuotationFilters';
 import { Plus, FileText, Trash2, Pencil, Eye, LayoutGrid, Table } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { CanWrite } from '@/components/auth/Can';
 import { QuotationCard } from '@/components/quotations/QuotationCard';
 import { EnquiryStageChangeModal } from '@/components/quotations/EnquiryStageChangeModal';
 import { EnquiryStageBadge } from '@/components/quotations/EnquiryStageBadge';
@@ -101,10 +102,12 @@ export default function QuotationsPage() {
           <h1 className="text-3xl font-bold">Quotation tracker</h1>
           <p className="text-muted-foreground">Track enquiries, vendor quotes, follow-ups, and outcomes</p>
         </div>
-        <Button onClick={() => router.push('/dashboard/quotations/new')}>
-          <Plus className="w-4 h-4 mr-2" />
-          New enquiry
-        </Button>
+        <CanWrite>
+          <Button onClick={() => router.push('/dashboard/quotations/new')}>
+            <Plus className="w-4 h-4 mr-2" />
+            New enquiry
+          </Button>
+        </CanWrite>
       </div>
 
       {/* Stats row */}
@@ -150,10 +153,12 @@ export default function QuotationsPage() {
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <FileText className="h-10 w-10 text-muted-foreground mb-3" />
           <p className="text-muted-foreground">No quotations found</p>
-          <Button className="mt-4" onClick={() => router.push('/dashboard/quotations/new')}>
-            <Plus className="w-4 h-4 mr-2" />
-            Create your first quotation
-          </Button>
+          <CanWrite>
+            <Button className="mt-4" onClick={() => router.push('/dashboard/quotations/new')}>
+              <Plus className="w-4 h-4 mr-2" />
+              Create your first quotation
+            </Button>
+          </CanWrite>
         </div>
       ) : (
         <>

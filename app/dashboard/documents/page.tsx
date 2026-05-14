@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { getDocuments, deleteDocument } from '@/lib/api/documents';
 import { supabase } from '@/lib/auth';
 import { Plus, Search, Download, FileText, Trash2 } from 'lucide-react';
+import { CanWrite } from '@/components/auth/Can';
 
 export default function DocumentsPage() {
   const router = useRouter();
@@ -74,10 +75,12 @@ export default function DocumentsPage() {
           <h1 className="text-3xl font-bold">Documents</h1>
           <p className="text-muted-foreground">Manage document uploads and tracking</p>
         </div>
-        <Button onClick={() => router.push('/dashboard/documents/new')}>
-          <Plus className="w-4 h-4 mr-2" />
-          Upload Document
-        </Button>
+        <CanWrite>
+          <Button onClick={() => router.push('/dashboard/documents/new')}>
+            <Plus className="w-4 h-4 mr-2" />
+            Upload Document
+          </Button>
+        </CanWrite>
       </div>
 
       <Card className="p-4">

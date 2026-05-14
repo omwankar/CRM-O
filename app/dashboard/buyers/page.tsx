@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { getBuyers } from '@/lib/api/buyers';
 import { Plus, Search, LayoutGrid, List, Kanban, ExternalLink, Mail, Phone, Building2 } from 'lucide-react';
+import { CanWrite } from '@/components/auth/Can';
 
 type ViewMode = 'card' | 'table' | 'kanban';
 
@@ -50,10 +51,12 @@ export default function BuyersPage() {
           <h1 className="text-3xl font-bold">Buyers</h1>
           <p className="text-muted-foreground">Manage buyer relationships and pipeline</p>
         </div>
-        <Button onClick={() => router.push('/dashboard/buyers/new')}>
-          <Plus className="w-4 h-4 mr-2" />
-          New Buyer
-        </Button>
+        <CanWrite>
+          <Button onClick={() => router.push('/dashboard/buyers/new')}>
+            <Plus className="w-4 h-4 mr-2" />
+            New Buyer
+          </Button>
+        </CanWrite>
       </div>
 
       <Card className="p-4">

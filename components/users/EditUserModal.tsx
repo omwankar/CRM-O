@@ -63,14 +63,22 @@ export function EditUserModal({ user, onClose }: EditUserModalProps) {
             <label className="text-sm font-medium mb-1 block">Role</label>
             <select
               className="w-full h-10 rounded-md border border-input bg-background px-3"
-              value={role}
+              value={role === 'super_admin' ? 'super_admin' : role === 'manager' || role === 'admin' ? 'manager' : 'user'}
               onChange={(e) => setRole(e.target.value)}
+              disabled={user.role === 'super_admin'}
             >
-              <option value="admin">Admin</option>
-              <option value="manager">Manager</option>
-              <option value="operations">Operations</option>
-              <option value="sales">Sales</option>
+              <option value="user">User · read-only, owns their tasks</option>
+              <option value="manager">Manager · full CRM access</option>
+              {/* Super admin can only be granted via the database, never the UI. */}
+              {user.role === 'super_admin' && (
+                <option value="super_admin">Super Admin</option>
+              )}
             </select>
+            {user.role === 'super_admin' && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Super admin role can only be changed directly in the database.
+              </p>
+            )}
           </div>
           <div>
             <label className="text-sm font-medium mb-1 block">Department</label>

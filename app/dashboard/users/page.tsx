@@ -15,18 +15,21 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 const roleColors: Record<string, string> = {
   super_admin: 'bg-purple-600 text-white',
+  manager: 'bg-blue-100 text-blue-700',
+  user: 'bg-teal-100 text-teal-700',
+  // Legacy fall-backs; rows are migrated by 018_simplify_roles.sql.
   admin: 'bg-blue-100 text-blue-700',
-  manager: 'bg-purple-100 text-purple-700',
   operations: 'bg-teal-100 text-teal-700',
-  sales: 'bg-orange-100 text-orange-700',
+  sales: 'bg-teal-100 text-teal-700',
 };
 
 const roleLabels: Record<string, string> = {
   super_admin: 'Super Admin',
-  admin: 'Admin',
   manager: 'Manager',
-  operations: 'Operations',
-  sales: 'Sales',
+  user: 'User',
+  admin: 'Manager',
+  operations: 'User',
+  sales: 'User',
 };
 
 function getInitials(name: string) {
@@ -141,7 +144,7 @@ export default function UsersPage() {
         </div>
         <Button onClick={() => setInviteOpen(true)}>
           <UserPlus className="w-4 h-4 mr-2" />
-          Invite User
+          Add User
         </Button>
       </div>
 
@@ -213,10 +216,9 @@ export default function UsersPage() {
             onChange={(e) => setRoleFilter(e.target.value)}
           >
             <option value="all">All Roles</option>
-            <option value="admin">Admin</option>
+            <option value="super_admin">Super Admin</option>
             <option value="manager">Manager</option>
-            <option value="operations">Operations</option>
-            <option value="sales">Sales</option>
+            <option value="user">User</option>
           </select>
           <select
             className="h-10 rounded-md border border-input bg-background px-3"

@@ -11,6 +11,7 @@ import { getTasks, changeTaskStatus } from '@/lib/api/tasks';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Task, TaskFilters as Filters } from '@/types/tasks';
 import { Plus, LayoutGrid, Table } from 'lucide-react';
+import { CanWrite } from '@/components/auth/Can';
 
 export default function TasksPage() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export default function TasksPage() {
   const [viewMode, setViewMode] = useState<'table' | 'card'>('card');
   const [cardSection, setCardSection] = useState<'ongoing' | 'completed' | 'cancelled'>('ongoing');
   const [statusModalTask, setStatusModalTask] = useState<Task | null>(null);
-  const { user } = useCurrentUser();
+  const { user, canEditTask } = useCurrentUser();
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
@@ -54,7 +55,8 @@ export default function TasksPage() {
     setFilters({ ...filters, page: newPage });
   };
 
-  const canChangeStatus = true;
+  // Status changes follow `taskWriteGuard` on the backend: managers and
+  // super_admins can change any task, plain users only ones allocated to them.
   const showArchivedToggles = !filters.status || filters.status === ('all' as any);
 
   const ongoingTasks = showArchivedToggles
@@ -90,10 +92,12 @@ export default function TasksPage() {
             Manage your tasks and track progress
           </p>
         </div>
-        <Button onClick={() => router.push('/dashboard/tasks/new')}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Task
-        </Button>
+        <CanWrite>
+          <Button onClick={() => router.push('/dashboard/tasks/new')}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Task
+          </Button>
+        </CanWrite>
       </div>
 
       {/* Filters */}
@@ -111,10 +115,12 @@ export default function TasksPage() {
           <LayoutGrid className="h-16 w-16 text-muted-foreground mb-4" />
           <h3 className="text-[18px] font-medium text-foreground mb-2">No tasks yet</h3>
           <p className="text-[14px] text-muted-foreground mb-4">Create your first task to get started</p>
-          <Button onClick={() => router.push('/dashboard/tasks/new')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Task
-          </Button>
+          <CanWrite>
+            <Button onClick={() => router.push('/dashboard/tasks/new')}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Task
+            </Button>
+          </CanWrite>
         </div>
       ) : (
         <>
@@ -174,7 +180,7 @@ export default function TasksPage() {
                   <TaskCard
                     key={task.id}
                     task={task}
-                    canChangeStatus={canChangeStatus}
+                    canChangeStatus={canEditTask(task)}
                     onChangeStatus={setStatusModalTask}
                   />
                 ))}
@@ -252,7 +258,7 @@ export default function TasksPage() {
                       <td className="px-4 py-3 text-[13px] text-foreground">{task.assigned_person?.name || '-'}</td>
                       <td className="px-4 py-3 text-[13px] text-foreground">{task.supervisor?.name || '-'}</td>
                       <td className="px-4 py-3">
-                        {canChangeStatus ? (
+                        {canEditTask(task) ? (
                           <button onClick={(e) => { e.stopPropagation(); setStatusModalTask(task); }} className="hover:opacity-80 transition-opacity">
                             <TaskStatusPill status={task.status} />
                           </button>

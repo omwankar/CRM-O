@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Calendar, CalendarDayButton } from '@/components/ui/calendar';
 import { CalendarDays, PlusCircle, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { getCalendarEvents, createCalendarEvent } from '@/lib/api/calendar';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 type CalendarEvent = {
   id: string;
@@ -45,6 +46,7 @@ function formatYMDLocal(d: Date) {
 
 export default function CalendarPage() {
   const queryClient = useQueryClient();
+  const { canWrite } = useCurrentUser();
   const [monthDate, setMonthDate] = useState(() => new Date());
   const monthKey = useMemo(() => formatMonthKey(monthDate), [monthDate]);
 
@@ -189,7 +191,7 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className={`grid grid-cols-1 gap-6 ${canWrite ? 'lg:grid-cols-2' : 'lg:grid-cols-1'}`}>
           <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow h-full">
             <div className="p-6 sm:p-8">
               <div className="flex items-center gap-2 mb-6">
@@ -298,6 +300,7 @@ export default function CalendarPage() {
             </div>
           </Card>
 
+          {canWrite && (
           <Card className="border-border/50 shadow-sm h-full hover:shadow-md transition-shadow">
             <div className="p-6 sm:p-8">
               <h3 className="text-xl font-semibold mb-2">Add Event</h3>
@@ -358,6 +361,7 @@ export default function CalendarPage() {
               </form>
             </div>
           </Card>
+          )}
         </div>
       </div>
     </div>

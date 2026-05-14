@@ -11,6 +11,7 @@ import { getProjects, changeProjectStatus } from '@/lib/api/projects';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Project, ProjectFilters as Filters } from '@/types/projects';
 import { Plus, LayoutGrid, Table } from 'lucide-react';
+import { CanWrite } from '@/components/auth/Can';
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -91,10 +92,12 @@ export default function ProjectsPage() {
             Manage your projects and track progress
           </p>
         </div>
-        <Button onClick={() => router.push('/dashboard/projects/new')}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Project
-        </Button>
+        <CanWrite>
+          <Button onClick={() => router.push('/dashboard/projects/new')}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Project
+          </Button>
+        </CanWrite>
       </div>
 
       {/* Filters */}
@@ -116,10 +119,12 @@ export default function ProjectsPage() {
           <p className="text-[14px] text-muted-foreground mb-4">
             Create your first project to get started
           </p>
-          <Button onClick={() => router.push('/dashboard/projects/new')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Project
-          </Button>
+          <CanWrite>
+            <Button onClick={() => router.push('/dashboard/projects/new')}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Project
+            </Button>
+          </CanWrite>
         </div>
       ) : (
         <>
