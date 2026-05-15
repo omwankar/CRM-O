@@ -34,9 +34,17 @@ export async function createUser(data: {
   password?: string;
   department?: string;
   phone?: string;
+  employee_id?: string;
+  employment_type?: 'full_time' | 'part_time' | 'probation' | 'commission';
+  work_mode?: 'office' | 'remote';
 }): Promise<{
   user: any;
-  credentials: { email: string; password: string; password_was_generated: boolean };
+  credentials: {
+    email: string;
+    employee_id: string;
+    password: string;
+    password_was_generated: boolean;
+  };
   message: string;
 }> {
   return apiRequest('/users', { method: 'POST', body: JSON.stringify(data) });

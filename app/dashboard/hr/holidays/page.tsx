@@ -17,6 +17,7 @@ export default function HrHolidaysPage() {
   const [date, setDate] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [holidayPayType, setHolidayPayType] = useState<'paid' | 'unpaid'>('paid');
 
   const { data, isLoading } = useQuery({
     queryKey: ['hr-holidays', year],
@@ -24,7 +25,8 @@ export default function HrHolidaysPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: () => createHoliday({ date, title, description: description || undefined }),
+    mutationFn: () =>
+      createHoliday({ date, title, description: description || undefined, holiday_pay_type: holidayPayType }),
     onSuccess: () => {
       toast.success('Holiday added');
       setShowForm(false);
@@ -86,6 +88,17 @@ export default function HrHolidaysPage() {
               <label className="text-sm font-medium block mb-1">Description</label>
               <Input value={description} onChange={(e) => setDescription(e.target.value)} />
             </div>
+            <div>
+              <label className="text-sm font-medium block mb-1">Holiday type</label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3"
+                value={holidayPayType}
+                onChange={(e) => setHolidayPayType(e.target.value as 'paid' | 'unpaid')}
+              >
+                <option value="paid">Paid holiday</option>
+                <option value="unpaid">Unpaid holiday</option>
+              </select>
+            </div>
             <div className="md:col-span-3">
               <Button type="submit" disabled={createMutation.isPending}>
                 {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save holiday'}
@@ -106,6 +119,7 @@ export default function HrHolidaysPage() {
               <tr>
                 <th className="text-left p-3">Date</th>
                 <th className="text-left p-3">Title</th>
+                <th className="text-left p-3">Type</th>
                 <th className="text-left p-3">Description</th>
                 <th className="p-3 w-16" />
               </tr>
@@ -115,6 +129,17 @@ export default function HrHolidaysPage() {
                 <tr key={h.id} className="border-b">
                   <td className="p-3">{h.date}</td>
                   <td className="p-3 font-medium">{h.title}</td>
+                  <td className="p-3">
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full ${
+                        h.holiday_pay_type === 'unpaid'
+                          ? 'bg-gray-100 text-gray-700'
+                          : 'bg-emerald-100 text-emerald-800'
+                      }`}
+                    >
+                      {h.holiday_pay_type === 'unpaid' ? 'Unpaid' : 'Paid'}
+                    </span>
+                  </td>
                   <td className="p-3 text-muted-foreground">{h.description || '—'}</td>
                   <td className="p-3">
                     <CanWrite>

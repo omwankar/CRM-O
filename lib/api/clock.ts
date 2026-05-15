@@ -54,3 +54,29 @@ export async function approvePunchRequest(id: string, notes?: string) {
 export async function rejectPunchRequest(id: string, rejection_reason: string) {
   return apiRequest(`/clock/punch-requests/${id}/reject`, { method: 'PUT', body: JSON.stringify({ rejection_reason }) });
 }
+
+export type LeaveRequest = {
+  id: string;
+  start_date: string;
+  end_date: string;
+  reason: string | null;
+  leave_type: 'paid' | 'unpaid' | 'lop';
+  status: string;
+  created_at: string;
+};
+
+export async function getMyLeaveRequests() {
+  return apiRequest('/clock/leave-requests') as Promise<{ data: LeaveRequest[] }>;
+}
+
+export async function submitLeaveRequest(data: {
+  start_date: string;
+  end_date: string;
+  reason?: string;
+  leave_type: 'paid' | 'unpaid' | 'lop';
+}) {
+  return apiRequest('/clock/leave-requests', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}

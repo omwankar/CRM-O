@@ -1,37 +1,46 @@
 import { apiRequest } from '@/lib/api/client';
+import { decideLeave } from '@/lib/api/hr/leaves';
 
-export type ClockSession = {
-  id: string;
+export type TeamAttendanceRow = {
   user_id: string;
-  clock_in: string;
-  clock_out: string | null;
-  notes: string | null;
+  employee_id: string | null;
+  full_name: string | null;
+  email: string;
+  department: string | null;
+  designation: string | null;
+  employment_type: string | null;
+  work_mode: string | null;
+  reporting_manager_name: string | null;
+  total_hours: number;
+  days_present: number;
+  leave_paid_days: number;
+  leave_unpaid_days: number;
+  leave_lop_days: number;
+  pending_leave_count: number;
 };
 
-export async function getHrAttendance(params?: { user_id?: string; month?: string }) {
-  const q = new URLSearchParams();
-  if (params?.user_id) q.set('user_id', params.user_id);
-  if (params?.month) q.set('month', params.month);
-  const query = q.toString();
-  return apiRequest(`/hr/attendance${query ? `?${query}` : ''}`) as Promise<{
-    sessions: ClockSession[];
-    totalHours: number;
+export type TeamLeave = {
+  id: string;
+  requested_by: string;
+  employee_id: string | null;
+  start_date: string;
+  end_date: string;
+  reason: string | null;
+  leave_type: string;
+  status: string;
+  requester_name?: string;
+  requester_employee_id?: string | null;
+};
+
+export async function getHrTeamAttendance(month?: string) {
+  const q = month ? `?month=${month}` : '';
+  return apiRequest(`/hr/attendance/team${q}`) as Promise<{
     month: string;
+    employees: TeamAttendanceRow[];
+    leaves: TeamLeave[];
+    pending_leaves: TeamLeave[];
+    holidays: Array<{ id: string; date: string; title: string; holiday_pay_type: string | null }>;
   }>;
 }
 
-export async function getHrAttendanceSummary(month?: string) {
-  const q = month ? `?month=${month}` : '';
-  return apiRequest(`/hr/attendance/summary${q}`) as Promise<{
-    month: string;
-    data: Array<{
-      user_id: string;
-      full_name: string | null;
-      email: string;
-      department: string | null;
-      employee_id: string | null;
-      total_hours: number;
-      days_present: number;
-    }>;
-  }>;
-}
+export { decideLeave };

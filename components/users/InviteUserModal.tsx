@@ -41,8 +41,13 @@ export function InviteUserModal({ onClose }: InviteUserModalProps) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [employeeId, setEmployeeId] = useState('');
+  const [autoEmployeeId, setAutoEmployeeId] = useState(true);
+  const [employmentType, setEmploymentType] = useState<'full_time' | 'part_time' | 'probation' | 'commission'>('full_time');
+  const [workMode, setWorkMode] = useState<'office' | 'remote'>('office');
   const [created, setCreated] = useState<{
     email: string;
+    employee_id: string;
     password: string;
     generated: boolean;
   } | null>(null);
@@ -53,6 +58,7 @@ export function InviteUserModal({ onClose }: InviteUserModalProps) {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setCreated({
         email: res.credentials.email,
+        employee_id: res.credentials.employee_id,
         password: res.credentials.password,
         generated: res.credentials.password_was_generated,
       });
@@ -84,6 +90,9 @@ export function InviteUserModal({ onClose }: InviteUserModalProps) {
       department,
       phone,
       password: password || undefined,
+      employee_id: autoEmployeeId ? undefined : employeeId.trim() || undefined,
+      employment_type: employmentType,
+      work_mode: workMode,
     });
   };
 
@@ -98,7 +107,7 @@ export function InviteUserModal({ onClose }: InviteUserModalProps) {
 
   const copyAll = () => {
     if (!created) return;
-    const text = `Email: ${created.email}\nPassword: ${created.password}\nSign in at: ${window.location.origin}/auth/login`;
+    const text = `Employee ID: ${created.employee_id}\nEmail: ${created.email}\nPassword: ${created.password}\nSign in with Employee ID or email at: ${window.location.origin}/auth/login`;
     void copyToClipboard(text, 'Credentials');
   };
 
@@ -119,6 +128,22 @@ export function InviteUserModal({ onClose }: InviteUserModalProps) {
               Share these credentials with the new user. The password
               <strong> won&apos;t be shown again</strong> - they can change it from
               their profile after signing in.
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Employee ID</label>
+              <div className="flex items-center gap-2 mt-1">
+                <Input value={created.employee_id} readOnly className="font-mono text-sm" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => copyToClipboard(created.employee_id, 'Employee ID')}
+                  title="Copy employee ID"
+                >
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
 
             <div>
@@ -203,6 +228,51 @@ export function InviteUserModal({ onClose }: InviteUserModalProps) {
               onChange={(e) => setEmail(e.target.value)}
               required
             />
+          </div>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={autoEmployeeId}
+                onChange={(e) => setAutoEmployeeId(e.target.checked)}
+              />
+              Auto-generate Employee ID (e.g. EMP0001)
+            </label>
+            {!autoEmployeeId && (
+              <Input
+                value={employeeId}
+                onChange={(e) => setEmployeeId(e.target.value.toUpperCase())}
+                placeholder="EMP0001"
+                pattern="[A-Za-z0-9]+"
+                title="Letters and numbers only"
+              />
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Employment type</label>
+              <select
+                className="w-full h-10 rounded-md border border-input bg-background px-3"
+                value={employmentType}
+                onChange={(e) => setEmploymentType(e.target.value as typeof employmentType)}
+              >
+                <option value="full_time">Full time</option>
+                <option value="part_time">Part time</option>
+                <option value="probation">Probation</option>
+                <option value="commission">Commission</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Work mode</label>
+              <select
+                className="w-full h-10 rounded-md border border-input bg-background px-3"
+                value={workMode}
+                onChange={(e) => setWorkMode(e.target.value as typeof workMode)}
+              >
+                <option value="office">Office</option>
+                <option value="remote">Remote</option>
+              </select>
+            </div>
           </div>
           <div>
             <label className="text-sm font-medium mb-1 block">Role *</label>

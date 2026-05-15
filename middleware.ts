@@ -35,6 +35,20 @@ export async function middleware(request: NextRequest) {
     if (!user) {
       return NextResponse.redirect(new URL('/auth/login', request.url))
     }
+
+    // HR portal: managers and super_admin only
+    if (pathname.startsWith('/dashboard/hr')) {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      const role = profile?.role
+      if (role !== 'manager' && role !== 'super_admin' && role !== 'admin') {
+        return NextResponse.redirect(new URL('/dashboard?access=hr_denied', request.url))
+      }
+    }
   }
 
   // Prevent logged-in users from opening login

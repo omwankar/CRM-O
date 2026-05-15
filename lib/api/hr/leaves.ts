@@ -6,6 +6,7 @@ export type LeaveRequest = {
   start_date: string;
   end_date: string;
   reason: string | null;
+  leave_type: 'paid' | 'unpaid' | 'lop';
   status: 'pending' | 'approved' | 'rejected';
   reviewed_by: string | null;
   reviewed_at: string | null;

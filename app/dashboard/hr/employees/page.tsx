@@ -29,7 +29,9 @@ export default function HrEmployeesPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Employees</h1>
-        <p className="text-muted-foreground">Company directory with HR profiles</p>
+        <p className="text-muted-foreground">
+          Company directory — new employees are added by super admin on the Users page
+        </p>
       </div>
 
       <Card className="p-4">
@@ -65,6 +67,8 @@ export default function HrEmployeesPage() {
                   <th className="text-left p-3 font-medium">ID</th>
                   <th className="text-left p-3 font-medium">Department</th>
                   <th className="text-left p-3 font-medium">Designation</th>
+                  <th className="text-left p-3 font-medium">Type</th>
+                  <th className="text-left p-3 font-medium">Work mode</th>
                   <th className="text-left p-3 font-medium">Status</th>
                 </tr>
               </thead>
@@ -82,6 +86,8 @@ export default function HrEmployeesPage() {
                     <td className="p-3 font-mono text-xs">{emp.employee_id || '—'}</td>
                     <td className="p-3">{emp.department || '—'}</td>
                     <td className="p-3">{emp.designation || '—'}</td>
+                    <td className="p-3 capitalize">{(emp.employment_type || '—').replace('_', ' ')}</td>
+                    <td className="p-3 capitalize">{emp.work_mode || '—'}</td>
                     <td className="p-3">
                       <span
                         className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${

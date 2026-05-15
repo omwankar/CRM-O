@@ -10,7 +10,7 @@ import { AuthShell } from '@/components/auth-shell';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,7 +26,7 @@ const handleLogin = async (e: React.FormEvent) => {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ login, password }),
     });
 
     const payload = (await res.json().catch(() => ({}))) as {
@@ -56,14 +56,15 @@ const handleLogin = async (e: React.FormEvent) => {
 
           <form onSubmit={handleLogin} className="space-y-6">
             <FieldGroup>
-              <FieldLabel htmlFor="email">Email</FieldLabel>
+              <FieldLabel htmlFor="login">Employee ID or email</FieldLabel>
               <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="login"
+                type="text"
+                placeholder="EMP0001 or you@example.com"
+                value={login}
+                onChange={(e) => setLogin(e.target.value)}
                 required
+                autoComplete="username"
               />
             </FieldGroup>
 

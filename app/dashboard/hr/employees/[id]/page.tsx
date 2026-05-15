@@ -6,11 +6,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getHrEmployee, updateHrEmployee, getHrEmployees } from '@/lib/api/hr/employees';
 import { getHrLeaves } from '@/lib/api/hr/leaves';
 import { getHrAppreciations } from '@/lib/api/hr/appreciations';
-import { getHrAttendance } from '@/lib/api/hr/attendance';
+import { getHrTeamAttendance } from '@/lib/api/hr/attendance';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { CanWrite } from '@/components/auth/Can';
+import { CanWrite, CanManageUsers } from '@/components/auth/Can';
 import { ArrowLeft, Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -24,6 +24,8 @@ export default function HrEmployeeDetailPage() {
     designation: '',
     department: '',
     joining_date: '',
+    employment_type: 'full_time',
+    work_mode: 'office',
     employment_status: 'active',
     reporting_manager_id: '',
     phone: '',
@@ -54,11 +56,12 @@ export default function HrEmployeeDetailPage() {
   });
 
   const month = new Date().toISOString().slice(0, 7);
-  const { data: attendanceData } = useQuery({
-    queryKey: ['hr-attendance-employee', id, month],
-    queryFn: () => getHrAttendance({ user_id: id, month }),
+  const { data: teamAttendance } = useQuery({
+    queryKey: ['hr-team-attendance', month],
+    queryFn: () => getHrTeamAttendance(month),
     enabled: !!id,
   });
+  const attendanceRow = teamAttendance?.employees?.find((e) => e.user_id === id);
 
   const saveMutation = useMutation({
     mutationFn: () =>
@@ -82,6 +85,8 @@ export default function HrEmployeeDetailPage() {
       designation: employee.designation || '',
       department: employee.department || '',
       joining_date: employee.joining_date || '',
+      employment_type: employee.employment_type || 'full_time',
+      work_mode: employee.work_mode || 'office',
       employment_status: employee.employment_status || 'active',
       reporting_manager_id: employee.reporting_manager_id || '',
       phone: employee.phone || '',
@@ -116,6 +121,9 @@ export default function HrEmployeeDetailPage() {
         <div>
           <h1 className="text-3xl font-bold">{employee.full_name || employee.email}</h1>
           <p className="text-muted-foreground">{employee.email}</p>
+          {employee.employee_id && (
+            <p className="font-mono text-sm mt-1 text-primary">ID: {employee.employee_id}</p>
+          )}
         </div>
         <CanWrite>
           {!editing ? (
@@ -140,9 +148,39 @@ export default function HrEmployeeDetailPage() {
               <label className="text-sm font-medium block mb-1">Full name</label>
               <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
             </div>
+            <CanManageUsers>
+              <div>
+                <label className="text-sm font-medium block mb-1">Employee ID</label>
+                <Input
+                  value={form.employee_id}
+                  onChange={(e) => setForm({ ...form, employee_id: e.target.value.toUpperCase() })}
+                  placeholder="EMP0001"
+                />
+              </div>
+            </CanManageUsers>
             <div>
-              <label className="text-sm font-medium block mb-1">Employee ID</label>
-              <Input value={form.employee_id} onChange={(e) => setForm({ ...form, employee_id: e.target.value })} placeholder="EMP-0001" />
+              <label className="text-sm font-medium block mb-1">Employment type</label>
+              <select
+                className="w-full h-10 rounded-md border border-input bg-background px-3"
+                value={form.employment_type}
+                onChange={(e) => setForm({ ...form, employment_type: e.target.value })}
+              >
+                <option value="full_time">Full time</option>
+                <option value="part_time">Part time</option>
+                <option value="probation">Probation</option>
+                <option value="commission">Commission</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium block mb-1">Work mode</label>
+              <select
+                className="w-full h-10 rounded-md border border-input bg-background px-3"
+                value={form.work_mode}
+                onChange={(e) => setForm({ ...form, work_mode: e.target.value })}
+              >
+                <option value="office">Office</option>
+                <option value="remote">Remote</option>
+              </select>
             </div>
             <div>
               <label className="text-sm font-medium block mb-1">Department</label>
@@ -192,7 +230,9 @@ export default function HrEmployeeDetailPage() {
           </div>
         ) : (
           <dl className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div><dt className="text-muted-foreground">Employee ID</dt><dd className="font-medium">{employee.employee_id || '—'}</dd></div>
+            <div><dt className="text-muted-foreground">Employee ID</dt><dd className="font-medium font-mono">{employee.employee_id || '—'}</dd></div>
+            <div><dt className="text-muted-foreground">Employment type</dt><dd className="font-medium capitalize">{(employee.employment_type || '—').replace('_', ' ')}</dd></div>
+            <div><dt className="text-muted-foreground">Work mode</dt><dd className="font-medium capitalize">{employee.work_mode || '—'}</dd></div>
             <div><dt className="text-muted-foreground">Department</dt><dd className="font-medium">{employee.department || '—'}</dd></div>
             <div><dt className="text-muted-foreground">Designation</dt><dd className="font-medium">{employee.designation || '—'}</dd></div>
             <div><dt className="text-muted-foreground">Joining date</dt><dd className="font-medium">{employee.joining_date || '—'}</dd></div>
@@ -206,8 +246,30 @@ export default function HrEmployeeDetailPage() {
 
       <Card className="p-6">
         <h2 className="font-semibold mb-2">Attendance this month</h2>
-        <p className="text-2xl font-bold tabular-nums">{attendanceData?.totalHours ?? 0} hrs</p>
-        <p className="text-sm text-muted-foreground">{attendanceData?.sessions?.length ?? 0} clock sessions</p>
+        {attendanceRow ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <p className="text-muted-foreground">Hours</p>
+              <p className="text-2xl font-bold tabular-nums">{attendanceRow.total_hours}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Days present</p>
+              <p className="text-2xl font-bold tabular-nums">{attendanceRow.days_present}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Paid / unpaid / LOP</p>
+              <p className="font-medium tabular-nums">
+                {attendanceRow.leave_paid_days} / {attendanceRow.leave_unpaid_days} / {attendanceRow.leave_lop_days}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Pending leave</p>
+              <p className="text-2xl font-bold tabular-nums">{attendanceRow.pending_leave_count}</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">No attendance data for this month</p>
+        )}
       </Card>
 
       <Card className="p-6">
@@ -218,7 +280,12 @@ export default function HrEmployeeDetailPage() {
           <ul className="space-y-2 text-sm">
             {employeeLeaves.map((l) => (
               <li key={l.id} className="flex justify-between border-b pb-2">
-                <span>{l.start_date} → {l.end_date}</span>
+                <span>
+                  {l.start_date} → {l.end_date}{' '}
+                  <span className="text-muted-foreground capitalize">
+                    ({l.leave_type === 'lop' ? 'LOP' : l.leave_type})
+                  </span>
+                </span>
                 <span className="capitalize">{l.status}</span>
               </li>
             ))}

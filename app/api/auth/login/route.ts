@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
 type LoginBody = {
+  login?: string;
   email?: string;
   password?: string;
 };
@@ -12,14 +14,12 @@ export async function POST(request: NextRequest) {
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-  // We need to return the same response object that receives cookie updates.
-  // To do that safely, we collect cookies to set during Supabase calls,
-  // then apply them to the final response just before returning.
   const cookiesToSet: Array<{
     name: string;
     value: string;
-    options?: Record<string, any>;
+    options?: Record<string, unknown>;
   }> = [];
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
@@ -36,14 +36,32 @@ export async function POST(request: NextRequest) {
   });
 
   const body = (await request.json().catch(() => null)) as LoginBody | null;
-  const email = body?.email?.trim().toLowerCase();
+  const loginInput = (body?.login || body?.email || '').trim();
   const password = body?.password;
 
-  if (!email || !password) {
-    return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
+  if (!loginInput || !password) {
+    return NextResponse.json({ error: 'Employee ID (or email) and password are required' }, { status: 400 });
   }
 
-  // 1) Sign in (Supabase will generate auth cookies via the setAll callback above)
+  let email = loginInput.toLowerCase();
+
+  if (!loginInput.includes('@')) {
+    const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
+    const { data: userRow, error: lookupErr } = await admin
+      .from('users')
+      .select('email, is_active, employee_id')
+      .eq('employee_id', loginInput)
+      .maybeSingle();
+
+    if (lookupErr || !userRow?.email) {
+      return NextResponse.json({ error: 'Invalid employee ID or password' }, { status: 400 });
+    }
+    if (userRow.is_active === false) {
+      return NextResponse.json({ error: 'Account is deactivated' }, { status: 403 });
+    }
+    email = userRow.email.toLowerCase();
+  }
+
   const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -51,42 +69,37 @@ export async function POST(request: NextRequest) {
 
   if (authError || !authData?.user) {
     return NextResponse.json(
-      { error: authError?.message || 'Invalid email or password' },
-      { status: 400 }
+      { error: authError?.message || 'Invalid employee ID or password' },
+      { status: 400 },
     );
   }
 
-  // 2) Fetch profile row (role + approval)
   const { data: profile, error: profileError } = await supabase
     .from('users')
-    // Login should not depend on approval status.
-    // Keep only fields that are required by the app.
-    .select('role, full_name')
+    .select('role, full_name, employee_id, is_active')
     .eq('id', authData.user.id)
     .maybeSingle();
 
   if (profileError) {
-    const msg = profileError.message || 'Failed to fetch user profile';
-    const details = {
-      code: (profileError as any)?.code,
-      details: (profileError as any)?.details,
-      hint: (profileError as any)?.hint,
-    };
-
-    const res = NextResponse.json({ error: msg, details }, { status: 500 });
+    const res = NextResponse.json({ error: profileError.message }, { status: 500 });
     cookiesToSet.forEach(({ name, value, options }) => {
-      res.cookies.set(name, value, options);
+      res.cookies.set(name, value, options as Parameters<typeof res.cookies.set>[2]);
     });
     return res;
   }
 
   if (!profile) {
-    const res = NextResponse.json(
-      { error: 'User profile not found in public.users' },
-      { status: 403 }
-    );
+    const res = NextResponse.json({ error: 'User profile not found' }, { status: 403 });
     cookiesToSet.forEach(({ name, value, options }) => {
-      res.cookies.set(name, value, options);
+      res.cookies.set(name, value, options as Parameters<typeof res.cookies.set>[2]);
+    });
+    return res;
+  }
+
+  if (profile.is_active === false) {
+    const res = NextResponse.json({ error: 'Account is deactivated' }, { status: 403 });
+    cookiesToSet.forEach(({ name, value, options }) => {
+      res.cookies.set(name, value, options as Parameters<typeof res.cookies.set>[2]);
     });
     return res;
   }
@@ -96,14 +109,14 @@ export async function POST(request: NextRequest) {
       ok: true,
       role: profile.role,
       full_name: profile.full_name,
+      employee_id: profile.employee_id,
     },
-    { status: 200 }
+    { status: 200 },
   );
 
   cookiesToSet.forEach(({ name, value, options }) => {
-    res.cookies.set(name, value, options);
+    res.cookies.set(name, value, options as Parameters<typeof res.cookies.set>[2]);
   });
 
   return res;
 }
-

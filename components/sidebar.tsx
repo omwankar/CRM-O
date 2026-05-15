@@ -30,7 +30,6 @@ import {
   ListTodo,
   FileSearch,
   Heart,
-  Palmtree,
   ClipboardList,
   PartyPopper,
 } from 'lucide-react';
@@ -40,8 +39,9 @@ import { getPunchStats } from '@/lib/api/clock';
 
 function getMenuSections(role?: string, pendingCount?: number) {
   const isSuperAdmin = role === 'super_admin';
-  
-  return [
+  const canAccessHr = role === 'manager' || role === 'super_admin' || role === 'admin';
+
+  const sections = [
     {
       label: 'OVERVIEW',
       items: [
@@ -67,16 +67,19 @@ function getMenuSections(role?: string, pendingCount?: number) {
         { label: 'Documents', href: '/dashboard/documents', icon: FileText },
       ],
     },
-    {
-      label: 'HR',
-      items: [
-        { label: 'Employees', href: '/dashboard/hr/employees', icon: Users },
-        { label: 'Leaves', href: '/dashboard/hr/leaves', icon: Palmtree },
-        { label: 'Attendance', href: '/dashboard/hr/attendance', icon: ClipboardList },
-        { label: 'Holiday', href: '/dashboard/hr/holidays', icon: PartyPopper },
-        { label: 'Appreciation', href: '/dashboard/hr/appreciations', icon: Heart },
-      ],
-    },
+    ...(canAccessHr
+      ? [
+          {
+            label: 'HR',
+            items: [
+              { label: 'Employees', href: '/dashboard/hr/employees', icon: Users },
+              { label: 'Team attendance', href: '/dashboard/hr/attendance', icon: ClipboardList },
+              { label: 'Holiday', href: '/dashboard/hr/holidays', icon: PartyPopper },
+              { label: 'Appreciation', href: '/dashboard/hr/appreciations', icon: Heart },
+            ],
+          },
+        ]
+      : []),
     {
       label: 'SETTINGS',
       items: [
@@ -85,6 +88,8 @@ function getMenuSections(role?: string, pendingCount?: number) {
       ],
     },
   ];
+
+  return sections;
 }
 
 export function Sidebar() {

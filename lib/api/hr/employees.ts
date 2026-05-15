@@ -10,6 +10,8 @@ export type HrEmployee = {
   employee_id: string | null;
   designation: string | null;
   joining_date: string | null;
+  employment_type: string | null;
+  work_mode: string | null;
   employment_status: string | null;
   reporting_manager_id: string | null;
   reporting_manager_name?: string | null;

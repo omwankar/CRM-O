@@ -6,6 +6,7 @@ export type Holiday = {
   title: string;
   description: string | null;
   event_type: string;
+  holiday_pay_type: 'paid' | 'unpaid' | null;
   created_by: string | null;
   created_at: string;
 };
@@ -20,7 +21,12 @@ export async function getHrHolidays(params?: { year?: string }) {
   }>;
 }
 
-export async function createHoliday(data: { date: string; title: string; description?: string }) {
+export async function createHoliday(data: {
+  date: string;
+  title: string;
+  description?: string;
+  holiday_pay_type?: 'paid' | 'unpaid';
+}) {
   return apiRequest('/hr/holidays', { method: 'POST', body: JSON.stringify(data) });
 }
 

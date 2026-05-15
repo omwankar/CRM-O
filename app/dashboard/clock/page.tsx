@@ -5,8 +5,16 @@ import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { getClockSessions, clockIn, clockOut, createMissedPunchRequest } from '@/lib/api/clock';
-import { Clock3, Loader2, MinusCircle, PlusCircle } from 'lucide-react';
+import {
+  getClockSessions,
+  clockIn,
+  clockOut,
+  createMissedPunchRequest,
+  getMyLeaveRequests,
+  submitLeaveRequest,
+} from '@/lib/api/clock';
+import { Clock3, Loader2, MinusCircle, PlusCircle, Palmtree } from 'lucide-react';
+import { toast } from 'sonner';
 
 function formatMonthKey(d: Date) {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
@@ -36,6 +44,10 @@ export default function ClockPage() {
 
   const [missedType, setMissedType] = useState<'clock_in' | 'clock_out'>('clock_in');
   const [missedReason, setMissedReason] = useState('');
+  const [leaveStart, setLeaveStart] = useState('');
+  const [leaveEnd, setLeaveEnd] = useState('');
+  const [leaveReason, setLeaveReason] = useState('');
+  const [leaveType, setLeaveType] = useState<'paid' | 'unpaid' | 'lop'>('unpaid');
 
   const { data: sessionsData, isLoading } = useQuery({
     queryKey: ['clock-sessions', monthKey],
@@ -62,6 +74,29 @@ export default function ClockPage() {
       queryClient.invalidateQueries({ queryKey: ['clock-sessions'] });
       setMissedReason('');
     },
+  });
+
+  const { data: leavesData, isLoading: leavesLoading } = useQuery({
+    queryKey: ['my-leave-requests'],
+    queryFn: getMyLeaveRequests,
+  });
+
+  const leaveMutation = useMutation({
+    mutationFn: () =>
+      submitLeaveRequest({
+        start_date: leaveStart,
+        end_date: leaveEnd,
+        reason: leaveReason || undefined,
+        leave_type: leaveType,
+      }),
+    onSuccess: () => {
+      toast.success('Leave request submitted');
+      setLeaveStart('');
+      setLeaveEnd('');
+      setLeaveReason('');
+      queryClient.invalidateQueries({ queryKey: ['my-leave-requests'] });
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const sessions = sessionsData?.sessions || [];
@@ -227,6 +262,92 @@ export default function ClockPage() {
           </div>
         )}
       </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="p-5">
+          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <Palmtree className="w-5 h-5" />
+            Request leave
+          </h2>
+          <form
+            className="space-y-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!leaveStart || !leaveEnd) {
+                toast.error('Select start and end dates');
+                return;
+              }
+              leaveMutation.mutate();
+            }}
+          >
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium block mb-1">From</label>
+                <Input type="date" value={leaveStart} onChange={(e) => setLeaveStart(e.target.value)} required />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1">To</label>
+                <Input type="date" value={leaveEnd} onChange={(e) => setLeaveEnd(e.target.value)} required />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium block mb-1">Leave type</label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3"
+                value={leaveType}
+                onChange={(e) => setLeaveType(e.target.value as 'paid' | 'unpaid' | 'lop')}
+              >
+                <option value="paid">Paid leave</option>
+                <option value="unpaid">Unpaid leave</option>
+                <option value="lop">LOP (loss of pay)</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium block mb-1">Reason</label>
+              <Input value={leaveReason} onChange={(e) => setLeaveReason(e.target.value)} placeholder="Optional" />
+            </div>
+            <Button type="submit" className="w-full" disabled={leaveMutation.isPending}>
+              {leaveMutation.isPending ? 'Submitting...' : 'Submit leave request'}
+            </Button>
+          </form>
+        </Card>
+
+        <Card className="p-5">
+          <h2 className="text-lg font-semibold mb-3">My leave requests</h2>
+          {leavesLoading ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (leavesData?.data || []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">No leave requests yet.</p>
+          ) : (
+            <ul className="space-y-2 max-h-64 overflow-y-auto">
+              {(leavesData?.data || []).map((l) => (
+                <li key={l.id} className="text-sm border rounded-lg p-3">
+                  <div className="flex justify-between">
+                    <span className="font-medium">
+                      {l.start_date} → {l.end_date}
+                    </span>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full capitalize ${
+                        l.status === 'approved'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : l.status === 'rejected'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-amber-100 text-amber-800'
+                      }`}
+                    >
+                      {l.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 capitalize">
+                    {l.leave_type === 'lop' ? 'LOP' : l.leave_type} leave
+                    {l.reason ? ` · ${l.reason}` : ''}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
 
       <Card className="p-5">
         <h2 className="text-lg font-semibold mb-3">Missed Punch Request</h2>
