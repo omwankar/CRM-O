@@ -29,6 +29,10 @@ import {
   Timer,
   ListTodo,
   FileSearch,
+  Heart,
+  Palmtree,
+  ClipboardList,
+  PartyPopper,
 } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useQuery } from '@tanstack/react-query';
@@ -61,6 +65,16 @@ function getMenuSections(role?: string, pendingCount?: number) {
         { label: 'Vendors', href: '/dashboard/vendors', icon: Package },
         { label: 'Buyers', href: '/dashboard/buyers', icon: ShoppingCart },
         { label: 'Documents', href: '/dashboard/documents', icon: FileText },
+      ],
+    },
+    {
+      label: 'HR',
+      items: [
+        { label: 'Employees', href: '/dashboard/hr/employees', icon: Users },
+        { label: 'Leaves', href: '/dashboard/hr/leaves', icon: Palmtree },
+        { label: 'Attendance', href: '/dashboard/hr/attendance', icon: ClipboardList },
+        { label: 'Holiday', href: '/dashboard/hr/holidays', icon: PartyPopper },
+        { label: 'Appreciation', href: '/dashboard/hr/appreciations', icon: Heart },
       ],
     },
     {

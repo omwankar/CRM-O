@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     .eq('id', user.id)
     .maybeSingle();
 
-  const isHead = ['super_admin', 'admin'].includes(roleRow?.role);
+  const isHead = ['super_admin', 'manager', 'admin'].includes(roleRow?.role || '');
   const forceMine = scope === 'mine';
 
   let query = supabase
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
   const { data: heads } = await adminClient
     .from('users')
     .select('id')
-    .in('role', ['super_admin', 'admin']);
+    .in('role', ['super_admin', 'manager', 'admin']);
 
   if (heads?.length) {
     await adminClient.from('notifications').insert(
@@ -187,7 +187,7 @@ export async function PATCH(request: NextRequest) {
     .eq('id', user.id)
     .maybeSingle();
 
-  if (!['super_admin', 'admin'].includes(roleRow?.role)) {
+  if (!['super_admin', 'manager', 'admin'].includes(roleRow?.role || '')) {
     return NextResponse.json({ error: 'Only admin/super_admin can review leaves' }, { status: 403 });
   }
 
