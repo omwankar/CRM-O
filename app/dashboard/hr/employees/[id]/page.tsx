@@ -11,8 +11,15 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { CanWrite, CanManageUsers } from '@/components/auth/Can';
-import { ArrowLeft, Loader2, Save } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
+
+function formatSalary(amount: number | null | undefined) {
+  if (amount == null) return '—';
+  return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(
+    amount,
+  );
+}
 
 export default function HrEmployeeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -30,6 +37,7 @@ export default function HrEmployeeDetailPage() {
     reporting_manager_id: '',
     phone: '',
     full_name: '',
+    monthly_salary: '',
   });
 
   const { data: employee, isLoading } = useQuery({
@@ -69,6 +77,10 @@ export default function HrEmployeeDetailPage() {
         ...form,
         reporting_manager_id: form.reporting_manager_id || null,
         joining_date: form.joining_date || null,
+        monthly_salary:
+          form.monthly_salary === '' || form.monthly_salary == null
+            ? null
+            : Number(form.monthly_salary),
       }),
     onSuccess: () => {
       toast.success('Employee profile updated');
@@ -91,6 +103,8 @@ export default function HrEmployeeDetailPage() {
       reporting_manager_id: employee.reporting_manager_id || '',
       phone: employee.phone || '',
       full_name: employee.full_name || '',
+      monthly_salary:
+        employee.monthly_salary != null ? String(employee.monthly_salary) : '',
     });
     setEditing(true);
   };
@@ -124,6 +138,9 @@ export default function HrEmployeeDetailPage() {
           {employee.employee_id && (
             <p className="font-mono text-sm mt-1 text-primary">ID: {employee.employee_id}</p>
           )}
+          <p className="text-sm mt-1">
+            Salary: <span className="font-semibold">{formatSalary(employee.monthly_salary)}</span>
+          </p>
         </div>
         <CanWrite>
           {!editing ? (
@@ -224,6 +241,17 @@ export default function HrEmployeeDetailPage() {
               </select>
             </div>
             <div>
+              <label className="text-sm font-medium block mb-1">Monthly salary</label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={form.monthly_salary}
+                onChange={(e) => setForm({ ...form, monthly_salary: e.target.value })}
+                placeholder="e.g. 50000"
+              />
+            </div>
+            <div>
               <label className="text-sm font-medium block mb-1">Phone</label>
               <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </div>
@@ -236,6 +264,7 @@ export default function HrEmployeeDetailPage() {
             <div><dt className="text-muted-foreground">Department</dt><dd className="font-medium">{employee.department || '—'}</dd></div>
             <div><dt className="text-muted-foreground">Designation</dt><dd className="font-medium">{employee.designation || '—'}</dd></div>
             <div><dt className="text-muted-foreground">Joining date</dt><dd className="font-medium">{employee.joining_date || '—'}</dd></div>
+            <div><dt className="text-muted-foreground">Monthly salary</dt><dd className="font-medium">{formatSalary(employee.monthly_salary)}</dd></div>
             <div><dt className="text-muted-foreground">Status</dt><dd className="font-medium capitalize">{(employee.employment_status || 'active').replace('_', ' ')}</dd></div>
             <div><dt className="text-muted-foreground">Reporting manager</dt><dd className="font-medium">{employee.reporting_manager?.full_name || employee.reporting_manager?.email || '—'}</dd></div>
             <div><dt className="text-muted-foreground">Phone</dt><dd className="font-medium">{employee.phone || '—'}</dd></div>
@@ -245,7 +274,17 @@ export default function HrEmployeeDetailPage() {
       </Card>
 
       <Card className="p-6">
-        <h2 className="font-semibold mb-2">Attendance this month</h2>
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <h2 className="font-semibold">Attendance this month</h2>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/dashboard/hr/attendance/${id}?month=${month}`)}
+          >
+            <CalendarDays className="w-4 h-4 mr-2" />
+            Day-wise view
+          </Button>
+        </div>
         {attendanceRow ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>

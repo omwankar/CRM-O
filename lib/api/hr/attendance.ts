@@ -43,4 +43,62 @@ export async function getHrTeamAttendance(month?: string) {
   }>;
 }
 
+export type DayMarker =
+  | 'present'
+  | 'absent'
+  | 'paid_leave'
+  | 'unpaid_leave'
+  | 'lop'
+  | 'paid_holiday'
+  | 'unpaid_holiday'
+  | 'pending_paid'
+  | 'pending_unpaid'
+  | 'pending_lop'
+  | 'leave_rejected';
+
+export type EmployeeDayAttendance = {
+  date: string;
+  weekday: string;
+  markers: string[];
+  hours: number;
+  sessions: Array<{ id: string; clock_in: string; clock_out: string | null; notes: string | null }>;
+  holiday: { id: string; title: string; holiday_pay_type: string } | null;
+  leave: {
+    id: string;
+    leave_type: string;
+    status: string;
+    start_date: string;
+    end_date: string;
+    reason: string | null;
+  } | null;
+};
+
+export async function getHrEmployeeAttendance(userId: string, month?: string) {
+  const q = month ? `?month=${month}` : '';
+  return apiRequest(`/hr/attendance/employee/${userId}${q}`) as Promise<{
+    month: string;
+    employee: {
+      id: string;
+      full_name: string | null;
+      email: string;
+      employee_id: string | null;
+      department: string | null;
+      designation: string | null;
+      employment_type: string | null;
+      work_mode: string | null;
+      monthly_salary: number | null;
+    };
+    days: EmployeeDayAttendance[];
+    summary: {
+      total_hours: number;
+      days_present: number;
+      leave_paid_days: number;
+      leave_unpaid_days: number;
+      leave_lop_days: number;
+      holiday_count: number;
+    };
+    holidays: Array<{ id: string; date: string; title: string; holiday_pay_type: string | null }>;
+  }>;
+}
+
 export { decideLeave };

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getHrTeamAttendance, decideLeave } from '@/lib/api/hr/attendance';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ const leaveTypeLabel: Record<string, string> = {
 };
 
 export default function HrAttendancePage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
 
@@ -44,10 +46,10 @@ export default function HrAttendancePage() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <ClipboardList className="w-8 h-8" />
-            Team attendance
+            Attendance
           </h1>
           <p className="text-muted-foreground">
-            Current month overview — clock hours, leave (paid / unpaid / LOP), and pending approvals
+            Team summary for the month — click an employee to view day-wise attendance with leaves, LOP, and holidays
           </p>
         </div>
         <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-44" />
@@ -64,10 +66,24 @@ export default function HrAttendancePage() {
                   <span className="text-muted-foreground">({leaveTypeLabel[l.leave_type] || l.leave_type})</span>
                 </span>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="outline" onClick={() => decideMutation.mutate({ id: l.id, status: 'approved' })}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      decideMutation.mutate({ id: l.id, status: 'approved' });
+                    }}
+                  >
                     <Check className="w-4 h-4" />
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => decideMutation.mutate({ id: l.id, status: 'rejected' })}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      decideMutation.mutate({ id: l.id, status: 'rejected' });
+                    }}
+                  >
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
@@ -108,9 +124,15 @@ export default function HrAttendancePage() {
               </thead>
               <tbody>
                 {employees.map((row) => (
-                  <tr key={row.user_id} className="border-b hover:bg-muted/20">
+                  <tr
+                    key={row.user_id}
+                    className="border-b hover:bg-muted/40 cursor-pointer"
+                    onClick={() => router.push(`/dashboard/hr/attendance/${row.user_id}?month=${month}`)}
+                  >
                     <td className="p-3 font-mono text-xs">{row.employee_id || '—'}</td>
-                    <td className="p-3 font-medium">{row.full_name || row.email}</td>
+                    <td className="p-3 font-medium text-primary underline-offset-2 hover:underline">
+                      {row.full_name || row.email}
+                    </td>
                     <td className="p-3 capitalize">{(row.employment_type || '—').replace('_', ' ')}</td>
                     <td className="p-3 capitalize">{row.work_mode || '—'}</td>
                     <td className="p-3">{row.department || '—'}</td>

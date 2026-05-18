@@ -73,7 +73,7 @@ function getMenuSections(role?: string, pendingCount?: number) {
             label: 'HR',
             items: [
               { label: 'Employees', href: '/dashboard/hr/employees', icon: Users },
-              { label: 'Team attendance', href: '/dashboard/hr/attendance', icon: ClipboardList },
+              { label: 'Attendance', href: '/dashboard/hr/attendance', icon: ClipboardList },
               { label: 'Holiday', href: '/dashboard/hr/holidays', icon: PartyPopper },
               { label: 'Appreciation', href: '/dashboard/hr/appreciations', icon: Heart },
             ],
