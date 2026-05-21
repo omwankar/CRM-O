@@ -19,6 +19,7 @@ import { CanWrite } from '@/components/auth/Can';
 import {
   InvoiceForm,
   invoiceFormToPayload,
+  invoiceToFormValues,
   validateInvoiceForm,
   type InvoiceFormValues,
 } from '@/components/invoices/InvoiceForm';
@@ -39,20 +40,7 @@ import { ArrowLeft, FileText, Loader2, Mail, Save, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 function invoiceToForm(inv: Invoice): InvoiceFormValues {
-  return {
-    buyer_id: inv.buyer_id,
-    issue_date: inv.issue_date,
-    due_date: inv.due_date,
-    currency: (inv.currency as InvoiceFormValues['currency']) || 'INR',
-    tax_rate: String(inv.tax_rate ?? 0),
-    notes: inv.notes || '',
-    terms: inv.terms || '',
-    line_items: (inv.line_items || []).map((l) => ({
-      description: l.description,
-      quantity: String(l.quantity),
-      unit_price: String(l.unit_price),
-    })),
-  };
+  return invoiceToFormValues(inv);
 }
 
 function formatMoney(amount: number, currency: string) {
@@ -67,7 +55,6 @@ export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
-  const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<InvoiceFormValues | null>(null);
   const [sendOpen, setSendOpen] = useState(false);
   const [sendEmail, setSendEmail] = useState('');
@@ -84,11 +71,11 @@ export default function InvoiceDetailPage() {
   });
 
   useEffect(() => {
-    if (invoice && !editing) {
+    if (invoice) {
       setForm(invoiceToForm(invoice));
       setSendEmail(invoice.buyer?.contact_email || invoice.buyers?.contact_email || '');
     }
-  }, [invoice, editing]);
+  }, [invoice]);
 
   const saveMut = useMutation({
     mutationFn: () => {
@@ -99,7 +86,6 @@ export default function InvoiceDetailPage() {
     onSuccess: () => {
       toast.success('Invoice saved');
       qc.invalidateQueries({ queryKey: ['invoice', id] });
-      setEditing(false);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -156,7 +142,7 @@ export default function InvoiceDetailPage() {
   const buyerName = invoice.buyer?.buyer_name || invoice.buyers?.buyer_name || '—';
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 w-full max-w-7xl mx-auto">
       <Button variant="ghost" onClick={() => router.push('/dashboard/invoices')}>
         <ArrowLeft className="w-4 h-4 mr-2" />
         Back to invoices
@@ -182,19 +168,20 @@ export default function InvoiceDetailPage() {
         </div>
         <CanWrite>
           <div className="flex flex-wrap gap-2">
-            {isDraft && !editing && (
-              <Button variant="outline" onClick={() => setEditing(true)}>
-                Edit
-              </Button>
-            )}
-            {editing && (
+            {isDraft && (
               <>
-                <Button variant="outline" onClick={() => { setEditing(false); setForm(invoiceToForm(invoice)); }}>
-                  Cancel
-                </Button>
                 <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>
                   <Save className="w-4 h-4 mr-2" />
-                  Save
+                  Save invoice
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setForm(invoiceToForm(invoice));
+                    toast.message('Changes reset');
+                  }}
+                >
+                  Reset
                 </Button>
               </>
             )}
@@ -231,19 +218,23 @@ export default function InvoiceDetailPage() {
         </Card>
       )}
 
-      <Card className="p-6">
+      <div className="rounded-xl bg-slate-100/90 p-4 md:p-6">
+      <Card className="p-0 overflow-hidden border-0 shadow-none bg-transparent">
         {form && (
           <InvoiceForm
             value={form}
             onChange={setForm}
             buyers={buyersData?.data || []}
-            disabled={!editing || !isDraft}
+            disabled={!isDraft}
           />
         )}
-        {!isDraft && !editing && (
-          <p className="text-sm text-muted-foreground mt-4">Only draft invoices can be edited.</p>
+        {!isDraft && (
+          <p className="text-sm text-slate-600 mt-4 px-6 pb-4 bg-amber-50 border border-amber-200 rounded-md mx-4">
+            This invoice was sent — view only. Duplicate as a new draft to edit.
+          </p>
         )}
       </Card>
+      </div>
 
       <Dialog open={sendOpen} onOpenChange={setSendOpen}>
         <DialogContent>

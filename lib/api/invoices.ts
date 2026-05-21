@@ -1,6 +1,24 @@
 import { apiRequest, getApiBase } from '@/lib/api/client';
 import type { CreateInvoiceInput, Invoice, UpdateInvoiceInput } from '@/types/invoices';
 
+export type InvoiceCompanySettings = {
+  name: string;
+  phone: string;
+  address: string;
+  vat_number: string;
+};
+
+export async function getInvoiceCompanySettings() {
+  return apiRequest('/invoices/settings/company') as Promise<InvoiceCompanySettings>;
+}
+
+export async function updateInvoiceCompanySettings(data: InvoiceCompanySettings) {
+  return apiRequest('/invoices/settings/company', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }) as Promise<InvoiceCompanySettings>;
+}
+
 export async function getInvoices(params?: {
   status?: string;
   buyer_id?: string;

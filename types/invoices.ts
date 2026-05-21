@@ -16,13 +16,24 @@ export const INVOICE_STATUS_CLASSES: Record<InvoiceStatus, string> = {
   cancelled: 'bg-gray-100 text-gray-600',
 };
 
-export const INVOICE_CURRENCIES = ['INR', 'USD', 'EUR', 'AED', 'GBP'] as const;
+export const INVOICE_CURRENCIES = ['SAR', 'INR', 'USD', 'EUR', 'AED', 'GBP'] as const;
 export type InvoiceCurrency = (typeof INVOICE_CURRENCIES)[number];
+
+export interface InvoiceTax {
+  id?: string;
+  invoice_id?: string;
+  rate: number;
+  name: string;
+  tax_number?: string | null;
+  amount: number;
+  sort_order?: number;
+}
 
 export interface InvoiceLineItem {
   id?: string;
   invoice_id?: string;
   description: string;
+  line_detail?: string | null;
   quantity: number;
   unit_price: number;
   amount: number;
@@ -53,6 +64,10 @@ export interface Invoice {
   tax_rate: number;
   tax_amount: number;
   total: number;
+  reference?: string | null;
+  discount_type?: 'percent' | 'fixed' | null;
+  discount_value?: number;
+  discount_amount?: number;
   notes?: string | null;
   terms?: string | null;
   pdf_url?: string | null;
@@ -63,6 +78,7 @@ export interface Invoice {
   created_at: string;
   updated_at: string;
   line_items?: InvoiceLineItem[];
+  taxes?: InvoiceTax[];
   buyer?: InvoiceBuyer | null;
   buyers?: { id: string; buyer_name: string; contact_email?: string | null };
 }
@@ -73,9 +89,13 @@ export type CreateInvoiceInput = {
   due_date: string;
   currency?: string;
   tax_rate?: number;
+  taxes?: Array<{ rate: number; name: string; tax_number?: string | null }>;
+  reference?: string | null;
+  discount?: { type: 'percent' | 'fixed'; value: number } | null;
   notes?: string | null;
+  line_items: Array<{ description: string; line_detail?: string | null; quantity: number; unit_price: number }>;
   terms?: string | null;
-  line_items: Array<{ description: string; quantity: number; unit_price: number }>;
 };
+
 
 export type UpdateInvoiceInput = Partial<CreateInvoiceInput>;

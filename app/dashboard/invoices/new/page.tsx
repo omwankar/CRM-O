@@ -34,16 +34,19 @@ export default function NewInvoicePage() {
   });
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 w-full max-w-7xl mx-auto pb-10">
       <Button variant="ghost" onClick={() => router.push('/dashboard/invoices')}>
         <ArrowLeft className="w-4 h-4 mr-2" />
         Back
       </Button>
       <div>
-        <h1 className="text-3xl font-bold">New invoice</h1>
-        <p className="text-muted-foreground">Draft will be saved; generate PDF and email from the detail page.</p>
+        <h1 className="text-3xl font-bold text-foreground">New invoice</h1>
+        <p className="text-slate-400">
+          White invoice editor — all fields below print on the PDF.
+        </p>
       </div>
-      <Card className="p-6">
+      <div className="rounded-xl bg-slate-100/90 p-4 md:p-6">
+      <Card className="p-0 overflow-hidden border-0 shadow-none bg-transparent">
         <InvoiceForm value={form} onChange={setForm} buyers={buyersData?.data || []} />
         <div className="mt-6 flex justify-end">
           <Button onClick={() => createMut.mutate()} disabled={createMut.isPending}>
@@ -52,6 +55,7 @@ export default function NewInvoicePage() {
           </Button>
         </div>
       </Card>
+      </div>
     </div>
   );
 }
