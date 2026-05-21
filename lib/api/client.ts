@@ -27,8 +27,18 @@ export async function apiRequest(url: string, options?: RequestInit) {
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(error.error || 'Request failed');
+    const body = await response.json().catch(() => ({ error: 'Request failed' }));
+    const issues = body.issues as Array<{ path?: (string | number)[]; message?: string }> | undefined;
+    if (issues?.length) {
+      const detail = issues
+        .map((i) => {
+          const field = i.path?.length ? i.path.join('.') : 'field';
+          return `${field}: ${i.message || 'invalid'}`;
+        })
+        .join('; ');
+      throw new Error(detail);
+    }
+    throw new Error(body.error || 'Request failed');
   }
 
   return response.json();
