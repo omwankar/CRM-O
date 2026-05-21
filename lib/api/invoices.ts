@@ -50,6 +50,13 @@ export async function createInvoice(data: CreateInvoiceInput) {
   return apiRequest('/invoices', { method: 'POST', body: JSON.stringify(data) }) as Promise<Invoice>;
 }
 
+export async function createInvoiceFromQuotation(quotationId: string, buyerId: string, dueDate?: string) {
+  return apiRequest(`/invoices/from-quotation/${quotationId}`, {
+    method: 'POST',
+    body: JSON.stringify({ buyer_id: buyerId, due_date: dueDate }),
+  }) as Promise<Invoice>;
+}
+
 export async function updateInvoice(id: string, data: UpdateInvoiceInput) {
   return apiRequest(`/invoices/${id}`, { method: 'PUT', body: JSON.stringify(data) }) as Promise<Invoice>;
 }

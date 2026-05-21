@@ -199,6 +199,15 @@ export interface CreateFollowupInput {
 
 export interface UpdateFollowupInput extends Partial<CreateFollowupInput> {}
 
+export interface LinkedInvoiceSummary {
+  id: string;
+  invoice_number: string;
+  status: string;
+  total: number;
+  currency: string;
+  created_at: string;
+}
+
 export interface Quotation {
   id: string;
   quotation_number: string;
@@ -230,7 +239,18 @@ export interface Quotation {
   outcome?: string | null;
   tracker_remarks?: string | null;
   updated_by?: string | null;
+  buyer_id?: string | null;
+  client_email?: string | null;
+  quote_sent_to_email?: string | null;
+  quote_sent_at?: string | null;
   // Joined
+  buyer?: {
+    id: string;
+    buyer_name: string;
+    contact_email?: string | null;
+    contact_person?: string | null;
+  } | null;
+  linked_invoices?: LinkedInvoiceSummary[];
   users?: { id: string; full_name: string | null; avatar_url?: string | null; email?: string | null; phone?: string | null };
   projects?: { id: string; project_name: string };
   quotation_vendor_quotes?: VendorQuote[];
@@ -257,6 +277,8 @@ export interface CreateQuotationInput {
 }
 
 export interface UpdateQuotationInput extends Partial<CreateQuotationInput> {
+  buyer_id?: string | null;
+  client_email?: string | null;
   chosen_quote_id?: string;
   clarusto_final_price?: number;
   clarusto_final_currency?: string;

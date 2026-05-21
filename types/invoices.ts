@@ -81,10 +81,19 @@ export interface Invoice {
   taxes?: InvoiceTax[];
   buyer?: InvoiceBuyer | null;
   buyers?: { id: string; buyer_name: string; contact_email?: string | null };
+  quotation_id?: string | null;
+  quotation?: {
+    id: string;
+    quotation_number: string;
+    requirement?: string;
+    enquiry_title?: string | null;
+    standalone_project_name?: string | null;
+  } | null;
 }
 
 export type CreateInvoiceInput = {
   buyer_id: string;
+  quotation_id?: string | null;
   issue_date?: string;
   due_date: string;
   currency?: string;

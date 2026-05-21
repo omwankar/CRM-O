@@ -1,4 +1,4 @@
-import { apiRequest } from '@/lib/api/client';
+import { apiRequest, getApiBase } from '@/lib/api/client';
 import type {
   CreateFollowupInput,
   CreateQuotationInput,
@@ -107,5 +107,28 @@ export async function updateFollowup(followupId: string, data: UpdateFollowupInp
 
 export async function deleteFollowup(followupId: string): Promise<void> {
   await apiRequest(`/quotations/followups/${followupId}`, { method: 'DELETE' });
+}
+
+export async function sendQuotation(id: string, payload: { email: string; message?: string }) {
+  return apiRequest(`/quotations/${id}/send`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchQuotationPdfBlob(id: string): Promise<Blob> {
+  const { supabase } = await import('@/lib/auth');
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  const res = await fetch(`${getApiBase()}/quotations/${id}/pdf`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || 'Failed to load quotation PDF');
+  }
+  return res.blob();
 }
 

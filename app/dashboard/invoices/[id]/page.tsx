@@ -36,7 +36,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ArrowLeft, FileText, Loader2, Mail, Save, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowLeft, FileText, Link2, Loader2, Mail, Save, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 function invoiceToForm(inv: Invoice): InvoiceFormValues {
@@ -163,6 +164,18 @@ export default function InvoiceDetailPage() {
           {invoice.sent_at && (
             <p className="text-xs text-muted-foreground mt-2">
               Sent {new Date(invoice.sent_at).toLocaleString()} to {invoice.sent_to_email}
+            </p>
+          )}
+          {invoice.quotation && (
+            <p className="text-sm mt-2 flex items-center gap-1.5">
+              <Link2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <span className="text-muted-foreground">Linked quotation:</span>
+              <Link
+                href={`/dashboard/quotations/${invoice.quotation.id}`}
+                className="font-mono text-blue-600 hover:underline"
+              >
+                {invoice.quotation.quotation_number}
+              </Link>
             </p>
           )}
         </div>

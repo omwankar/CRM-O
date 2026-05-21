@@ -6,16 +6,28 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import Link from 'next/link';
 import {
   ArrowLeft,
+  FileText,
+  Mail,
   Pencil,
+  Receipt,
   Search,
 } from 'lucide-react';
 import {
   addVendorQuote,
   updateVendorQuote,
   deleteVendorQuote,
+  sendQuotation,
+  fetchQuotationPdfBlob,
 } from '@/lib/api/quotations';
+import { createInvoiceFromQuotation } from '@/lib/api/invoices';
+import { getQuotationCustomerPrice } from '@/lib/quotationPricing';
+import { SendQuotationDialog } from '@/components/quotations/SendQuotationDialog';
+import { CreateInvoiceFromQuotationDialog } from '@/components/quotations/CreateInvoiceFromQuotationDialog';
+import { CanWrite } from '@/components/auth/Can';
+import { toast } from 'sonner';
 import type { EnquiryStage, Quotation, QuotationFollowup, UpdateQuotationInput, VendorQuote } from '@/types/quotations';
 import { normalizeEnquiryStage, buildOutcomeString, closureKindToCrmStatus, isTerminalEnquiryStage, closureKindForEnquiryStage, enquiryStageForClosureKind } from '@/types/quotations';
 import { EnquiryOutcomeModal } from '@/components/quotations/EnquiryOutcomeModal';
@@ -64,6 +76,8 @@ export default function QuotationDetailPage() {
   const [deleteFollowupTarget, setDeleteFollowupTarget] = useState<QuotationFollowup | null>(null);
   const [closureOpen, setClosureOpen] = useState(false);
   const [pendingClosureStage, setPendingClosureStage] = useState<EnquiryStage | null>(null);
+  const [sendQuoteOpen, setSendQuoteOpen] = useState(false);
+  const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false);
 
   const { data: q, isLoading, error } = useQuotation(id || '');
 
@@ -106,6 +120,22 @@ export default function QuotationDetailPage() {
   }, [quotation]);
 
   const followups = quotation?.quotation_followups || [];
+
+  const customerPrice = useMemo(
+    () => (quotation ? getQuotationCustomerPrice(quotation) : null),
+    [quotation],
+  );
+
+  const previewQuotePdf = async () => {
+    if (!id) return;
+    try {
+      const blob = await fetchQuotationPdfBlob(id);
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not open quote PDF');
+    }
+  };
 
   const runSearch = () => {
     const t = searchQ.trim();
@@ -212,6 +242,93 @@ export default function QuotationDetailPage() {
           />
 
           <Card className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm sm:p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Client quote & invoicing</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Send the customer quotation from the CRM and create linked invoices.
+                </p>
+                {customerPrice ? (
+                  <p className="text-sm font-medium mt-2">
+                    Customer price:{' '}
+                    <span className="font-mono">
+                      {customerPrice.currency}{' '}
+                      {customerPrice.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                  </p>
+                ) : (
+                  <p className="text-sm text-amber-700 dark:text-amber-300 mt-2">
+                    Finalize the enquiry or set a revised price before sending a quote or creating an invoice.
+                  </p>
+                )}
+                {quotation.quote_sent_at ? (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Quote emailed {new Date(quotation.quote_sent_at).toLocaleString()}
+                    {quotation.quote_sent_to_email ? ` to ${quotation.quote_sent_to_email}` : ''}
+                  </p>
+                ) : null}
+              </div>
+              <CanWrite>
+                <div className="flex flex-wrap gap-2 shrink-0">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!customerPrice}
+                    onClick={previewQuotePdf}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Preview PDF
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    disabled={!customerPrice}
+                    onClick={() => setSendQuoteOpen(true)}
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    Send to client
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={!customerPrice}
+                    onClick={() => setCreateInvoiceOpen(true)}
+                  >
+                    <Receipt className="h-4 w-4 mr-2" />
+                    Create invoice
+                  </Button>
+                </div>
+              </CanWrite>
+            </div>
+
+            {(quotation.linked_invoices?.length ?? 0) > 0 ? (
+              <div className="mt-4 pt-4 border-t border-border/60">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                  Linked invoices
+                </p>
+                <ul className="space-y-1">
+                  {quotation.linked_invoices!.map((inv) => (
+                    <li key={inv.id}>
+                      <Link
+                        href={`/dashboard/invoices/${inv.id}`}
+                        className="text-sm text-blue-600 hover:underline font-mono"
+                      >
+                        {inv.invoice_number}
+                      </Link>
+                      <span className="text-xs text-muted-foreground ml-2">
+                        {inv.status} · {inv.currency} {Number(inv.total).toFixed(2)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </Card>
+
+          <Card className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm sm:p-5">
             <VendorQuoteTable
               quotes={(quotation.quotation_vendor_quotes || []) as VendorQuote[]}
               chosenQuoteId={quotation.chosen_quote_id}
@@ -281,6 +398,36 @@ export default function QuotationDetailPage() {
           />
         </>
       )}
+
+      {quotation ? (
+        <>
+          <SendQuotationDialog
+            open={sendQuoteOpen}
+            onOpenChange={setSendQuoteOpen}
+            quotationNumber={quotation.quotation_number}
+            defaultEmail={quotation.buyer?.contact_email || quotation.client_email}
+            onSend={async ({ email, message }) => {
+              if (!id) return;
+              await sendQuotation(id, { email, message });
+              toast.success('Quotation sent');
+              qc.invalidateQueries({ queryKey: ['quotation', id] });
+            }}
+          />
+          <CreateInvoiceFromQuotationDialog
+            open={createInvoiceOpen}
+            onOpenChange={setCreateInvoiceOpen}
+            quotationNumber={quotation.quotation_number}
+            defaultBuyerId={quotation.buyer_id}
+            onConfirm={async (buyerId) => {
+              if (!id) return;
+              const inv = await createInvoiceFromQuotation(id, buyerId);
+              toast.success('Invoice created');
+              qc.invalidateQueries({ queryKey: ['quotation', id] });
+              router.push(`/dashboard/invoices/${inv.id}`);
+            }}
+          />
+        </>
+      ) : null}
 
       <FinalizeQuotationModal
         open={finalizeOpen}
