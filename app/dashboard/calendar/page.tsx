@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,6 +46,7 @@ function formatYMDLocal(d: Date) {
 }
 
 export default function CalendarPage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { canWrite } = useCurrentUser();
   const [monthDate, setMonthDate] = useState(() => new Date());
@@ -131,14 +133,19 @@ export default function CalendarPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/30">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2.5 bg-primary/10 rounded-lg">
-              <CalendarDays className="w-6 h-6 text-primary" />
+        <div className="mb-8 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2.5 bg-primary/10 rounded-lg">
+                <CalendarDays className="w-6 h-6 text-primary" />
+              </div>
+              <h1 className="text-4xl font-bold tracking-tight">Calendar</h1>
             </div>
-            <h1 className="text-4xl font-bold tracking-tight">Calendar</h1>
+            <p className="text-base text-muted-foreground">Manage holidays and scheduled meetings for your organization.</p>
           </div>
-          <p className="text-base text-muted-foreground">Manage holidays and scheduled meetings for your organization.</p>
+          <Button variant="outline" onClick={() => router.push('/dashboard/events')}>
+            Manage events
+          </Button>
         </div>
 
         <div className="mb-8 flex flex-wrap items-center justify-between gap-3 bg-card rounded-xl border border-border/50 p-4 shadow-sm">

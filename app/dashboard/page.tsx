@@ -24,6 +24,7 @@ import {
   ArrowRight,
   FileSearch,
 } from 'lucide-react';
+import { AnnouncementsWidget } from '@/components/announcements/AnnouncementsWidget';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -134,6 +135,8 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      <AnnouncementsWidget />
 
       {/* KPI bar */}
       {isLoading ? (

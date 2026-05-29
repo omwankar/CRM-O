@@ -33,6 +33,10 @@ import {
   Heart,
   ClipboardList,
   PartyPopper,
+  Megaphone,
+  BookOpen,
+  BarChart3,
+  CalendarClock,
 } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useQuery } from '@tanstack/react-query';
@@ -67,6 +71,16 @@ function getMenuSections(role?: string, pendingCount?: number) {
         { label: 'Vendors', href: '/dashboard/vendors', icon: Package },
         { label: 'Buyers', href: '/dashboard/buyers', icon: ShoppingCart },
         { label: 'Documents', href: '/dashboard/documents', icon: FileText },
+      ],
+    },
+    {
+      label: 'TEAM',
+      items: [
+        { label: 'Announcements', href: '/dashboard/announcements', icon: Megaphone },
+        { label: 'Knowledge Base', href: '/dashboard/knowledge', icon: BookOpen },
+        { label: 'Event Manager', href: '/dashboard/events', icon: CalendarClock },
+        { label: 'Time Log', href: '/dashboard/timelog', icon: Timer },
+        { label: 'Reports', href: '/dashboard/reports', icon: BarChart3 },
       ],
     },
     ...(canAccessHr

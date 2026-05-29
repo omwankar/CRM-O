@@ -1,4 +1,5 @@
 import { apiRequest } from '@/lib/api/client';
+import type { CalendarEvent } from '@/types/workplace';
 
 export async function getCalendarEvents(params?: { start_date?: string; end_date?: string; event_type?: string; page?: number; limit?: number }) {
   const query = new URLSearchParams();
@@ -8,6 +9,14 @@ export async function getCalendarEvents(params?: { start_date?: string; end_date
   if (params?.page) query.append('page', params.page.toString());
   if (params?.limit) query.append('limit', params.limit.toString());
   return apiRequest(`/calendar?${query}`);
+}
+
+/** Calendar events + approved leaves merged (Event Manager / calendar views). */
+export async function getCalendarFeed(params?: { start_date?: string; end_date?: string }) {
+  const query = new URLSearchParams();
+  if (params?.start_date) query.append('start_date', params.start_date);
+  if (params?.end_date) query.append('end_date', params.end_date);
+  return apiRequest(`/calendar/feed?${query}`) as Promise<{ data: CalendarEvent[] }>;
 }
 
 export async function getCalendarEvent(id: string) {
