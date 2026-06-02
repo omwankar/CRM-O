@@ -4,29 +4,42 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { CalendarCheck, Loader2, Palmtree } from 'lucide-react';
-import { getLeaveBalance, getMyAttendance } from '@/lib/api/leave';
+import { CalendarCheck, Loader2, Palmtree, Users } from 'lucide-react';
+import { getLeaveBalance, getMyAttendance, getAttendanceGrid } from '@/lib/api/leave';
 import { getMyLeaveRequests } from '@/lib/api/clock';
-
-const markerConfig: Record<string, { label: string; className: string }> = {
-  present: { label: 'Present', className: 'bg-emerald-100 text-emerald-800' },
-  absent: { label: 'Absent', className: 'bg-gray-100 text-gray-600' },
-  paid_leave: { label: 'Paid leave', className: 'bg-blue-100 text-blue-800' },
-  unpaid_leave: { label: 'Unpaid leave', className: 'bg-slate-100 text-slate-700' },
-  lop: { label: 'LOP', className: 'bg-red-100 text-red-800' },
-  paid_holiday: { label: 'Paid holiday', className: 'bg-purple-100 text-purple-800' },
-  unpaid_holiday: { label: 'Unpaid holiday', className: 'bg-violet-100 text-violet-700' },
-  pending_paid: { label: 'Pending paid', className: 'bg-amber-100 text-amber-800' },
-  pending_unpaid: { label: 'Pending unpaid', className: 'bg-amber-100 text-amber-800' },
-  pending_lop: { label: 'Pending LOP', className: 'bg-amber-100 text-amber-800' },
-  leave_rejected: { label: 'Leave rejected', className: 'bg-gray-100 text-gray-500' },
-};
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 function statusBadge(status: string) {
   if (status === 'approved') return 'bg-emerald-100 text-emerald-800';
   if (status === 'rejected') return 'bg-red-100 text-red-800';
   return 'bg-amber-100 text-amber-800';
 }
+
+// Solid, high-contrast codes used in the month grid cells (readable on dark theme).
+const gridCellConfig: Record<string, { code: string; className: string; label: string }> = {
+  present: { code: 'P', className: 'bg-emerald-600 text-white', label: 'Present' },
+  absent: { code: 'A', className: 'bg-rose-600 text-white', label: 'Absent' },
+  paid_leave: { code: 'PL', className: 'bg-sky-600 text-white', label: 'Paid leave' },
+  unpaid_leave: { code: 'UL', className: 'bg-indigo-600 text-white', label: 'Unpaid leave' },
+  lop: { code: 'X', className: 'bg-red-800 text-white', label: 'LOP' },
+  paid_holiday: { code: 'H', className: 'bg-purple-600 text-white', label: 'Holiday (paid)' },
+  unpaid_holiday: { code: 'h', className: 'bg-fuchsia-700 text-white', label: 'Holiday (unpaid)' },
+  pending: { code: '?', className: 'bg-amber-500 text-black', label: 'Pending leave' },
+  weekoff: { code: '·', className: 'bg-zinc-700 text-zinc-300', label: 'Week off' },
+  none: { code: '', className: 'bg-muted/30 text-muted-foreground', label: '' },
+};
+
+const gridLegend = [
+  'present',
+  'absent',
+  'paid_leave',
+  'unpaid_leave',
+  'lop',
+  'paid_holiday',
+  'unpaid_holiday',
+  'pending',
+  'weekoff',
+];
 
 function formatTime(iso: string | null) {
   if (!iso) return '—';
@@ -37,13 +50,25 @@ export default function LeaveTrackerPage() {
   const now = new Date();
   const [month, setMonth] = useState(now.toISOString().slice(0, 7));
   const year = Number(month.slice(0, 4)) || now.getFullYear();
+  const { role } = useCurrentUser();
+  const isManager = role === 'manager' || role === 'super_admin';
+
+  const {
+    data: grid,
+    isLoading: gridLoading,
+    error: gridError,
+  } = useQuery({
+    queryKey: ['attendance-grid', month],
+    queryFn: () => getAttendanceGrid(month),
+    retry: false,
+  });
 
   const { data: balance, isLoading: balanceLoading } = useQuery({
     queryKey: ['leave-balance', year],
     queryFn: () => getLeaveBalance(year),
   });
 
-  const { data: attendance, isLoading: attendanceLoading } = useQuery({
+  const { data: attendance } = useQuery({
     queryKey: ['my-attendance', month],
     queryFn: () => getMyAttendance(month),
   });
@@ -169,76 +194,102 @@ export default function LeaveTrackerPage() {
 
       <Card className="overflow-hidden">
         <div className="p-4 border-b bg-muted/30 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-medium">My attendance · {monthLabel}</p>
+          <p className="text-sm font-medium flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            {isManager ? `Team attendance grid · ${monthLabel}` : `My attendance · ${monthLabel}`}
+          </p>
           <div className="flex flex-wrap gap-2 text-xs">
-            {Object.entries(markerConfig).map(([key, cfg]) => (
-              <span key={key} className={`px-2 py-0.5 rounded-full ${cfg.className}`}>
-                {cfg.label}
-              </span>
-            ))}
+            {gridLegend.map((key) => {
+              const cfg = gridCellConfig[key];
+              return (
+                <span key={key} className="inline-flex items-center gap-1">
+                  <span
+                    className={`inline-flex h-5 w-6 items-center justify-center rounded-sm text-[10px] font-bold ${cfg.className}`}
+                  >
+                    {cfg.code}
+                  </span>
+                  {cfg.label}
+                </span>
+              );
+            })}
           </div>
         </div>
 
-        {attendanceLoading ? (
+        {gridLoading ? (
           <div className="p-8 flex justify-center">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
           </div>
-        ) : !attendance?.days?.length ? (
-          <p className="p-8 text-center text-muted-foreground">No data</p>
+        ) : gridError ? (
+          <p className="p-8 text-center text-rose-600 text-sm">
+            Couldn&apos;t load the grid: {gridError instanceof Error ? gridError.message : 'Unknown error'}
+          </p>
+        ) : !grid?.employees?.length ? (
+          <p className="p-8 text-center text-muted-foreground">No employees</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 border-b">
+            <table className="text-sm border-separate border-spacing-0">
+              <thead>
                 <tr>
-                  <th className="text-left p-3">Date</th>
-                  <th className="text-left p-3">Day</th>
-                  <th className="text-left p-3">Status</th>
-                  <th className="text-left p-3">Login</th>
-                  <th className="text-left p-3">Logout</th>
-                  <th className="text-right p-3">Hours</th>
+                  <th className="sticky left-0 z-10 bg-muted/60 text-left p-2 min-w-[180px] border-b">
+                    Employee
+                  </th>
+                  {grid.days.map((d) => (
+                    <th
+                      key={d.date}
+                      className={`p-1 min-w-[52px] text-center text-xs font-medium border-b ${
+                        d.is_weekend ? 'bg-muted/50 text-muted-foreground' : 'bg-muted/30'
+                      }`}
+                    >
+                      {d.day}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {attendance.days.map((day) => (
-                  <tr key={day.date} className="border-b hover:bg-muted/20 align-top">
-                    <td className="p-3 font-medium whitespace-nowrap">{day.date}</td>
-                    <td className="p-3 text-muted-foreground">{day.weekday}</td>
-                    <td className="p-3">
-                      <div className="flex flex-wrap gap-1">
-                        {day.markers.map((m) => {
-                          const cfg = markerConfig[m] || { label: m, className: 'bg-muted text-muted-foreground' };
-                          return (
-                            <span key={m} className={`text-xs px-2 py-0.5 rounded-full ${cfg.className}`}>
-                              {cfg.label}
+                {grid.employees.map((emp) => (
+                  <tr key={emp.user_id} className="hover:bg-muted/10">
+                    <td className="sticky left-0 z-10 bg-background p-2 border-b">
+                      <p className="font-medium truncate max-w-[160px]">{emp.full_name}</p>
+                      {emp.employee_id && (
+                        <p className="text-[10px] text-muted-foreground font-mono">{emp.employee_id}</p>
+                      )}
+                    </td>
+                    {emp.cells.map((c) => {
+                      const cfg = gridCellConfig[c.marker] || gridCellConfig.none;
+                      const session = c.sessions[0];
+                      const tooltip = [
+                        `${c.date} · ${cfg.label || '—'}`,
+                        session ? `In: ${formatTime(session.clock_in)}` : null,
+                        session ? `Out: ${formatTime(session.clock_out)}` : null,
+                        c.hours > 0 ? `${c.hours}h` : null,
+                      ]
+                        .filter(Boolean)
+                        .join('\n');
+                      return (
+                        <td key={c.date} className="p-0.5 text-center border-b align-top">
+                          <div
+                            title={tooltip}
+                            className="flex flex-col items-center gap-0.5 min-h-[52px] py-0.5"
+                          >
+                            <span
+                              className={`inline-flex h-5 w-6 items-center justify-center rounded-sm text-[10px] font-bold ${cfg.className}`}
+                            >
+                              {cfg.code}
                             </span>
-                          );
-                        })}
-                      </div>
-                      {day.holiday && <p className="text-xs text-muted-foreground mt-1">{day.holiday.title}</p>}
-                    </td>
-                    <td className="p-3 text-xs whitespace-nowrap">
-                      {day.sessions.length === 0 ? (
-                        '—'
-                      ) : (
-                        <ul className="space-y-1">
-                          {day.sessions.map((s) => (
-                            <li key={s.id}>{formatTime(s.clock_in)}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </td>
-                    <td className="p-3 text-xs whitespace-nowrap">
-                      {day.sessions.length === 0 ? (
-                        '—'
-                      ) : (
-                        <ul className="space-y-1">
-                          {day.sessions.map((s) => (
-                            <li key={s.id}>{formatTime(s.clock_out)}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </td>
-                    <td className="p-3 text-right tabular-nums">{day.hours > 0 ? day.hours.toFixed(2) : '—'}</td>
+                            {session ? (
+                              <>
+                                <span className="text-[9px] leading-tight text-emerald-400 tabular-nums">
+                                  {formatTime(session.clock_in)}
+                                </span>
+                                <span className="text-[9px] leading-tight text-sky-400 tabular-nums">
+                                  {formatTime(session.clock_out)}
+                                </span>
+                              </>
+                            ) : null}
+                          </div>
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>

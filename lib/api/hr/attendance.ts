@@ -101,4 +101,23 @@ export async function getHrEmployeeAttendance(userId: string, month?: string) {
   }>;
 }
 
+export type AttendanceGridDay = { date: string; day: number; is_weekend: boolean };
+export type AttendanceGridCell = { date: string; marker: string };
+export type AttendanceGridEmployee = {
+  user_id: string;
+  employee_id: string | null;
+  full_name: string;
+  department: string | null;
+  cells: AttendanceGridCell[];
+};
+
+export async function getAttendanceGrid(month?: string) {
+  const q = month ? `?month=${month}` : '';
+  return apiRequest(`/hr/attendance/grid${q}`) as Promise<{
+    month: string;
+    days: AttendanceGridDay[];
+    employees: AttendanceGridEmployee[];
+  }>;
+}
+
 export { decideLeave };

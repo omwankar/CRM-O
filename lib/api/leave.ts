@@ -31,3 +31,30 @@ export async function getMyAttendance(month?: string) {
   const q = month ? `?month=${month}` : '';
   return apiRequest(`/clock/attendance/me${q}`) as Promise<MyAttendance>;
 }
+
+// Monthly grid: employees (rows) x days (columns). Manager / super_admin only.
+export type AttendanceGridDay = { date: string; day: number; is_weekend: boolean };
+export type AttendanceGridCell = {
+  date: string;
+  marker: string;
+  hours: number;
+  sessions: Array<{ clock_in: string; clock_out: string | null }>;
+};
+export type AttendanceGridEmployee = {
+  user_id: string;
+  employee_id: string | null;
+  full_name: string;
+  department: string | null;
+  cells: AttendanceGridCell[];
+};
+
+export type AttendanceGrid = {
+  month: string;
+  days: AttendanceGridDay[];
+  employees: AttendanceGridEmployee[];
+};
+
+export async function getAttendanceGrid(month?: string) {
+  const q = month ? `?month=${month}` : '';
+  return apiRequest(`/clock/attendance-grid${q}`) as Promise<AttendanceGrid>;
+}
