@@ -28,6 +28,11 @@ function statusBadge(status: string) {
   return 'bg-amber-100 text-amber-800';
 }
 
+function formatTime(iso: string | null) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 export default function LeaveTrackerPage() {
   const now = new Date();
   const [month, setMonth] = useState(now.toISOString().slice(0, 7));
@@ -163,9 +168,9 @@ export default function LeaveTrackerPage() {
       </div>
 
       <Card className="overflow-hidden">
-        <div className="p-4 border-b bg-muted/30 flex flex-col items-start gap-3">
+        <div className="p-4 border-b bg-muted/30 flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-medium">My attendance · {monthLabel}</p>
-          <div className="flex flex-col items-start gap-1.5 text-xs">
+          <div className="flex flex-wrap gap-2 text-xs">
             {Object.entries(markerConfig).map(([key, cfg]) => (
               <span key={key} className={`px-2 py-0.5 rounded-full ${cfg.className}`}>
                 {cfg.label}
@@ -188,6 +193,8 @@ export default function LeaveTrackerPage() {
                   <th className="text-left p-3">Date</th>
                   <th className="text-left p-3">Day</th>
                   <th className="text-left p-3">Status</th>
+                  <th className="text-left p-3">Login</th>
+                  <th className="text-left p-3">Logout</th>
                   <th className="text-right p-3">Hours</th>
                 </tr>
               </thead>
@@ -208,6 +215,28 @@ export default function LeaveTrackerPage() {
                         })}
                       </div>
                       {day.holiday && <p className="text-xs text-muted-foreground mt-1">{day.holiday.title}</p>}
+                    </td>
+                    <td className="p-3 text-xs whitespace-nowrap">
+                      {day.sessions.length === 0 ? (
+                        '—'
+                      ) : (
+                        <ul className="space-y-1">
+                          {day.sessions.map((s) => (
+                            <li key={s.id}>{formatTime(s.clock_in)}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </td>
+                    <td className="p-3 text-xs whitespace-nowrap">
+                      {day.sessions.length === 0 ? (
+                        '—'
+                      ) : (
+                        <ul className="space-y-1">
+                          {day.sessions.map((s) => (
+                            <li key={s.id}>{formatTime(s.clock_out)}</li>
+                          ))}
+                        </ul>
+                      )}
                     </td>
                     <td className="p-3 text-right tabular-nums">{day.hours > 0 ? day.hours.toFixed(2) : '—'}</td>
                   </tr>
