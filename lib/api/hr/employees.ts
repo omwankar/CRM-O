@@ -13,6 +13,7 @@ export type HrEmployee = {
   employment_type: string | null;
   work_mode: string | null;
   monthly_salary: number | null;
+  annual_leave_allowance: number | null;
   employment_status: string | null;
   reporting_manager_id: string | null;
   reporting_manager_name?: string | null;

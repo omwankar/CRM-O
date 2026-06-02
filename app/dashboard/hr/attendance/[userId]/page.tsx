@@ -111,9 +111,9 @@ export default function HrIndividualAttendancePage() {
       )}
 
       <Card className="overflow-hidden">
-        <div className="p-4 border-b bg-muted/30 flex flex-wrap items-center justify-between gap-2">
+        <div className="p-4 border-b bg-muted/30 flex flex-col items-start gap-3">
           <p className="text-sm font-medium">{monthLabel}</p>
-          <div className="flex flex-wrap gap-2 text-xs">
+          <div className="flex flex-col items-start gap-1.5 text-xs">
             {Object.entries(markerConfig).map(([key, cfg]) => (
               <span key={key} className={`px-2 py-0.5 rounded-full ${cfg.className}`}>
                 {cfg.label}

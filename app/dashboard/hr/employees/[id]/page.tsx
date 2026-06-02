@@ -38,6 +38,7 @@ export default function HrEmployeeDetailPage() {
     phone: '',
     full_name: '',
     monthly_salary: '',
+    annual_leave_allowance: '',
   });
 
   const { data: employee, isLoading } = useQuery({
@@ -81,6 +82,10 @@ export default function HrEmployeeDetailPage() {
           form.monthly_salary === '' || form.monthly_salary == null
             ? null
             : Number(form.monthly_salary),
+        annual_leave_allowance:
+          form.annual_leave_allowance === '' || form.annual_leave_allowance == null
+            ? null
+            : Number(form.annual_leave_allowance),
       }),
     onSuccess: () => {
       toast.success('Employee profile updated');
@@ -105,6 +110,8 @@ export default function HrEmployeeDetailPage() {
       full_name: employee.full_name || '',
       monthly_salary:
         employee.monthly_salary != null ? String(employee.monthly_salary) : '',
+      annual_leave_allowance:
+        employee.annual_leave_allowance != null ? String(employee.annual_leave_allowance) : '',
     });
     setEditing(true);
   };
@@ -252,6 +259,17 @@ export default function HrEmployeeDetailPage() {
               />
             </div>
             <div>
+              <label className="text-sm font-medium block mb-1">Annual paid leave allowance</label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={form.annual_leave_allowance}
+                onChange={(e) => setForm({ ...form, annual_leave_allowance: e.target.value })}
+                placeholder="e.g. 10"
+              />
+            </div>
+            <div>
               <label className="text-sm font-medium block mb-1">Phone</label>
               <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </div>
@@ -265,6 +283,7 @@ export default function HrEmployeeDetailPage() {
             <div><dt className="text-muted-foreground">Designation</dt><dd className="font-medium">{employee.designation || '—'}</dd></div>
             <div><dt className="text-muted-foreground">Joining date</dt><dd className="font-medium">{employee.joining_date || '—'}</dd></div>
             <div><dt className="text-muted-foreground">Monthly salary</dt><dd className="font-medium">{formatSalary(employee.monthly_salary)}</dd></div>
+            <div><dt className="text-muted-foreground">Annual paid leave</dt><dd className="font-medium">{employee.annual_leave_allowance ?? 10} days</dd></div>
             <div><dt className="text-muted-foreground">Status</dt><dd className="font-medium capitalize">{(employee.employment_status || 'active').replace('_', ' ')}</dd></div>
             <div><dt className="text-muted-foreground">Reporting manager</dt><dd className="font-medium">{employee.reporting_manager?.full_name || employee.reporting_manager?.email || '—'}</dd></div>
             <div><dt className="text-muted-foreground">Phone</dt><dd className="font-medium">{employee.phone || '—'}</dd></div>

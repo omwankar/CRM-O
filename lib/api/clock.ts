@@ -61,6 +61,7 @@ export type LeaveRequest = {
   end_date: string;
   reason: string | null;
   leave_type: 'paid' | 'unpaid' | 'lop';
+  working_days: number | null;
   status: string;
   created_at: string;
 };
@@ -69,11 +70,11 @@ export async function getMyLeaveRequests() {
   return apiRequest('/clock/leave-requests') as Promise<{ data: LeaveRequest[] }>;
 }
 
+// leave_type is auto-classified by the backend (paid vs unpaid) based on balance.
 export async function submitLeaveRequest(data: {
   start_date: string;
   end_date: string;
   reason?: string;
-  leave_type: 'paid' | 'unpaid' | 'lop';
 }) {
   return apiRequest('/clock/leave-requests', {
     method: 'POST',

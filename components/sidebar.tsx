@@ -37,6 +37,7 @@ import {
   BookOpen,
   BarChart3,
   CalendarClock,
+  CalendarCheck,
 } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useQuery } from '@tanstack/react-query';
@@ -58,6 +59,7 @@ function getMenuSections(role?: string, pendingCount?: number) {
       label: 'MANAGE',
       items: [
         { label: 'Clock In/Out', href: '/dashboard/clock', icon: Clock3 },
+        { label: 'Leave Tracker', href: '/dashboard/leave-tracker', icon: CalendarCheck },
         { label: 'Calendar', href: '/dashboard/calendar', icon: CalendarDays },
         ...(isSuperAdmin ? [{ label: 'Punch Requests', href: '/dashboard/punch-requests', icon: Timer, badge: pendingCount }] : []),
         { label: 'Certifications', href: '/dashboard/certifications', icon: Award },

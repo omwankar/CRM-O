@@ -13,8 +13,25 @@ import {
   getMyLeaveRequests,
   submitLeaveRequest,
 } from '@/lib/api/clock';
+import { getLeaveBalance } from '@/lib/api/leave';
 import { Clock3, Loader2, MinusCircle, PlusCircle, Palmtree } from 'lucide-react';
 import { toast } from 'sonner';
+
+/** Weekday count (Mon-Fri) in an inclusive range. Holidays are additionally excluded by the server. */
+function countWeekdays(start: string, end: string): number {
+  if (!start || !end || end < start) return 0;
+  const [sy, sm, sd] = start.split('-').map(Number);
+  const [ey, em, ed] = end.split('-').map(Number);
+  const cur = new Date(Date.UTC(sy, sm - 1, sd));
+  const last = new Date(Date.UTC(ey, em - 1, ed));
+  let count = 0;
+  while (cur <= last) {
+    const day = cur.getUTCDay();
+    if (day !== 0 && day !== 6) count++;
+    cur.setUTCDate(cur.getUTCDate() + 1);
+  }
+  return count;
+}
 
 function formatMonthKey(d: Date) {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
@@ -47,7 +64,6 @@ export default function ClockPage() {
   const [leaveStart, setLeaveStart] = useState('');
   const [leaveEnd, setLeaveEnd] = useState('');
   const [leaveReason, setLeaveReason] = useState('');
-  const [leaveType, setLeaveType] = useState<'paid' | 'unpaid' | 'lop'>('unpaid');
 
   const { data: sessionsData, isLoading } = useQuery({
     queryKey: ['clock-sessions', monthKey],
@@ -81,13 +97,17 @@ export default function ClockPage() {
     queryFn: getMyLeaveRequests,
   });
 
+  const { data: leaveBalance } = useQuery({
+    queryKey: ['leave-balance', new Date().getFullYear()],
+    queryFn: () => getLeaveBalance(),
+  });
+
   const leaveMutation = useMutation({
     mutationFn: () =>
       submitLeaveRequest({
         start_date: leaveStart,
         end_date: leaveEnd,
         reason: leaveReason || undefined,
-        leave_type: leaveType,
       }),
     onSuccess: () => {
       toast.success('Leave request submitted');
@@ -95,9 +115,14 @@ export default function ClockPage() {
       setLeaveEnd('');
       setLeaveReason('');
       queryClient.invalidateQueries({ queryKey: ['my-leave-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['leave-balance'] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const requestWeekdays = countWeekdays(leaveStart, leaveEnd);
+  const remainingPaid = leaveBalance?.remaining ?? 0;
+  const willBePaid = requestWeekdays > 0 && requestWeekdays <= remainingPaid;
 
   const sessions = sessionsData?.sessions || [];
   const openSession = sessionsData?.openSession || null;
@@ -290,17 +315,30 @@ export default function ClockPage() {
                 <Input type="date" value={leaveEnd} onChange={(e) => setLeaveEnd(e.target.value)} required />
               </div>
             </div>
-            <div>
-              <label className="text-sm font-medium block mb-1">Leave type</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3"
-                value={leaveType}
-                onChange={(e) => setLeaveType(e.target.value as 'paid' | 'unpaid' | 'lop')}
-              >
-                <option value="paid">Paid leave</option>
-                <option value="unpaid">Unpaid leave</option>
-                <option value="lop">LOP (loss of pay)</option>
-              </select>
+            <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Paid leave remaining ({new Date().getFullYear()})</span>
+                <span className="font-semibold">
+                  {leaveBalance ? `${leaveBalance.remaining} / ${leaveBalance.allowance}` : '—'}
+                </span>
+              </div>
+              {requestWeekdays > 0 && (
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">
+                    {requestWeekdays} working day{requestWeekdays === 1 ? '' : 's'} (weekends &amp; holidays excluded)
+                  </span>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      willBePaid ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    {willBePaid ? 'Will be PAID' : 'Will be UNPAID'}
+                  </span>
+                </div>
+              )}
+              <p className="mt-2 text-xs text-muted-foreground">
+                Paid/unpaid is decided automatically from your remaining balance. Once it runs out, leave is unpaid.
+              </p>
             </div>
             <div>
               <label className="text-sm font-medium block mb-1">Reason</label>
