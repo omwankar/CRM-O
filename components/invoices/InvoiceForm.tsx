@@ -47,6 +47,7 @@ export type DiscountDraft = {
 };
 
 export type InvoiceFormValues = {
+  quotation_id?: string;
   buyer_id: string;
   issue_date: string;
   due_date: string;
@@ -566,6 +567,7 @@ export function invoiceFormToPayload(form: InvoiceFormValues) {
 
   return {
     buyer_id: form.buyer_id,
+    quotation_id: form.quotation_id || null,
     issue_date: form.issue_date,
     due_date: form.due_date,
     currency: form.currency,

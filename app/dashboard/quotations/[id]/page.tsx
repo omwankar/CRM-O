@@ -22,10 +22,8 @@ import {
   sendQuotation,
   fetchQuotationPdfBlob,
 } from '@/lib/api/quotations';
-import { createInvoiceFromQuotation } from '@/lib/api/invoices';
-import { getQuotationCustomerPrice } from '@/lib/quotationPricing';
 import { SendQuotationDialog } from '@/components/quotations/SendQuotationDialog';
-import { CreateInvoiceFromQuotationDialog } from '@/components/quotations/CreateInvoiceFromQuotationDialog';
+import { getQuotationCustomerPrice } from '@/lib/quotationPricing';
 import { CanWrite } from '@/components/auth/Can';
 import { toast } from 'sonner';
 import type { EnquiryStage, Quotation, QuotationFollowup, UpdateQuotationInput, VendorQuote } from '@/types/quotations';
@@ -77,7 +75,6 @@ export default function QuotationDetailPage() {
   const [closureOpen, setClosureOpen] = useState(false);
   const [pendingClosureStage, setPendingClosureStage] = useState<EnquiryStage | null>(null);
   const [sendQuoteOpen, setSendQuoteOpen] = useState(false);
-  const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false);
 
   const { data: q, isLoading, error } = useQuotation(id || '');
 
@@ -294,8 +291,8 @@ export default function QuotationDetailPage() {
                     type="button"
                     variant="secondary"
                     size="sm"
-                    disabled={!customerPrice}
-                    onClick={() => setCreateInvoiceOpen(true)}
+                    disabled={!customerPrice || !id}
+                    onClick={() => router.push(`/dashboard/invoices/new?quotation_id=${id}`)}
                   >
                     <Receipt className="h-4 w-4 mr-2" />
                     Create invoice
@@ -411,19 +408,6 @@ export default function QuotationDetailPage() {
               await sendQuotation(id, { email, message });
               toast.success('Quotation sent');
               qc.invalidateQueries({ queryKey: ['quotation', id] });
-            }}
-          />
-          <CreateInvoiceFromQuotationDialog
-            open={createInvoiceOpen}
-            onOpenChange={setCreateInvoiceOpen}
-            quotationNumber={quotation.quotation_number}
-            defaultBuyerId={quotation.buyer_id}
-            onConfirm={async (buyerId) => {
-              if (!id) return;
-              const inv = await createInvoiceFromQuotation(id, buyerId);
-              toast.success('Invoice created');
-              qc.invalidateQueries({ queryKey: ['quotation', id] });
-              router.push(`/dashboard/invoices/${inv.id}`);
             }}
           />
         </>
