@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/auth';
+import { createMembership } from '@/lib/api/memberships';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -34,8 +34,10 @@ export default function NewMembershipPage() {
     setLoading(true);
 
     try {
-      const { error: insertError } = await supabase.from('memberships').insert([formData]);
-      if (insertError) throw insertError;
+      await createMembership({
+        ...formData,
+        membership_fee: formData.membership_fee ? parseFloat(formData.membership_fee) : undefined,
+      });
       router.push('/dashboard/memberships');
     } catch (err: any) {
       setError(err.message || 'Failed to create membership');

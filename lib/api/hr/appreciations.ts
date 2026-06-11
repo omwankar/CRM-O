@@ -13,10 +13,11 @@ export type Appreciation = {
   created_at: string;
 };
 
-export async function getHrAppreciations(params?: { employee_id?: string; page?: number }) {
+export async function getHrAppreciations(params?: { employee_id?: string; page?: number; limit?: number }) {
   const q = new URLSearchParams();
   if (params?.employee_id) q.set('employee_id', params.employee_id);
   if (params?.page) q.set('page', String(params.page));
+  if (params?.limit) q.set('limit', String(params.limit));
   const query = q.toString();
   return apiRequest(`/hr/appreciations${query ? `?${query}` : ''}`) as Promise<{
     data: Appreciation[];

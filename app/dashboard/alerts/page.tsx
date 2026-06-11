@@ -18,11 +18,6 @@ interface Alert {
 export default function AlertsPage() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
-  const [settings, setSettings] = useState({
-    cert_expiry_days: 30,
-    membership_expiry_days: 30,
-    insurance_expiry_days: 30,
-  });
 
   useEffect(() => {
     fetchAlertsAndSettings();
@@ -34,20 +29,18 @@ export default function AlertsPage() {
       const user = await supabase.auth.getUser();
       const userId = user.data.user?.id;
 
-      // Fetch user settings
+      // Fetch user settings (use locally — state updates are async)
       const { data: settingsData } = await supabase
         .from('admin_settings')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
-      if (settingsData) {
-        setSettings({
-          cert_expiry_days: settingsData.cert_expiry_days || 30,
-          membership_expiry_days: settingsData.membership_expiry_days || 30,
-          insurance_expiry_days: settingsData.insurance_expiry_days || 30,
-        });
-      }
+      const settings = {
+        cert_expiry_days: settingsData?.cert_expiry_days || 30,
+        membership_expiry_days: settingsData?.membership_expiry_days || 30,
+        insurance_expiry_days: settingsData?.insurance_expiry_days || 30,
+      };
 
       // Fetch all items that might be expiring
       const today = new Date();
@@ -67,7 +60,7 @@ export default function AlertsPage() {
               name: cert.name,
               expiry_date: cert.expiry_date,
               days_until_expiry: daysUntil,
-              status: daysUntil < 0 ? 'expired' : daysUntil < 1 ? 'expiring_soon' : 'ok',
+              status: daysUntil < 0 ? 'expired' : 'expiring_soon',
             });
           }
         });
@@ -87,7 +80,7 @@ export default function AlertsPage() {
               name: mem.organization_name,
               expiry_date: mem.renewal_date,
               days_until_expiry: daysUntil,
-              status: daysUntil < 0 ? 'expired' : daysUntil < 1 ? 'expiring_soon' : 'ok',
+              status: daysUntil < 0 ? 'expired' : 'expiring_soon',
             });
           }
         });
@@ -107,7 +100,7 @@ export default function AlertsPage() {
               name: `${ins.provider} (${ins.insurance_type})`,
               expiry_date: ins.end_date,
               days_until_expiry: daysUntil,
-              status: daysUntil < 0 ? 'expired' : daysUntil < 1 ? 'expiring_soon' : 'ok',
+              status: daysUntil < 0 ? 'expired' : 'expiring_soon',
             });
           }
         });

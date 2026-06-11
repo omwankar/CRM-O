@@ -38,6 +38,8 @@ import {
   BarChart3,
   CalendarClock,
   CalendarCheck,
+  Target,
+  Contact2,
 } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useQuery } from '@tanstack/react-query';
@@ -60,6 +62,7 @@ function getMenuSections(role?: string, pendingCount?: number) {
       items: [
         { label: 'Clock In/Out', href: '/dashboard/clock', icon: Clock3 },
         { label: 'Leave Tracker', href: '/dashboard/leave-tracker', icon: CalendarCheck },
+        { label: 'Holidays', href: '/dashboard/holidays', icon: PartyPopper },
         { label: 'Calendar', href: '/dashboard/calendar', icon: CalendarDays },
         ...(isSuperAdmin ? [{ label: 'Punch Requests', href: '/dashboard/punch-requests', icon: Timer, badge: pendingCount }] : []),
         { label: 'Certifications', href: '/dashboard/certifications', icon: Award },
@@ -68,6 +71,8 @@ function getMenuSections(role?: string, pendingCount?: number) {
         { label: 'Insurance', href: '/dashboard/insurance', icon: Shield },
         { label: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
         { label: 'Tasks', href: '/dashboard/tasks', icon: ListTodo },
+        { label: 'Leads', href: '/dashboard/leads', icon: Target },
+        { label: 'Contacts', href: '/dashboard/contacts', icon: Contact2 },
         { label: 'Quotations', href: '/dashboard/quotations', icon: FileSearch },
         { label: 'Invoices', href: '/dashboard/invoices', icon: Receipt },
         { label: 'Vendors', href: '/dashboard/vendors', icon: Package },

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/auth';
+import { createInsurance } from '@/lib/api/insurance';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -37,14 +37,11 @@ export default function NewInsurancePage() {
     setLoading(true);
 
     try {
-      const { error: insertError } = await supabase.from('insurance').insert([
-        {
-          ...formData,
-          coverage_amount: parseFloat(formData.coverage_amount),
-          premium: parseFloat(formData.premium),
-        },
-      ]);
-      if (insertError) throw insertError;
+      await createInsurance({
+        ...formData,
+        coverage_amount: parseFloat(formData.coverage_amount),
+        premium: parseFloat(formData.premium),
+      });
       router.push('/dashboard/insurance');
     } catch (err: any) {
       setError(err.message || 'Failed to create insurance policy');

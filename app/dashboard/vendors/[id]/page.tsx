@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { getVendor, updateVendor } from '@/lib/api/vendors';
 import { getComments, createComment } from '@/lib/api/comments';
 import { getTasks, createTask } from '@/lib/api/tasks';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { ArrowLeft, Edit2, Save, X, Plus, MessageSquare, CheckSquare, History } from 'lucide-react';
 
 type Tab = 'overview' | 'details' | 'tasks' | 'comments' | 'activity';
@@ -34,9 +35,13 @@ export default function VendorDetailPage() {
     queryFn: () => getComments({ related_table: 'vendors', related_id: id }),
   });
 
+  const { user: currentUser } = useCurrentUser();
+  // Tasks are linked by a tag in the title (tasks have no vendor relation)
+  const taskTag = `[VEN-${id.slice(0, 8)}]`;
+
   const { data: tasks } = useQuery({
     queryKey: ['tasks', 'vendors', id],
-    queryFn: () => getTasks({ related_table: 'vendors', related_id: id }),
+    queryFn: () => getTasks({ search: taskTag }),
   });
 
   const updateMutation = useMutation({
@@ -56,7 +61,12 @@ export default function VendorDetailPage() {
   });
 
   const taskMutation = useMutation({
-    mutationFn: (title: string) => createTask({ title, related_table: 'vendors', related_id: id }),
+    mutationFn: (title: string) =>
+      createTask({
+        task_title: `${taskTag} ${title}`,
+        task_type: 'admin',
+        created_by: currentUser?.id || '',
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', 'vendors', id] });
       setNewTask('');
@@ -201,19 +211,19 @@ export default function VendorDetailPage() {
               </div>
             </div>
             <div className="space-y-2">
-              {tasks?.data?.map((task: any) => (
+              {tasks?.tasks?.map((task) => (
                 <Card key={task.id} className="p-3 flex items-center gap-3">
                   <CheckSquare className="w-5 h-5" />
                   <div className="flex-1">
-                    <p className="font-medium">{task.title}</p>
+                    <p className="font-medium">{task.task_title.replace(taskTag, '').trim()}</p>
                     <p className="text-xs text-muted-foreground">Due: {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}</p>
                   </div>
-                  <span className={`px-2 py-1 rounded text-xs ${task.priority === 'high' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
-                    {task.priority}
+                  <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-800">
+                    {task.status}
                   </span>
                 </Card>
               ))}
-              {tasks?.data?.length === 0 && <p className="text-muted-foreground text-sm">No tasks assigned</p>}
+              {tasks?.tasks?.length === 0 && <p className="text-muted-foreground text-sm">No tasks assigned</p>}
             </div>
           </div>
         )}

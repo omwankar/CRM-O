@@ -73,23 +73,29 @@ export default function ClockPage() {
   const clockInMutation = useMutation({
     mutationFn: () => clockIn(),
     onSuccess: () => {
+      toast.success('Clocked in');
       queryClient.invalidateQueries({ queryKey: ['clock-sessions'] });
     },
+    onError: (e: Error) => toast.error(e.message || 'Failed to clock in'),
   });
 
   const clockOutMutation = useMutation({
     mutationFn: () => clockOut(),
     onSuccess: () => {
+      toast.success('Clocked out');
       queryClient.invalidateQueries({ queryKey: ['clock-sessions'] });
     },
+    onError: (e: Error) => toast.error(e.message || 'Failed to clock out'),
   });
 
   const missedPunchMutation = useMutation({
     mutationFn: (data: { type: 'clock_in' | 'clock_out'; requested_at: string; reason?: string }) => createMissedPunchRequest(data),
     onSuccess: () => {
+      toast.success('Missed punch request submitted');
       queryClient.invalidateQueries({ queryKey: ['clock-sessions'] });
       setMissedReason('');
     },
+    onError: (e: Error) => toast.error(e.message || 'Failed to submit request'),
   });
 
   const { data: leavesData, isLoading: leavesLoading } = useQuery({

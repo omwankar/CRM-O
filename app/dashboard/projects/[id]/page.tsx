@@ -112,7 +112,6 @@ export default function ProjectDetailPage() {
     userRole === 'admin' ||
     userRole === 'assigned' ||
     globalRole === 'super_admin' ||
-    globalRole === 'admin' ||
     globalRole === 'manager';
 
   const resolveAttachmentUrl = (fileUrl: string) => {

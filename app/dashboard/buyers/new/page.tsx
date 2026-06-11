@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/auth';
+import { createBuyer } from '@/lib/api/buyers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -46,17 +46,13 @@ export default function NewBuyerPage() {
         ...formData,
         credit_limit: formData.credit_limit
           ? parseFloat(formData.credit_limit)
-          : null,
+          : undefined,
         pipeline_value: formData.pipeline_value
           ? parseFloat(formData.pipeline_value)
-          : null,
+          : undefined,
       };
 
-      const { error } = await supabase
-        .from('buyers')
-        .insert([data]);
-
-      if (error) throw error;
+      await createBuyer(data);
 
       router.push('/dashboard/buyers');
     } catch (err: any) {

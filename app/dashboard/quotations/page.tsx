@@ -83,7 +83,8 @@ export default function QuotationsPage() {
   }, [statsData]);
 
   const canDelete = role === 'super_admin';
-  const canChangeEnquiryStage = role === 'super_admin' || role === 'admin';
+  // Everyone who can see an enquiry can work it (backend scopes the list per role)
+  const canChangeEnquiryStage = true;
 
   const deadlineTone = (deadline?: string | null) => {
     if (!deadline) return 'text-muted-foreground';
@@ -102,12 +103,10 @@ export default function QuotationsPage() {
           <h1 className="text-3xl font-bold">Quotation tracker</h1>
           <p className="text-muted-foreground">Track enquiries, vendor quotes, follow-ups, and outcomes</p>
         </div>
-        <CanWrite>
-          <Button onClick={() => router.push('/dashboard/quotations/new')}>
-            <Plus className="w-4 h-4 mr-2" />
-            New enquiry
-          </Button>
-        </CanWrite>
+        <Button onClick={() => router.push('/dashboard/quotations/new')}>
+          <Plus className="w-4 h-4 mr-2" />
+          New enquiry
+        </Button>
       </div>
 
       {/* Stats row */}

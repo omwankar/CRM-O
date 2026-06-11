@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/auth';
+import { createVendor } from '@/lib/api/vendors';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -42,13 +42,8 @@ export default function NewVendorPage() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.from('vendors').insert([
-        {
-          ...formData,
-        },
-      ]);
-
-      if (error) throw error;
+      const { status: _status, ...payload } = formData;
+      await createVendor(payload);
 
       router.push('/dashboard/vendors');
     } catch (err: any) {

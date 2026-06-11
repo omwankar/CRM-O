@@ -32,7 +32,21 @@ export async function getMyAttendance(month?: string) {
   return apiRequest(`/clock/attendance/me${q}`) as Promise<MyAttendance>;
 }
 
-// Monthly grid: employees (rows) x days (columns). Manager / super_admin only.
+export type CompanyHoliday = {
+  id: string;
+  date: string;
+  title: string;
+  description: string | null;
+  holiday_pay_type: 'paid' | 'unpaid' | null;
+};
+
+// Read-only holiday list, visible to every authenticated user
+export async function getCompanyHolidays(year?: number) {
+  const q = year ? `?year=${year}` : '';
+  return apiRequest(`/clock/holidays${q}`) as Promise<{ data: CompanyHoliday[]; year: number }>;
+}
+
+// Monthly grid: employees (rows) x days (columns). Managers see the team; employees see their own row.
 export type AttendanceGridDay = { date: string; day: number; is_weekend: boolean };
 export type AttendanceGridCell = {
   date: string;
