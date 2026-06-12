@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
@@ -25,10 +25,34 @@ import {
   FileSearch,
 } from 'lucide-react';
 import { AnnouncementsWidget } from '@/components/announcements/AnnouncementsWidget';
+import { useIsClient } from '@/hooks/useIsClient';
+
+function getGreeting(date: Date) {
+  const hour = date.getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function getDateLabel(date: Date) {
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
 
 export default function DashboardPage() {
   const router = useRouter();
+  const isClient = useIsClient();
   const { role } = useCurrentUser();
+  const [headerCopy, setHeaderCopy] = useState<{ greeting: string; dateLabel: string } | null>(null);
+
+  useEffect(() => {
+    const now = new Date();
+    setHeaderCopy({ greeting: getGreeting(now), dateLabel: getDateLabel(now) });
+  }, []);
 
   const { data: dashboardData, isLoading } = useQuery({
     queryKey: ['dashboard-stats'],
@@ -74,21 +98,7 @@ export default function DashboardPage() {
     { name: 'Documents', count: stats.documents, icon: FileText, href: '/dashboard/documents', color: 'text-gray-600', bg: 'bg-gray-500/10' },
   ];
 
-  const today = new Date();
-  const dateLabel = today.toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-
   const roleLabel = role ? role.replaceAll('_', ' ') : 'user';
-  const greeting =
-    today.getHours() < 12
-      ? 'Good morning'
-      : today.getHours() < 18
-        ? 'Good afternoon'
-        : 'Good evening';
 
   const hashToHue = (input: string) => {
     let hash = 0;
@@ -123,9 +133,12 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-foreground">
-              {greeting}, <span className="capitalize">{roleLabel}</span>
+              {isClient && headerCopy ? headerCopy.greeting : 'Welcome'},{' '}
+              <span className="capitalize">{roleLabel}</span>
             </h1>
-            <p className="text-sm text-muted-foreground">{dateLabel}</p>
+            <p className="text-sm text-muted-foreground">
+              {isClient && headerCopy ? headerCopy.dateLabel : '\u00A0'}
+            </p>
           </div>
           <div className="w-full md:w-[360px]">
             <input

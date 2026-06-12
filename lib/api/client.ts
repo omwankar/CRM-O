@@ -17,14 +17,25 @@ async function getAuthToken() {
 
 export async function apiRequest(url: string, options?: RequestInit) {
   const token = await getAuthToken();
-  const response = await fetch(`${API_BASE}${url}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...options?.headers,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${url}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+        ...options?.headers,
+      },
+    });
+  } catch {
+    const hint =
+      typeof window !== 'undefined' &&
+      API_BASE.includes('localhost') &&
+      window.location.hostname !== 'localhost'
+        ? ' NEXT_PUBLIC_API_URL is missing or still set to localhost — add it in Vercel and redeploy.'
+        : ' Check that the backend is running and FRONTEND_ORIGIN on Render matches your Vercel URL exactly.';
+    throw new Error(`Cannot reach API at ${API_BASE}.${hint}`);
+  }
 
   if (!response.ok) {
     const body = await response.json().catch(() => ({ error: 'Request failed' }));
