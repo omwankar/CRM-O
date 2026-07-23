@@ -197,7 +197,10 @@ export function EntityRecordPicker({ entityType, value, label, onChange, disable
     return hit?.label || (value ? 'Selected record' : '');
   }, [label, options, value]);
 
-  const typeLabel = TASK_ENTITY_LABELS[entityType] || 'record';
+  const typeLabel =
+    entityType === 'partnership'
+      ? 'Partner'
+      : TASK_ENTITY_LABELS[entityType] || 'record';
 
   return (
     <Popover open={open} onOpenChange={setOpen} modal={false}>

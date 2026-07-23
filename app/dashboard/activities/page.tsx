@@ -54,6 +54,9 @@ const ENTITY_LABELS: Record<ActivityEntityType, string> = {
   vendor: 'Vendor',
   contact: 'Contact',
   company: 'Company',
+  job: 'Job',
+  project: 'Project',
+  partnership: 'Partner',
 };
 
 const ENTITY_HREF: Partial<Record<ActivityEntityType, (id: string) => string>> = {
@@ -65,6 +68,9 @@ const ENTITY_HREF: Partial<Record<ActivityEntityType, (id: string) => string>> =
   vendor: (id) => `/dashboard/vendors/${id}`,
   contact: () => '/dashboard/contacts',
   company: (id) => `/dashboard/companies/${id}`,
+  job: (id) => `/dashboard/jobs/${id}`,
+  project: (id) => `/dashboard/projects/${id}`,
+  partnership: (id) => `/dashboard/partnerships/${id}`,
 };
 
 export default function ActivitiesPage() {
