@@ -10,6 +10,7 @@ import { StatusChangeModal } from '@/components/projects/StatusChangeModal';
 import { getProjects, changeProjectStatus } from '@/lib/api/projects';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Project, ProjectFilters as Filters } from '@/types/projects';
+import Link from 'next/link';
 import { Plus, LayoutGrid, Table } from 'lucide-react';
 import { CanWrite } from '@/components/auth/Can';
 
@@ -89,7 +90,12 @@ export default function ProjectsPage() {
         <div>
           <h1 className="text-[32px] font-medium text-foreground">Projects</h1>
           <p className="text-[14px] leading-[1.7] text-muted-foreground">
-            Manage your projects and track progress
+            Internal initiatives only — process improvements, warehouse setup, and non-shipment work.
+            Shipments live under{' '}
+            <Link href="/dashboard/jobs" className="text-primary hover:underline">
+              Jobs / Shipments
+            </Link>
+            .
           </p>
         </div>
         <CanWrite>
@@ -117,7 +123,7 @@ export default function ProjectsPage() {
             No projects yet
           </h3>
           <p className="text-[14px] text-muted-foreground mb-4">
-            Create your first project to get started
+            Create an internal project — for actual shipments, use Jobs instead.
           </p>
           <CanWrite>
             <Button onClick={() => router.push('/dashboard/projects/new')}>

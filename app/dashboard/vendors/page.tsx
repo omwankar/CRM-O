@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -15,21 +16,15 @@ type ViewMode = 'card' | 'table';
 export default function VendorsPage() {
   const router = useRouter();
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [viewMode, setViewMode] = useState<ViewMode>('card');
 
   const { data: vendorsData, isLoading, error } = useQuery({
-    queryKey: ['vendors', search],
-    queryFn: () => getVendors({ search }),
+    queryKey: ['vendors', debouncedSearch],
+    queryFn: () => getVendors({ search: debouncedSearch || undefined }),
   });
 
   const vendors = vendorsData?.data || [];
-
-  const filteredVendors = search
-    ? vendors.filter((v: any) =>
-        v.vendor_name?.toLowerCase().includes(search.toLowerCase()) ||
-        v.contact_person?.toLowerCase().includes(search.toLowerCase())
-      )
-    : vendors;
 
   const openVendorPortal = (vendor: any) => {
     const rawLink = vendor?.vendor_portal_link?.trim();
@@ -93,7 +88,7 @@ export default function VendorsPage() {
         <Card className="p-6">
           <p className="text-sm text-destructive">Failed to load vendors. Please refresh the page.</p>
         </Card>
-      ) : filteredVendors.length === 0 ? (
+      ) : vendors.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12">
           <p className="text-muted-foreground">No vendors found</p>
         </div>
@@ -111,7 +106,7 @@ export default function VendorsPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredVendors.map((vendor: any) => (
+              {vendors.map((vendor: any) => (
                 <tr key={vendor.id} className="border-t">
                   <td className="p-4 font-medium">{vendor.vendor_name}</td>
                   <td className="p-4">{vendor.contact_person}</td>
@@ -134,7 +129,7 @@ export default function VendorsPage() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredVendors.map((vendor: any) => (
+          {vendors.map((vendor: any) => (
             <Card
               key={vendor.id}
               className="p-6 cursor-pointer hover:border-border/60"

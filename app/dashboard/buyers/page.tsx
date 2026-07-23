@@ -2,36 +2,30 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { getBuyers } from '@/lib/api/buyers';
-import { Plus, Search, LayoutGrid, List, Kanban, ExternalLink, Mail, Phone, Building2 } from 'lucide-react';
+import { Plus, Search, LayoutGrid, List, ExternalLink, Mail, Phone, Building2 } from 'lucide-react';
 import { CanWrite } from '@/components/auth/Can';
 
-type ViewMode = 'card' | 'table' | 'kanban';
+type ViewMode = 'card' | 'table';
 
 export default function BuyersPage() {
   const router = useRouter();
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [viewMode, setViewMode] = useState<ViewMode>('card');
 
   const { data: buyersData, isLoading, error } = useQuery({
-    queryKey: ['buyers', search],
-    queryFn: () => getBuyers({ search }),
+    queryKey: ['buyers', debouncedSearch],
+    queryFn: () => getBuyers({ search: debouncedSearch || undefined }),
   });
 
   const buyers = buyersData?.data || [];
 
-  const filteredBuyers = search
-    ? buyers.filter((b: any) =>
-        b.buyer_name?.toLowerCase().includes(search.toLowerCase()) ||
-        b.contact_person?.toLowerCase().includes(search.toLowerCase())
-      )
-    : buyers;
-
-  const pipelineStages = ['Lead', 'Contacted', 'Proposal Sent', 'Negotiating', 'Closed Won', 'Closed Lost'];
 
   const openBuyerPortal = (buyer: any) => {
     const rawLink = buyer?.buyer_portal_link?.trim();
@@ -83,13 +77,7 @@ export default function BuyersPage() {
             >
               <List className="w-4 h-4" />
             </Button>
-            <Button
-              variant={viewMode === 'kanban' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('kanban')}
-            >
-              <Kanban className="w-4 h-4" />
-            </Button>
+            
           </div>
         </div>
       </Card>
@@ -102,38 +90,9 @@ export default function BuyersPage() {
         <Card className="p-6">
           <p className="text-sm text-destructive">Failed to load buyers. Please refresh the page.</p>
         </Card>
-      ) : filteredBuyers.length === 0 ? (
+      ) : buyers.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12">
           <p className="text-muted-foreground">No buyers found</p>
-        </div>
-      ) : viewMode === 'kanban' ? (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {pipelineStages.map((stage) => {
-            const stageBuyers = filteredBuyers.filter((b: any) => b.pipeline_stages?.[0]?.name === stage);
-            return (
-              <div key={stage} className="flex-shrink-0 w-72">
-                <Card className="p-4 mb-3">
-                  <h3 className="font-semibold">{stage}</h3>
-                  <p className="text-sm text-muted-foreground">{stageBuyers.length} buyers</p>
-                </Card>
-                <div className="space-y-3">
-                  {stageBuyers.map((buyer: any) => (
-                    <Card
-                      key={buyer.id}
-                      className="p-4 cursor-pointer hover:border-border/60"
-                      onClick={() => router.push(`/dashboard/buyers/${buyer.id}`)}
-                    >
-                      <h4 className="font-medium mb-1">{buyer.buyer_name}</h4>
-                      <p className="text-sm text-muted-foreground">{buyer.contact_person}</p>
-                      {buyer.pipeline_value && (
-                        <p className="text-sm font-medium mt-2">${buyer.pipeline_value.toLocaleString()}</p>
-                      )}
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
         </div>
       ) : viewMode === 'table' ? (
         <Card className="overflow-hidden">
@@ -149,7 +108,7 @@ export default function BuyersPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredBuyers.map((buyer: any) => (
+              {buyers.map((buyer: any) => (
                 <tr key={buyer.id} className="border-t">
                   <td className="p-4 font-medium">{buyer.buyer_name}</td>
                   <td className="p-4">{buyer.contact_person}</td>
@@ -175,7 +134,7 @@ export default function BuyersPage() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredBuyers.map((buyer: any) => (
+          {buyers.map((buyer: any) => (
             <Card
               key={buyer.id}
               className="p-6 cursor-pointer hover:border-border/60"

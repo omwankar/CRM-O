@@ -1,11 +1,8 @@
 import { apiRequest, getApiBase } from '@/lib/api/client';
 import type {
-  CreateFollowupInput,
   CreateQuotationInput,
   Quotation,
-  QuotationFollowup,
   QuotationStatus,
-  UpdateFollowupInput,
   UpdateQuotationInput,
   VendorQuote,
 } from '@/types/quotations';
@@ -91,24 +88,6 @@ export async function chooseVendorQuote(quotation_id: string, vendor_quote_id: s
   });
 }
 
-export async function addFollowup(quotationId: string, data: CreateFollowupInput): Promise<QuotationFollowup> {
-  return apiRequest(`/quotations/${quotationId}/followups`, {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-}
-
-export async function updateFollowup(followupId: string, data: UpdateFollowupInput): Promise<QuotationFollowup> {
-  return apiRequest(`/quotations/followups/${followupId}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  });
-}
-
-export async function deleteFollowup(followupId: string): Promise<void> {
-  await apiRequest(`/quotations/followups/${followupId}`, { method: 'DELETE' });
-}
-
 export async function sendQuotation(id: string, payload: { email: string; message?: string }) {
   return apiRequest(`/quotations/${id}/send`, {
     method: 'POST',
@@ -131,4 +110,3 @@ export async function fetchQuotationPdfBlob(id: string): Promise<Blob> {
   }
   return res.blob();
 }
-

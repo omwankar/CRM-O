@@ -51,21 +51,19 @@ export function EnquiryInfoPanel({
   const pending = !!isSaving;
 
   const [users, setUsers] = useState<Array<{ id: string; full_name: string | null; email: string }>>([]);
+  const [usersLoaded, setUsersLoaded] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await getUsers({ limit: 200 });
-        if (!cancelled) setUsers(res.data || []);
-      } catch {
-        if (!cancelled) setUsers([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const ensureUsers = async () => {
+    if (usersLoaded) return;
+    try {
+      const res = await getUsers({ limit: 200 });
+      setUsers(res.data || []);
+    } catch {
+      setUsers([]);
+    } finally {
+      setUsersLoaded(true);
+    }
+  };
 
   const lead = quotation.users;
 
@@ -226,6 +224,9 @@ export function EnquiryInfoPanel({
                 <Select
                   value={quotation.enquiry_lead || '__none__'}
                   disabled={pending}
+                  onOpenChange={(open) => {
+                    if (open) void ensureUsers();
+                  }}
                   onValueChange={(v) => void onPatch({ enquiry_lead: v === '__none__' ? null : v })}
                 >
                   <SelectTrigger className="h-10 w-full rounded-lg border-input bg-background font-medium shadow-sm">

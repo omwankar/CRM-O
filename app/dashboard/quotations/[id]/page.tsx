@@ -26,24 +26,21 @@ import { SendQuotationDialog } from '@/components/quotations/SendQuotationDialog
 import { getQuotationCustomerPrice } from '@/lib/quotationPricing';
 import { CanWrite } from '@/components/auth/Can';
 import { toast } from 'sonner';
-import type { EnquiryStage, Quotation, QuotationFollowup, UpdateQuotationInput, VendorQuote } from '@/types/quotations';
+import type { EnquiryStage, Quotation, UpdateQuotationInput, VendorQuote } from '@/types/quotations';
 import { normalizeEnquiryStage, buildOutcomeString, closureKindToCrmStatus, isTerminalEnquiryStage, closureKindForEnquiryStage, enquiryStageForClosureKind } from '@/types/quotations';
 import { EnquiryOutcomeModal } from '@/components/quotations/EnquiryOutcomeModal';
 import { FinalizeQuotationModal } from '@/components/quotations/FinalizeQuotationModal';
 import { VendorQuoteTable } from '@/components/quotations/VendorQuoteTable';
 import { VendorQuoteDetailSection } from '@/components/quotations/VendorQuoteDetailSection';
 import { EnquiryInfoPanel } from '@/components/quotations/EnquiryInfoPanel';
-import { FollowUpForm } from '@/components/quotations/FollowUpForm';
 import { QuotationStatusBar } from '@/components/quotations/QuotationStatusBar';
+import { ActivityTimeline } from '@/components/activities/ActivityTimeline';
+import { EntityTaskList } from '@/components/tasks/EntityTaskList';
 import {
   useQuotation,
   useUpdateQuotation,
   useChooseVendorQuote,
-  useAddFollowup,
-  useUpdateFollowup,
-  useDeleteFollowup,
 } from '@/hooks/useQuotations';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { notifyQuotationError } from '@/lib/quotation-notify';
 import {
   AlertDialog,
@@ -61,17 +58,12 @@ export default function QuotationDetailPage() {
   const params = useParams<{ id: string }>();
   const id = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const qc = useQueryClient();
-  const { user, role } = useCurrentUser();
 
   const [searchQ, setSearchQ] = useState('');
   const [vendorDetailMode, setVendorDetailMode] = useState<'none' | 'add' | 'edit'>('none');
   const [editingQuote, setEditingQuote] = useState<VendorQuote | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<VendorQuote | null>(null);
   const [finalizeOpen, setFinalizeOpen] = useState(false);
-  const [followupOpen, setFollowupOpen] = useState(false);
-  const [followupVendorQuoteId, setFollowupVendorQuoteId] = useState<string | null>(null);
-  const [editingFollowup, setEditingFollowup] = useState<QuotationFollowup | null>(null);
-  const [deleteFollowupTarget, setDeleteFollowupTarget] = useState<QuotationFollowup | null>(null);
   const [closureOpen, setClosureOpen] = useState(false);
   const [pendingClosureStage, setPendingClosureStage] = useState<EnquiryStage | null>(null);
   const [sendQuoteOpen, setSendQuoteOpen] = useState(false);
@@ -80,9 +72,6 @@ export default function QuotationDetailPage() {
 
   const updateQuotationMut = useUpdateQuotation();
   const chooseQuoteMut = useChooseVendorQuote();
-  const addFollowupMut = useAddFollowup();
-  const updateFollowupMut = useUpdateFollowup();
-  const deleteFollowupMut = useDeleteFollowup();
 
   const addQuoteMutation = useMutation({
     mutationFn: (payload: Record<string, unknown>) => addVendorQuote(id!, payload as never),
@@ -115,8 +104,6 @@ export default function QuotationDetailPage() {
       null
     );
   }, [quotation]);
-
-  const followups = quotation?.quotation_followups || [];
 
   const customerPrice = useMemo(
     () => (quotation ? getQuotationCustomerPrice(quotation) : null),
@@ -167,10 +154,20 @@ export default function QuotationDetailPage() {
               type="button"
               size="sm"
               className="h-10 shrink-0 bg-blue-600 px-4 font-semibold text-white shadow-sm hover:bg-blue-700"
-              onClick={() => router.push('/dashboard/quotations/new')}
+              onClick={() => router.push('/dashboard/enquiries')}
             >
-              + Add enquiry
+              + From enquiry
             </Button>
+            {quotation?.enquiry_id ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-10 shrink-0 border-zinc-300"
+                onClick={() => router.push(`/dashboard/enquiries/${quotation.enquiry_id}`)}
+              >
+                Parent enquiry
+              </Button>
+            ) : null}
             {id ? (
               <Button variant="outline" size="sm" className="h-10 shrink-0 border-zinc-300" onClick={() => router.push(`/dashboard/quotations/${id}/edit`)}>
                 <Pencil className="h-4 w-4 mr-2" />
@@ -353,9 +350,6 @@ export default function QuotationDetailPage() {
                   quotation?.projects?.project_name || quotation?.standalone_project_name || undefined
                 }
                 initial={editingQuote}
-                followups={followups}
-                currentUserId={user?.id}
-                isSuperAdmin={role === 'super_admin'}
                 onClose={() => {
                   setVendorDetailMode('none');
                   setEditingQuote(null);
@@ -370,18 +364,6 @@ export default function QuotationDetailPage() {
                   setEditingQuote(created);
                   setVendorDetailMode('edit');
                 }}
-                onAddFollowup={() => {
-                  if (!editingQuote?.id) return;
-                  setFollowupVendorQuoteId(editingQuote.id);
-                  setEditingFollowup(null);
-                  setFollowupOpen(true);
-                }}
-                onEditFollowup={(f) => {
-                  setFollowupVendorQuoteId(f.vendor_quote_id || editingQuote?.id || null);
-                  setEditingFollowup(f);
-                  setFollowupOpen(true);
-                }}
-                onDeleteFollowup={(f) => setDeleteFollowupTarget(f)}
               />
             ) : null}
           </Card>
@@ -395,6 +377,18 @@ export default function QuotationDetailPage() {
           />
         </>
       )}
+
+      {id ? (
+        <Card className="p-5">
+          <ActivityTimeline entityType="quotation" entityId={id} />
+        </Card>
+      ) : null}
+
+      {id ? (
+        <Card className="p-5">
+          <EntityTaskList entityType="quotation" entityId={id} />
+        </Card>
+      ) : null}
 
       {quotation ? (
         <>
@@ -434,34 +428,6 @@ export default function QuotationDetailPage() {
         }}
       />
 
-      <FollowUpForm
-        open={followupOpen}
-        onOpenChange={(open) => {
-          setFollowupOpen(open);
-          if (!open) {
-            setEditingFollowup(null);
-            setFollowupVendorQuoteId(null);
-          }
-        }}
-        initial={editingFollowup}
-        onSubmit={async (data) => {
-          if (!id) return;
-          if (editingFollowup?.id) {
-            await updateFollowupMut.mutateAsync({
-              followupId: editingFollowup.id,
-              quotationId: id,
-              data,
-            });
-            return;
-          }
-          if (!followupVendorQuoteId) return;
-          await addFollowupMut.mutateAsync({
-            quotation_id: id,
-            data: { ...data, vendor_quote_id: followupVendorQuoteId },
-          });
-        }}
-      />
-
       {deleteTarget && (
         <AlertDialog open onOpenChange={() => setDeleteTarget(null)}>
           <AlertDialogContent>
@@ -484,32 +450,6 @@ export default function QuotationDetailPage() {
           </AlertDialogContent>
         </AlertDialog>
       )}
-
-      {deleteFollowupTarget && id ? (
-        <AlertDialog open onOpenChange={() => setDeleteFollowupTarget(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete follow-up?</AlertDialogTitle>
-              <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setDeleteFollowupTarget(null)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-red-600 hover:bg-red-700"
-                onClick={async () => {
-                  await deleteFollowupMut.mutateAsync({
-                    followupId: deleteFollowupTarget.id,
-                    quotationId: id,
-                  });
-                  setDeleteFollowupTarget(null);
-                }}
-              >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      ) : null}
     </div>
   );
 }

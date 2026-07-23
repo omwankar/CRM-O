@@ -43,7 +43,7 @@ export function EnquiryOutcomeModal({
     setDetail('');
   }, [open, currentOutcome, presetClosureKind]);
 
-  const title = adjustOnly ? 'Update outcome' : 'Close this enquiry';
+  const title = adjustOnly ? 'Update outcome' : 'Close this quotation';
   const description = adjustOnly
     ? 'Pick Won, Lost, or Closed again and optional notes.'
     : presetClosureKind

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Users, GitBranch, Settings, Mail, FileText, History } from 'lucide-react';
+import { Users, GitBranch, Settings, Mail, History } from 'lucide-react';
 
 type Tab = 'users' | 'pipeline' | 'custom_fields' | 'email_templates' | 'audit';
 

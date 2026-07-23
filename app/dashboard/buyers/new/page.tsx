@@ -1,17 +1,28 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createBuyer } from '@/lib/api/buyers';
+import { getCompanies } from '@/lib/api/companies';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { FieldGroup, FieldLabel } from '@/components/ui/field';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 
 export default function NewBuyerPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const presetCompanyId = searchParams.get('company_id') || '';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -29,6 +40,16 @@ export default function NewBuyerPage() {
     credit_limit: '',
     pipeline_value: '',
     buyer_portal_link: '',
+    company_id: presetCompanyId,
+  });
+
+  useEffect(() => {
+    if (presetCompanyId) setFormData((prev) => ({ ...prev, company_id: presetCompanyId }));
+  }, [presetCompanyId]);
+
+  const { data: companiesData } = useQuery({
+    queryKey: ['companies-buyer-form'],
+    queryFn: () => getCompanies({ limit: 200 }),
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,6 +65,7 @@ export default function NewBuyerPage() {
     try {
       const data = {
         ...formData,
+        company_id: formData.company_id || null,
         credit_limit: formData.credit_limit
           ? parseFloat(formData.credit_limit)
           : undefined,
@@ -90,6 +112,27 @@ export default function NewBuyerPage() {
             <FieldGroup>
               <FieldLabel>Buyer Name *</FieldLabel>
               <Input name="buyer_name" value={formData.buyer_name} onChange={handleChange} required />
+            </FieldGroup>
+            <FieldGroup>
+              <FieldLabel>Company (directory)</FieldLabel>
+              <Select
+                value={formData.company_id || 'none'}
+                onValueChange={(v) =>
+                  setFormData((prev) => ({ ...prev, company_id: v === 'none' ? '' : v }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Optional link" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No company link</SelectItem>
+                  {(companiesData?.data || []).map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </FieldGroup>
             <FieldGroup>
               <FieldLabel>Contact Person *</FieldLabel>

@@ -56,7 +56,7 @@ export default function QuotationsPage() {
       await qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
       setDeleteId(null);
     },
-    onError: (error) => notifyQuotationError(error, 'Could not delete this enquiry.'),
+    onError: (error) => notifyQuotationError(error, 'Could not delete this quotation.'),
   });
 
   const enquiryStageMutation = useMutation({
@@ -101,11 +101,11 @@ export default function QuotationsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Quotation tracker</h1>
-          <p className="text-muted-foreground">Track enquiries, vendor quotes, follow-ups, and outcomes</p>
+          <p className="text-muted-foreground">Vendor quotes, Clarusto pricing, and send status — created from Enquiries</p>
         </div>
-        <Button onClick={() => router.push('/dashboard/quotations/new')}>
+        <Button onClick={() => router.push('/dashboard/enquiries')}>
           <Plus className="w-4 h-4 mr-2" />
-          New enquiry
+          From enquiry
         </Button>
       </div>
 
@@ -153,9 +153,9 @@ export default function QuotationsPage() {
           <FileText className="h-10 w-10 text-muted-foreground mb-3" />
           <p className="text-muted-foreground">No quotations found</p>
           <CanWrite>
-            <Button className="mt-4" onClick={() => router.push('/dashboard/quotations/new')}>
+            <Button className="mt-4" onClick={() => router.push('/dashboard/enquiries')}>
               <Plus className="w-4 h-4 mr-2" />
-              Create your first quotation
+              Create from an enquiry
             </Button>
           </CanWrite>
         </div>

@@ -54,7 +54,7 @@ export default function TimeLogPage() {
 
   const { data: tasksData } = useQuery({
     queryKey: ['timelog-tasks'],
-    queryFn: () => getTasks({ limit: 200 }),
+    queryFn: () => getTasks({ view: 'mine', limit: 200 }),
   });
 
   const createMut = useMutation({
@@ -181,7 +181,7 @@ export default function TimeLogPage() {
             >
               <option value="">None</option>
               {tasks.map((t) => (
-                <option key={t.id} value={t.id}>{t.task_title}</option>
+                <option key={t.id} value={t.id}>{t.title || t.task_title}</option>
               ))}
             </select>
           </div>

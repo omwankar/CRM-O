@@ -326,7 +326,7 @@ export default function DashboardPage() {
                       <div
                         key={task.id}
                         className="rounded-2xl border border-border p-3 cursor-pointer hover:bg-muted/40 transition-all duration-150"
-                        onClick={() => router.push(`/dashboard/tasks/${task.id}`)}
+                        onClick={() => router.push('/dashboard/tasks')}
                       >
                         <p className="text-sm font-medium">{task.title}</p>
                         <p className="text-xs text-muted-foreground">

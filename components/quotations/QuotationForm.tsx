@@ -36,7 +36,6 @@ import {
   type ClosureKind,
   type EnquiryStage,
   type Quotation,
-  type QuotationStatus,
 } from '@/types/quotations';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { getUsers } from '@/lib/api/users';
@@ -168,13 +167,8 @@ export function QuotationForm({
       await qc.invalidateQueries({ queryKey: ['quotation-stats'] });
       await qc.invalidateQueries({ queryKey: ['quotation', quotation.id] });
     } else {
-      const { createQuotation } = await import('@/lib/api/quotations');
-      const CRM_DEFAULT: QuotationStatus = 'waiting_from_companies';
-      const status = (payload.status as QuotationStatus | undefined) || CRM_DEFAULT;
-      await createQuotation({ ...payload, status } as never);
-      await qc.invalidateQueries({ queryKey: ['quotations'] });
-      await qc.invalidateQueries({ queryKey: ['quotation-stats'] });
-      await qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      notifyQuotationError('Create quotations from an Enquiry (Convert / Create Quotation).');
+      return;
     }
 
     onSuccess();

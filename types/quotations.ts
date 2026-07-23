@@ -119,8 +119,6 @@ export function buildOutcomeString(kind: ClosureKind, detail?: string): string {
   return d ? `${base} — ${d}` : base;
 }
 
-export type FollowupMethod = 'Call' | 'Email' | 'Meeting';
-export type ReminderStatus = 'completed' | 'pending' | 'not_set';
 export type VendorQuoteLineStatus = 'under_review' | 'sent' | 'finalised';
 
 export const QUOTATION_STATUS_LABELS: Record<QuotationStatus, string> = {
@@ -174,31 +172,6 @@ export interface QuotationRevision {
   users?: { full_name: string };
 }
 
-export interface QuotationFollowup {
-  id: string;
-  quotation_id: string;
-  vendor_quote_id?: string | null;
-  followup_date: string;
-  method: FollowupMethod;
-  customer_response?: string | null;
-  next_followup_date?: string | null;
-  reminder_status: ReminderStatus;
-  created_by?: string | null;
-  created_at: string;
-  users?: { id: string; full_name: string | null } | null;
-}
-
-export interface CreateFollowupInput {
-  followup_date: string;
-  method: FollowupMethod;
-  customer_response?: string;
-  next_followup_date?: string;
-  reminder_status?: ReminderStatus;
-  vendor_quote_id?: string | null;
-}
-
-export interface UpdateFollowupInput extends Partial<CreateFollowupInput> {}
-
 export interface LinkedInvoiceSummary {
   id: string;
   invoice_number: string;
@@ -212,6 +185,8 @@ export interface Quotation {
   id: string;
   quotation_number: string;
   status: QuotationStatus;
+  enquiry_id: string;
+  opportunity_id?: string | null;
   requirement: string;
   enquiry_lead?: string | null;
   project_id?: string | null;
@@ -244,6 +219,18 @@ export interface Quotation {
   quote_sent_to_email?: string | null;
   quote_sent_at?: string | null;
   // Joined
+  enquiry?: {
+    id: string;
+    enquiry_number?: string | null;
+    title?: string | null;
+    stage?: EnquiryStage | null;
+    priority?: 'low' | 'medium' | 'high' | null;
+    deadline?: string | null;
+    client_budget?: number | null;
+    client_currency?: string | null;
+    opportunity_id?: string | null;
+    buyer_id?: string | null;
+  } | null;
   buyer?: {
     id: string;
     buyer_name: string;
@@ -255,28 +242,32 @@ export interface Quotation {
   projects?: { id: string; project_name: string };
   quotation_vendor_quotes?: VendorQuote[];
   quotation_revisions?: QuotationRevision[];
-  quotation_followups?: QuotationFollowup[];
   updated_by_user?: { id: string; full_name: string | null; email?: string | null } | null;
 }
 
 export interface CreateQuotationInput {
-  requirement: string;
-  status: QuotationStatus;
+  enquiry_id: string;
+  requirement?: string;
+  status?: QuotationStatus;
+  opportunity_id?: string | null;
   enquiry_lead?: string | null;
-  project_id?: string;
-  standalone_project_name?: string;
-  client_budget?: number;
-  client_currency?: string;
-  client_price_notes?: string;
-  deadline?: string;
-  enquiry_title?: string;
+  project_id?: string | null;
+  standalone_project_name?: string | null;
+  client_budget?: number | null;
+  client_currency?: string | null;
+  client_price_notes?: string | null;
+  deadline?: string | null;
+  enquiry_title?: string | null;
   enquiry_stage?: EnquiryStage;
   priority?: 'low' | 'medium' | 'high';
-  outcome?: string;
-  tracker_remarks?: string;
+  outcome?: string | null;
+  tracker_remarks?: string | null;
+  buyer_id?: string | null;
+  client_email?: string | null;
 }
 
-export interface UpdateQuotationInput extends Partial<CreateQuotationInput> {
+export interface UpdateQuotationInput extends Partial<Omit<CreateQuotationInput, 'enquiry_id'>> {
+  enquiry_id?: string;
   buyer_id?: string | null;
   client_email?: string | null;
   chosen_quote_id?: string;
@@ -287,4 +278,6 @@ export interface UpdateQuotationInput extends Partial<CreateQuotationInput> {
   revised_price?: number;
   revised_currency?: string;
   revised_notes?: string;
+  requirement?: string;
+  status?: QuotationStatus;
 }

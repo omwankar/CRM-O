@@ -178,7 +178,15 @@ export default function NewProjectPage() {
         <div>
           <h1 className="text-[32px] font-medium text-foreground">New Project</h1>
           <p className="text-[14px] text-muted-foreground">
-            Create a new project and assign team members
+            For internal / non-shipment work. Tracking a real shipment?{' '}
+            <button
+              type="button"
+              className="text-primary hover:underline"
+              onClick={() => router.push('/dashboard/jobs/new')}
+            >
+              Create a Job
+            </button>{' '}
+            instead.
           </p>
         </div>
       </div>

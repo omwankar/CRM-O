@@ -1,8 +1,9 @@
-export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+export type InvoiceStatus = 'draft' | 'sent' | 'partial' | 'paid' | 'overdue' | 'cancelled';
 
 export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
   draft: 'Draft',
   sent: 'Sent',
+  partial: 'Partial',
   paid: 'Paid',
   overdue: 'Overdue',
   cancelled: 'Cancelled',
@@ -11,6 +12,7 @@ export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
 export const INVOICE_STATUS_CLASSES: Record<InvoiceStatus, string> = {
   draft: 'bg-slate-100 text-slate-700',
   sent: 'bg-blue-100 text-blue-800',
+  partial: 'bg-violet-100 text-violet-800',
   paid: 'bg-emerald-100 text-emerald-800',
   overdue: 'bg-amber-100 text-amber-800',
   cancelled: 'bg-gray-100 text-gray-600',
@@ -82,6 +84,20 @@ export interface Invoice {
   buyer?: InvoiceBuyer | null;
   buyers?: { id: string; buyer_name: string; contact_email?: string | null };
   quotation_id?: string | null;
+  opportunity_id?: string | null;
+  amount_paid?: number;
+  balance_due?: number;
+  overpaid?: boolean;
+  overpayment_amount?: number;
+  payments?: Array<{
+    id: string;
+    amount: number;
+    currency: string;
+    payment_date: string;
+    method: string;
+    reference?: string | null;
+    notes?: string | null;
+  }>;
   quotation?: {
     id: string;
     quotation_number: string;

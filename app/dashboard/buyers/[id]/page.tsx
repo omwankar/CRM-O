@@ -3,16 +3,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { getBuyer, updateBuyer } from '@/lib/api/buyers';
 import { getComments, createComment } from '@/lib/api/comments';
-import { getTasks, createTask } from '@/lib/api/tasks';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { ArrowLeft, Edit2, Save, X, Plus, MessageSquare, CheckSquare, History } from 'lucide-react';
+import { getBuyerCreditStatus } from '@/lib/api/payments';
+import { ActivityTimeline } from '@/components/activities/ActivityTimeline';
+import { EntityTaskList } from '@/components/tasks/EntityTaskList';
+import { ArrowLeft, Edit2, Save, X, Plus, MessageSquare, History } from 'lucide-react';
 
-type Tab = 'overview' | 'pipeline' | 'tasks' | 'comments' | 'activity';
+type Tab = 'overview' | 'pipeline' | 'credit' | 'tasks' | 'comments' | 'activity';
 
 export default function BuyerDetailPage() {
   const router = useRouter();
@@ -23,7 +25,6 @@ export default function BuyerDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
   const [newComment, setNewComment] = useState('');
-  const [newTask, setNewTask] = useState('');
 
   const { data: buyer, isLoading } = useQuery({
     queryKey: ['buyer', id],
@@ -35,13 +36,10 @@ export default function BuyerDetailPage() {
     queryFn: () => getComments({ related_table: 'buyers', related_id: id }),
   });
 
-  const { user: currentUser } = useCurrentUser();
-  // Tasks are linked by a tag in the title (tasks have no buyer relation)
-  const taskTag = `[BUY-${id.slice(0, 8)}]`;
-
-  const { data: tasks } = useQuery({
-    queryKey: ['tasks', 'buyers', id],
-    queryFn: () => getTasks({ search: taskTag }),
+  const { data: credit } = useQuery({
+    queryKey: ['buyer-credit', id],
+    queryFn: () => getBuyerCreditStatus(id),
+    enabled: !!id && activeTab === 'credit',
   });
 
   const updateMutation = useMutation({
@@ -60,19 +58,6 @@ export default function BuyerDetailPage() {
     },
   });
 
-  const taskMutation = useMutation({
-    mutationFn: (title: string) =>
-      createTask({
-        task_title: `${taskTag} ${title}`,
-        task_type: 'sales',
-        created_by: currentUser?.id || '',
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', 'buyers', id] });
-      setNewTask('');
-    },
-  });
-
   const handleSave = () => {
     updateMutation.mutate(editForm);
   };
@@ -80,12 +65,6 @@ export default function BuyerDetailPage() {
   const handleAddComment = () => {
     if (newComment.trim()) {
       commentMutation.mutate(newComment);
-    }
-  };
-
-  const handleAddTask = () => {
-    if (newTask.trim()) {
-      taskMutation.mutate(newTask);
     }
   };
 
@@ -105,6 +84,27 @@ export default function BuyerDetailPage() {
           <div>
             <h1 className="text-2xl font-bold">{b.buyer_name}</h1>
             <p className="text-muted-foreground">{b.contact_person}</p>
+            {b.company?.id ? (
+              <p className="mt-1 text-sm">
+                Company:{' '}
+                <Link href={`/dashboard/companies/${b.company.id}`} className="text-blue-600 hover:underline">
+                  {b.company.name}
+                </Link>
+              </p>
+            ) : null}
+            {b.also_vendor && (b.sibling_vendors || []).length > 0 ? (
+              <p className="mt-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100">
+                This company is also a vendor:{' '}
+                {(b.sibling_vendors || []).map((v: { id: string; vendor_name: string }, i: number) => (
+                  <span key={v.id}>
+                    {i > 0 ? ', ' : ''}
+                    <Link href={`/dashboard/vendors/${v.id}`} className="font-medium underline">
+                      {v.vendor_name}
+                    </Link>
+                  </span>
+                ))}
+              </p>
+            ) : null}
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => { setEditForm(b); setIsEditing(true); }}>
@@ -115,7 +115,7 @@ export default function BuyerDetailPage() {
         </div>
 
         <div className="flex gap-1 border-b mb-6">
-          {(['overview', 'pipeline', 'tasks', 'comments', 'activity'] as Tab[]).map((tab) => (
+          {(['overview', 'pipeline', 'credit', 'tasks', 'comments', 'activity'] as Tab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -125,7 +125,7 @@ export default function BuyerDetailPage() {
                   : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab === 'pipeline' ? 'Opportunities' : tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
           ))}
         </div>
@@ -182,68 +182,128 @@ export default function BuyerDetailPage() {
         )}
 
         {activeTab === 'pipeline' && (
-          <div>
-            <h3 className="font-semibold mb-4">Pipeline Status</h3>
-            <div className="flex items-center gap-4">
-              <span
-                className="px-4 py-2 rounded-full text-white font-medium"
-                style={{ backgroundColor: b.pipeline_stages?.[0]?.color || '#64748b' }}
-              >
-                {b.pipeline_stages?.[0]?.name || 'Unassigned'}
-              </span>
-              <div className="flex-1">
-                <p className="text-sm text-muted-foreground">Pipeline Value</p>
-                <p className="text-2xl font-bold">{b.pipeline_value ? `$${b.pipeline_value.toLocaleString()}` : '-'}</p>
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h3 className="font-semibold">Opportunities</h3>
+                <p className="text-sm text-muted-foreground">
+                  Deal stages live on Opportunities now (not a single buyer stage).
+                </p>
               </div>
-              <div className="flex-1">
-                <p className="text-sm text-muted-foreground">Expected Close Date</p>
-                <p className="text-lg font-medium">{b.expected_close_date ? new Date(b.expected_close_date).toLocaleDateString() : '-'}</p>
-              </div>
+              <Button size="sm" asChild>
+                <Link href={`/dashboard/opportunities/new?buyer_id=${b.id}`}>New opportunity</Link>
+              </Button>
             </div>
-            {b.pipeline_notes && (
-              <div className="mt-4">
-                <p className="text-sm text-muted-foreground mb-1">Pipeline Notes</p>
-                <p className="text-sm">{b.pipeline_notes}</p>
-              </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Card className="p-4">
+                <p className="text-xs text-muted-foreground">Open deals</p>
+                <p className="text-2xl font-bold">{b.open_count ?? (b.opportunities || []).filter((o: any) => !['closed_won','closed_lost'].includes(o.stage)).length}</p>
+              </Card>
+              <Card className="p-4">
+                <p className="text-xs text-muted-foreground">Open pipeline value</p>
+                <p className="text-2xl font-bold tabular-nums">
+                  {(b.open_pipeline_value ?? 0).toLocaleString()}
+                </p>
+              </Card>
+            </div>
+            {(b.opportunities || []).length === 0 ? (
+              <p className="text-sm text-muted-foreground">No opportunities yet for this buyer.</p>
+            ) : (
+              <ul className="divide-y rounded-lg border">
+                {(b.opportunities || []).map((o: any) => (
+                  <li key={o.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                    <div>
+                      <Link href={`/dashboard/opportunities/${o.id}`} className="font-medium text-blue-600 hover:underline">
+                        {o.title}
+                      </Link>
+                      <p className="text-xs text-muted-foreground capitalize">{String(o.stage).replace(/_/g, ' ')}</p>
+                    </div>
+                    <p className="text-sm tabular-nums">
+                      {o.value != null ? `${o.currency || ''} ${Number(o.value).toLocaleString()}` : '—'}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {b.pipeline_stages?.[0]?.name ? (
+              <p className="text-xs text-muted-foreground">
+                Legacy buyer stage (deprecated): {b.pipeline_stages[0].name}
+              </p>
+            ) : null}
+          </div>
+        )}
+
+        {activeTab === 'credit' && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-semibold">Credit</h3>
+              <p className="text-sm text-muted-foreground">
+                Used amount is unpaid balance on non-cancelled invoices (total − payments).
+              </p>
+            </div>
+            {!credit ? (
+              <p className="text-sm text-muted-foreground">Loading credit…</p>
+            ) : (
+              <>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Card className="p-4">
+                    <p className="text-xs text-muted-foreground">Credit limit</p>
+                    <p className="text-2xl font-bold tabular-nums">
+                      {credit.credit_limit != null ? credit.credit_limit.toLocaleString() : '—'}
+                    </p>
+                  </Card>
+                  <Card className="p-4">
+                    <p className="text-xs text-muted-foreground">Used</p>
+                    <p className="text-2xl font-bold tabular-nums">{credit.credit_used.toLocaleString()}</p>
+                  </Card>
+                  <Card className="p-4">
+                    <p className="text-xs text-muted-foreground">Available</p>
+                    <p className="text-2xl font-bold tabular-nums">
+                      {credit.credit_available != null ? credit.credit_available.toLocaleString() : '—'}
+                    </p>
+                  </Card>
+                </div>
+                {credit.utilization_pct != null && (
+                  <p className="text-sm text-muted-foreground">
+                    Utilization: <span className="font-medium text-foreground">{credit.utilization_pct}%</span>
+                  </p>
+                )}
+                <div>
+                  <h4 className="font-medium mb-2">Open invoices (contributing to used)</h4>
+                  {(credit.open_invoices || []).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No open balances.</p>
+                  ) : (
+                    <ul className="divide-y rounded-lg border">
+                      {(credit.open_invoices || []).map((inv) => (
+                        <li key={inv.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                          <div>
+                            <Link
+                              href={`/dashboard/invoices/${inv.id}`}
+                              className="font-mono text-blue-600 hover:underline"
+                            >
+                              {inv.invoice_number}
+                            </Link>
+                            <p className="text-xs text-muted-foreground capitalize">
+                              {inv.status} · due {inv.due_date || '—'}
+                            </p>
+                          </div>
+                          <div className="text-right text-sm tabular-nums">
+                            <p>Balance {Number(inv.balance_due).toLocaleString()}</p>
+                            <p className="text-xs text-muted-foreground">
+                              of {Number(inv.total).toLocaleString()} {inv.currency}
+                            </p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </>
             )}
           </div>
         )}
 
-        {activeTab === 'tasks' && (
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <h3 className="font-semibold">Tasks</h3>
-              <div className="flex-1" />
-              <div className="flex gap-2">
-                <Input
-                  placeholder="New task..."
-                  value={newTask}
-                  onChange={(e) => setNewTask(e.target.value)}
-                  className="w-64"
-                />
-                <Button size="sm" onClick={handleAddTask} disabled={taskMutation.isPending}>
-                  <Plus className="w-4 h-4 mr-1" />
-                  Add
-                </Button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              {tasks?.tasks?.map((task) => (
-                <Card key={task.id} className="p-3 flex items-center gap-3">
-                  <CheckSquare className="w-5 h-5" />
-                  <div className="flex-1">
-                    <p className="font-medium">{task.task_title.replace(taskTag, '').trim()}</p>
-                    <p className="text-xs text-muted-foreground">Due: {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}</p>
-                  </div>
-                  <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-800">
-                    {task.status}
-                  </span>
-                </Card>
-              ))}
-              {tasks?.tasks?.length === 0 && <p className="text-muted-foreground text-sm">No tasks assigned</p>}
-            </div>
-          </div>
-        )}
+        {activeTab === 'tasks' && <EntityTaskList entityType="buyer" entityId={id} />}
 
         {activeTab === 'comments' && (
           <div>
@@ -285,10 +345,7 @@ export default function BuyerDetailPage() {
         )}
 
         {activeTab === 'activity' && (
-          <div>
-            <h3 className="font-semibold mb-4">Activity Log</h3>
-            <p className="text-muted-foreground text-sm">Activity log will be displayed here from the activity_logs table.</p>
-          </div>
+          <ActivityTimeline entityType="buyer" entityId={id} />
         )}
       </Card>
     </div>

@@ -3,16 +3,19 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { getVendor, updateVendor } from '@/lib/api/vendors';
+import { getVendor, updateVendor, getVendorJobs } from '@/lib/api/vendors';
 import { getComments, createComment } from '@/lib/api/comments';
-import { getTasks, createTask } from '@/lib/api/tasks';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { ArrowLeft, Edit2, Save, X, Plus, MessageSquare, CheckSquare, History } from 'lucide-react';
+import { ActivityTimeline } from '@/components/activities/ActivityTimeline';
+import { EntityTaskList } from '@/components/tasks/EntityTaskList';
+import { JobStatusPill } from '@/components/jobs/JobStatusPill';
+import { ArrowLeft, Edit2, Save, X, Plus, MessageSquare, History, Package } from 'lucide-react';
+import type { JobStatus } from '@/types/jobs';
 
-type Tab = 'overview' | 'details' | 'tasks' | 'comments' | 'activity';
+type Tab = 'overview' | 'details' | 'jobs' | 'tasks' | 'comments' | 'activity';
 
 export default function VendorDetailPage() {
   const router = useRouter();
@@ -23,7 +26,6 @@ export default function VendorDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
   const [newComment, setNewComment] = useState('');
-  const [newTask, setNewTask] = useState('');
 
   const { data: vendor, isLoading } = useQuery({
     queryKey: ['vendor', id],
@@ -35,14 +37,13 @@ export default function VendorDetailPage() {
     queryFn: () => getComments({ related_table: 'vendors', related_id: id }),
   });
 
-  const { user: currentUser } = useCurrentUser();
-  // Tasks are linked by a tag in the title (tasks have no vendor relation)
-  const taskTag = `[VEN-${id.slice(0, 8)}]`;
-
-  const { data: tasks } = useQuery({
-    queryKey: ['tasks', 'vendors', id],
-    queryFn: () => getTasks({ search: taskTag }),
+  const { data: jobsRes } = useQuery({
+    queryKey: ['vendor-jobs', id],
+    queryFn: () => getVendorJobs(id),
+    enabled: activeTab === 'jobs',
   });
+
+  const assignedJobs = jobsRes?.data || [];
 
   const updateMutation = useMutation({
     mutationFn: (data: any) => updateVendor(id, data),
@@ -60,19 +61,6 @@ export default function VendorDetailPage() {
     },
   });
 
-  const taskMutation = useMutation({
-    mutationFn: (title: string) =>
-      createTask({
-        task_title: `${taskTag} ${title}`,
-        task_type: 'admin',
-        created_by: currentUser?.id || '',
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', 'vendors', id] });
-      setNewTask('');
-    },
-  });
-
   const handleSave = () => {
     updateMutation.mutate(editForm);
   };
@@ -80,12 +68,6 @@ export default function VendorDetailPage() {
   const handleAddComment = () => {
     if (newComment.trim()) {
       commentMutation.mutate(newComment);
-    }
-  };
-
-  const handleAddTask = () => {
-    if (newTask.trim()) {
-      taskMutation.mutate(newTask);
     }
   };
 
@@ -105,6 +87,27 @@ export default function VendorDetailPage() {
           <div>
             <h1 className="text-2xl font-bold">{v.vendor_name}</h1>
             <p className="text-muted-foreground">{v.contact_person}</p>
+            {v.company?.id ? (
+              <p className="mt-1 text-sm">
+                Company:{' '}
+                <Link href={`/dashboard/companies/${v.company.id}`} className="text-blue-600 hover:underline">
+                  {v.company.name}
+                </Link>
+              </p>
+            ) : null}
+            {v.also_buyer && (v.sibling_buyers || []).length > 0 ? (
+              <p className="mt-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100">
+                This company is also a buyer:{' '}
+                {(v.sibling_buyers || []).map((b: { id: string; buyer_name: string }, i: number) => (
+                  <span key={b.id}>
+                    {i > 0 ? ', ' : ''}
+                    <Link href={`/dashboard/buyers/${b.id}`} className="font-medium underline">
+                      {b.buyer_name}
+                    </Link>
+                  </span>
+                ))}
+              </p>
+            ) : null}
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => { setEditForm(v); setIsEditing(true); }}>
@@ -115,7 +118,7 @@ export default function VendorDetailPage() {
         </div>
 
         <div className="flex gap-1 border-b mb-6">
-          {(['overview', 'details', 'tasks', 'comments', 'activity'] as Tab[]).map((tab) => (
+          {(['overview', 'details', 'jobs', 'tasks', 'comments', 'activity'] as Tab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -125,7 +128,7 @@ export default function VendorDetailPage() {
                   : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab === 'jobs' ? 'Assigned jobs' : tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
           ))}
         </div>
@@ -192,41 +195,57 @@ export default function VendorDetailPage() {
           </div>
         )}
 
-        {activeTab === 'tasks' && (
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <h3 className="font-semibold">Tasks</h3>
-              <div className="flex-1" />
-              <div className="flex gap-2">
-                <Input
-                  placeholder="New task..."
-                  value={newTask}
-                  onChange={(e) => setNewTask(e.target.value)}
-                  className="w-64"
-                />
-                <Button size="sm" onClick={handleAddTask} disabled={taskMutation.isPending}>
-                  <Plus className="w-4 h-4 mr-1" />
-                  Add
-                </Button>
+        {activeTab === 'jobs' && (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Jobs where this vendor is assigned as executor.
+            </p>
+            {assignedJobs.length === 0 ? (
+              <div className="flex flex-col items-center py-10 text-center text-muted-foreground">
+                <Package className="h-10 w-10 mb-2 opacity-50" />
+                <p className="text-sm">No assigned jobs yet</p>
               </div>
-            </div>
-            <div className="space-y-2">
-              {tasks?.tasks?.map((task) => (
-                <Card key={task.id} className="p-3 flex items-center gap-3">
-                  <CheckSquare className="w-5 h-5" />
-                  <div className="flex-1">
-                    <p className="font-medium">{task.task_title.replace(taskTag, '').trim()}</p>
-                    <p className="text-xs text-muted-foreground">Due: {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}</p>
-                  </div>
-                  <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-800">
-                    {task.status}
-                  </span>
-                </Card>
-              ))}
-              {tasks?.tasks?.length === 0 && <p className="text-muted-foreground text-sm">No tasks assigned</p>}
-            </div>
+            ) : (
+              <div className="overflow-x-auto rounded-lg border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/40 text-left">
+                    <tr>
+                      <th className="px-3 py-2 font-medium">Job</th>
+                      <th className="px-3 py-2 font-medium">Lane</th>
+                      <th className="px-3 py-2 font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {assignedJobs.map((row) => (
+                      <tr
+                        key={row.link_id}
+                        className="border-t hover:bg-muted/30 cursor-pointer"
+                        onClick={() => router.push(`/dashboard/jobs/${row.job.id}`)}
+                      >
+                        <td className="px-3 py-2">
+                          <div className="font-mono text-xs text-muted-foreground">
+                            {row.job.job_number}
+                          </div>
+                          <div className="font-medium">{row.job.title}</div>
+                        </td>
+                        <td className="px-3 py-2 text-muted-foreground">
+                          {row.job.origin || row.job.destination
+                            ? `${row.job.origin || '—'} → ${row.job.destination || '—'}`
+                            : '—'}
+                        </td>
+                        <td className="px-3 py-2">
+                          <JobStatusPill status={row.job.status as JobStatus} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
+
+        {activeTab === 'tasks' && <EntityTaskList entityType="vendor" entityId={id} />}
 
         {activeTab === 'comments' && (
           <div>
@@ -268,10 +287,7 @@ export default function VendorDetailPage() {
         )}
 
         {activeTab === 'activity' && (
-          <div>
-            <h3 className="font-semibold mb-4">Activity Log</h3>
-            <p className="text-muted-foreground text-sm">Activity log will be displayed here from the activity_logs table.</p>
-          </div>
+          <ActivityTimeline entityType="vendor" entityId={id} />
         )}
       </Card>
     </div>

@@ -5,12 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import type { QuotationFollowup, VendorQuote } from '@/types/quotations';
+import type { VendorQuote } from '@/types/quotations';
 import { QUOTATION_CURRENCIES } from '@/types/quotations';
 import { getVendors } from '@/lib/api/vendors';
 import { supabase } from '@/lib/auth';
 import { Upload, FileText, X } from 'lucide-react';
-import { FollowUpTable } from '@/components/quotations/FollowUpTable';
 import { notifyQuotationError } from '@/lib/quotation-notify';
 
 type VendorLite = { id: string; vendor_name: string; contact_email?: string | null };
@@ -26,9 +25,6 @@ type Props = {
   quotationId?: string;
   customerDisplayName?: string | null;
   initial?: Partial<VendorQuote> | null;
-  followups: QuotationFollowup[];
-  currentUserId?: string;
-  isSuperAdmin?: boolean;
   onClose: () => void;
   onSubmit: (data: {
     vendor_id?: string;
@@ -42,9 +38,6 @@ type Props = {
     validity_date?: string;
     quote_file_url?: string;
   }) => Promise<void> | void;
-  onAddFollowup: () => void;
-  onEditFollowup: (f: QuotationFollowup) => void;
-  onDeleteFollowup: (f: QuotationFollowup) => void;
 };
 
 export function VendorQuoteDetailSection({
@@ -52,21 +45,10 @@ export function VendorQuoteDetailSection({
   quotationId,
   customerDisplayName,
   initial,
-  followups,
-  currentUserId,
-  isSuperAdmin,
   onClose,
   onSubmit,
-  onAddFollowup,
-  onEditFollowup,
-  onDeleteFollowup,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const vendorQuoteId = initial?.id ?? null;
-  const vendorFollowups = useMemo(
-    () => (vendorQuoteId ? followups.filter((f) => f.vendor_quote_id === vendorQuoteId) : []),
-    [followups, vendorQuoteId],
-  );
   const [vendors, setVendors] = useState<VendorLite[]>([]);
   const [vendorMode, setVendorMode] = useState<'select' | 'manual'>(
     initial?.vendor_id ? 'select' : initial?.vendor_name ? 'manual' : 'select',
@@ -117,7 +99,7 @@ export function VendorQuoteDetailSection({
     e.target.value = '';
     if (!file || !quotationId) {
       if (!quotationId) {
-        notifyQuotationError('Missing enquiry id. Refresh the page and try again.');
+        notifyQuotationError('Missing quotation id. Refresh the page and try again.');
       }
       return;
     }
@@ -406,25 +388,6 @@ export function VendorQuoteDetailSection({
             {saving ? 'Saving...' : 'Save'}
           </Button>
         </div>
-      </div>
-
-      <div className="border-t border-border/80 px-4 py-4 sm:px-5">
-        <FollowUpTable
-          followups={vendorFollowups}
-          currentUserId={currentUserId}
-          isSuperAdmin={isSuperAdmin}
-          onAdd={vendorQuoteId ? onAddFollowup : undefined}
-          onEdit={onEditFollowup}
-          onDelete={onDeleteFollowup}
-          emptyMessage={
-            vendorQuoteId ? 'No follow-ups for this vendor yet.' : 'Save this company quotation to start logging follow-ups.'
-          }
-          addHint={
-            vendorQuoteId
-              ? 'Follow-ups here are only for this vendor quotation.'
-              : 'Follow-ups are linked to each saved company quotation.'
-          }
-        />
       </div>
     </div>
   );

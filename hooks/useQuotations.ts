@@ -1,11 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CreateFollowupInput, Quotation, UpdateFollowupInput, UpdateQuotationInput } from '@/types/quotations';
+import type { Quotation, UpdateQuotationInput } from '@/types/quotations';
 import {
-  addFollowup,
   chooseVendorQuote,
-  deleteFollowup,
   getQuotationById,
-  updateFollowup,
   updateQuotation,
 } from '@/lib/api/quotations';
 import { notifyQuotationError } from '@/lib/quotation-notify';
@@ -27,7 +24,7 @@ export function useUpdateQuotation() {
       qc.invalidateQueries({ queryKey: ['quotation', vars.id] });
       qc.invalidateQueries({ queryKey: ['quotation-stats'] });
     },
-    onError: (error) => notifyQuotationError(error, 'Could not update this enquiry.'),
+    onError: (error) => notifyQuotationError(error, 'Could not update this quotation.'),
   });
 }
 
@@ -72,40 +69,5 @@ export function useChooseVendorQuote() {
       }
       notifyQuotationError(error, 'Could not update the final vendor selection.');
     },
-  });
-}
-
-export function useAddFollowup() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ quotation_id, data }: { quotation_id: string; data: CreateFollowupInput }) =>
-      addFollowup(quotation_id, data),
-    onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: ['quotation', vars.quotation_id] });
-    },
-    onError: (error) => notifyQuotationError(error, 'Could not save this follow-up.'),
-  });
-}
-
-export function useUpdateFollowup() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (vars: { followupId: string; quotationId: string; data: UpdateFollowupInput }) =>
-      updateFollowup(vars.followupId, vars.data),
-    onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: ['quotation', vars.quotationId] });
-    },
-    onError: (error) => notifyQuotationError(error, 'Could not update this follow-up.'),
-  });
-}
-
-export function useDeleteFollowup() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (vars: { followupId: string; quotationId: string }) => deleteFollowup(vars.followupId),
-    onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: ['quotation', vars.quotationId] });
-    },
-    onError: (error) => notifyQuotationError(error, 'Could not delete this follow-up.'),
   });
 }

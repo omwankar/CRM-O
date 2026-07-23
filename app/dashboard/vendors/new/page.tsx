@@ -1,17 +1,28 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { createVendor } from '@/lib/api/vendors';
+import { getCompanies } from '@/lib/api/companies';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { FieldGroup, FieldLabel } from '@/components/ui/field';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 export default function NewVendorPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const presetCompanyId = searchParams.get('company_id') || '';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -29,6 +40,16 @@ export default function NewVendorPage() {
     payment_terms: '',
     status: 'active',
     vendor_portal_link: '',
+    company_id: presetCompanyId,
+  });
+
+  useEffect(() => {
+    if (presetCompanyId) setFormData((prev) => ({ ...prev, company_id: presetCompanyId }));
+  }, [presetCompanyId]);
+
+  const { data: companiesData } = useQuery({
+    queryKey: ['companies-vendor-form'],
+    queryFn: () => getCompanies({ limit: 200 }),
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,8 +63,11 @@ export default function NewVendorPage() {
     setLoading(true);
 
     try {
-      const { status: _status, ...payload } = formData;
-      await createVendor(payload);
+      const { status: _status, ...rest } = formData;
+      await createVendor({
+        ...rest,
+        company_id: formData.company_id || null,
+      });
 
       router.push('/dashboard/vendors');
     } catch (err: any) {
@@ -83,6 +107,27 @@ export default function NewVendorPage() {
               <Input name="vendor_name" value={formData.vendor_name} onChange={handleChange} required />
             </FieldGroup>
             <FieldGroup>
+              <FieldLabel>Company (directory)</FieldLabel>
+              <Select
+                value={formData.company_id || 'none'}
+                onValueChange={(v) =>
+                  setFormData((prev) => ({ ...prev, company_id: v === 'none' ? '' : v }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Optional link" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No company link</SelectItem>
+                  {(companiesData?.data || []).map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldGroup>
+            <FieldGroup>
               <FieldLabel>Contact Person *</FieldLabel>
               <Input name="contact_person" value={formData.contact_person} onChange={handleChange} required />
             </FieldGroup>
@@ -99,48 +144,43 @@ export default function NewVendorPage() {
               <Input name="vendor_type" value={formData.vendor_type} onChange={handleChange} required />
             </FieldGroup>
             <FieldGroup>
-              <FieldLabel>Status</FieldLabel>
-              <Input name="status" value={formData.status} onChange={handleChange} />
+              <FieldLabel>Payment Terms</FieldLabel>
+              <Input name="payment_terms" value={formData.payment_terms} onChange={handleChange} />
+            </FieldGroup>
+            <FieldGroup>
+              <FieldLabel>Vendor Portal Link</FieldLabel>
+              <Input name="vendor_portal_link" value={formData.vendor_portal_link} onChange={handleChange} />
+            </FieldGroup>
+            <FieldGroup>
+              <FieldLabel>Address</FieldLabel>
+              <Input name="address" value={formData.address} onChange={handleChange} />
+            </FieldGroup>
+            <FieldGroup>
+              <FieldLabel>City</FieldLabel>
+              <Input name="city" value={formData.city} onChange={handleChange} />
+            </FieldGroup>
+            <FieldGroup>
+              <FieldLabel>State</FieldLabel>
+              <Input name="state" value={formData.state} onChange={handleChange} />
+            </FieldGroup>
+            <FieldGroup>
+              <FieldLabel>Postal Code</FieldLabel>
+              <Input name="postal_code" value={formData.postal_code} onChange={handleChange} />
+            </FieldGroup>
+            <FieldGroup>
+              <FieldLabel>Country</FieldLabel>
+              <Input name="country" value={formData.country} onChange={handleChange} />
             </FieldGroup>
           </div>
 
-          <FieldGroup>
-            <FieldLabel>Address</FieldLabel>
-            <Input name="address" value={formData.address} onChange={handleChange} />
-          </FieldGroup>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-            <Input name="city" placeholder="City" value={formData.city} onChange={handleChange} />
-            <Input name="state" placeholder="State" value={formData.state} onChange={handleChange} />
-            <Input name="postal_code" placeholder="Postal Code" value={formData.postal_code} onChange={handleChange} />
-            <Input name="country" placeholder="Country" value={formData.country} onChange={handleChange} />
-          </div>
-
-          <FieldGroup>
-            <FieldLabel>Payment Terms</FieldLabel>
-            <Input name="payment_terms" value={formData.payment_terms} onChange={handleChange} />
-          </FieldGroup>
-
-          <FieldGroup>
-            <FieldLabel>Vendor Portal Link</FieldLabel>
-            <Input
-              name="vendor_portal_link"
-              type="url"
-              placeholder="https://vendor-portal.example.com"
-              value={formData.vendor_portal_link}
-              onChange={handleChange}
-            />
-          </FieldGroup>
-
-          <div className="flex gap-4 pt-4">
+          <div className="flex gap-3">
             <Button type="submit" disabled={loading}>
-              {loading ? 'Creating...' : 'Create Vendor'}
+              {loading ? 'Saving…' : 'Create Vendor'}
             </Button>
-            <Link href="/dashboard/vendors">
-              <Button variant="outline">Cancel</Button>
-            </Link>
+            <Button type="button" variant="outline" onClick={() => router.push('/dashboard/vendors')}>
+              Cancel
+            </Button>
           </div>
-
         </form>
       </Card>
     </div>

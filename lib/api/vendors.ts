@@ -21,6 +21,26 @@ export async function updateVendor(id: string, data: any) {
   return apiRequest(`/vendors/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 }
 
+export async function getVendorJobs(id: string) {
+  return apiRequest(`/vendors/${id}/jobs`) as Promise<{
+    data: Array<{
+      link_id: string;
+      notes: string | null;
+      added_at: string;
+      job: {
+        id: string;
+        job_number: string;
+        title: string;
+        status: string;
+        origin: string | null;
+        destination: string | null;
+        mode_type: string | null;
+        created_at: string;
+      };
+    }>;
+  }>;
+}
+
 export async function deleteVendor(id: string) {
   return apiRequest(`/vendors/${id}`, { method: 'DELETE' });
 }

@@ -1,293 +1,147 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/auth';
+import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { Briefcase, Plus, Search, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import Link from 'next/link';
-import { Plus, Search, Edit2, Trash2, Briefcase } from 'lucide-react';
+import { CanWrite } from '@/components/auth/Can';
 import {
   Empty,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
   EmptyDescription,
-  EmptyContent
+  EmptyContent,
 } from '@/components/ui/empty';
+import { deletePartnership, getPartnerships } from '@/lib/api/partnerships';
 
-interface Partnership {
-  id: string;
-  partner_company_name: string;
-  partner_name: string;
-  contact_person: string;
-  contact_email: string;
-  partnership_type: string;
-  start_date: string;
-  end_date: string;
-  description?: string;
-}
-
-export default function PartnershipsPage() {
-  const [partnerships, setPartnerships] = useState<Partnership[]>([]);
-  const [filteredPartnerships, setFilteredPartnerships] = useState<Partnership[]>([]);
+export default function PartnersPage() {
+  const router = useRouter();
+  const qc = useQueryClient();
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [role, setRole] = useState<string | null>(null);
+  const [q, setQ] = useState('');
 
-  const isAdmin = role !== 'user';
+  const { data, isLoading } = useQuery({
+    queryKey: ['partnerships', q],
+    queryFn: () => getPartnerships({ search: q || undefined, limit: 100 }),
+  });
 
-  useEffect(() => {
-    fetchPartnerships();
-    fetchRole();
-  }, []);
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => deletePartnership(id),
+    onSuccess: () => {
+      toast.success('Partner deleted');
+      qc.invalidateQueries({ queryKey: ['partnerships'] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
-  useEffect(() => {
-    const filtered = partnerships.filter(
-      (part) =>
-        part.partner_company_name?.toLowerCase().includes(search.toLowerCase()) ||
-        part.partner_name?.toLowerCase().includes(search.toLowerCase()) ||
-        part.partnership_type?.toLowerCase().includes(search.toLowerCase())
-    );
-    setFilteredPartnerships(filtered);
-  }, [search, partnerships]);
-
-  const fetchRole = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) return;
-
-    const { data } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    setRole(data?.role || null);
-  };
-
-  const fetchPartnerships = async () => {
-    try {
-      setLoading(true);
-
-      const { data, error } = await supabase
-        .from('partnerships')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      setPartnerships(data || []);
-    } catch (error) {
-      console.error('Failed to fetch partnerships:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!isAdmin) return;
-
-    if (!confirm('Are you sure you want to delete this partnership?')) return;
-
-    try {
-      const { error } = await supabase
-        .from('partnerships')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      setPartnerships((prev) => prev.filter((p) => p.id !== id));
-    } catch (error) {
-      console.error('Failed to delete partnership:', error);
-    }
-  };
-
-  const getStatus = (start: string, end: string) => {
-    const today = new Date();
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-
-    if (today < startDate) return 'pending';
-    if (today > endDate) return 'ended';
-    return 'active';
-  };
-
-  const getStatusBadge = (status: string) => {
-    const colors = {
-      active: 'bg-green-100 text-green-800',
-      ended: 'bg-gray-100 text-gray-800',
-      pending: 'bg-yellow-100 text-yellow-800',
-    };
-    return colors[status as keyof typeof colors] || colors.pending;
-  };
+  const partners = data?.data || [];
 
   return (
     <div className="space-y-6">
-
-      {/* HEADER */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Partnerships</h1>
-          <p className="text-muted-foreground">
-            {isAdmin
-              ? 'Manage business partnerships'
-              : 'View business partnerships'}
+          <h1 className="text-[32px] font-medium text-foreground">Partners</h1>
+          <p className="text-[14px] text-muted-foreground">
+            Co-loaders, customs agents, and logistics partners linked to Jobs
           </p>
         </div>
-
-        {/* ✅ ADMIN ONLY */}
-        {isAdmin && (
-          <Link href="/dashboard/partnerships/new">
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              New Partnership
-            </Button>
-          </Link>
-        )}
+        <CanWrite>
+          <Button onClick={() => router.push('/dashboard/partnerships/new')}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Partner
+          </Button>
+        </CanWrite>
       </div>
 
-      {/* SEARCH */}
-      <Card className="p-4">
-        <div className="flex gap-2 items-center">
-          <Search className="w-5 h-5 text-muted-foreground" />
-          <Input
-            placeholder="Search by company, partner, or type..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="border-0 bg-transparent"
-          />
-        </div>
-      </Card>
+      <div className="flex gap-2 max-w-md">
+        <Input
+          placeholder="Search partners…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') setQ(search.trim());
+          }}
+        />
+        <Button variant="outline" onClick={() => setQ(search.trim())}>
+          <Search className="h-4 w-4" />
+        </Button>
+      </div>
 
-      {/* LOADING */}
-      {loading ? (
-        <div className="grid gap-4">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i} className="p-6 animate-pulse">
-              <div className="h-4 bg-muted rounded w-1/2 mb-4"></div>
-              <div className="h-4 bg-muted rounded w-1/3"></div>
-            </Card>
+      {isLoading ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-20 rounded-lg bg-muted/40 animate-pulse" />
           ))}
         </div>
-
-      ) : filteredPartnerships.length === 0 ? (
-
-        /* EMPTY */
+      ) : partners.length === 0 ? (
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <Briefcase />
             </EmptyMedia>
-
-            <EmptyTitle>No partnerships yet</EmptyTitle>
-
-            <EmptyDescription>
-              {isAdmin
-                ? 'Create your first partnership to get started'
-                : 'No partnership data available'}
-            </EmptyDescription>
+            <EmptyTitle>No partners yet</EmptyTitle>
+            <EmptyDescription>Add a partner to assign them as co-loader/agent on Jobs.</EmptyDescription>
           </EmptyHeader>
-
-          {/* ✅ ADMIN ONLY */}
-          {isAdmin && (
-            <EmptyContent>
-              <Link href="/dashboard/partnerships/new">
-                <Button>Add Partnership</Button>
-              </Link>
-            </EmptyContent>
-          )}
+          <EmptyContent>
+            <CanWrite>
+              <Button onClick={() => router.push('/dashboard/partnerships/new')}>
+                <Plus className="h-4 w-4 mr-2" />
+                New Partner
+              </Button>
+            </CanWrite>
+          </EmptyContent>
         </Empty>
-
       ) : (
-
-        /* CARDS */
-        <div className="grid gap-4">
-          {filteredPartnerships.map((part) => {
-            const status = getStatus(part.start_date, part.end_date);
-
+        <div className="grid gap-3">
+          {partners.map((p) => {
+            const type = p.partnership_type || p.partner_type;
+            const org = p.partner_company_name || p.company?.name;
             return (
-              <Card key={part.id} className="p-6 hover:shadow-md transition">
-
-                <div className="flex items-start justify-between">
-
-                  {/* LEFT */}
-                  <div className="flex-1 space-y-2">
-
-                    <h3 className="text-xl font-semibold text-foreground">
-                      {part.partner_company_name}
+              <Card key={p.id} className="p-4 hover:bg-muted/20 transition-colors">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <Link href={`/dashboard/partnerships/${p.id}`} className="min-w-0 flex-1">
+                    <h3 className="font-medium text-foreground hover:underline">
+                      {org || p.partner_name}
                     </h3>
-
-                    <p className="text-sm text-muted-foreground">
-                      Partner: {part.partner_name}
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {[type, p.contact_person || p.partner_name, p.contact_email]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </p>
-
-                    <p className="text-sm text-muted-foreground">
-                      Type: {part.partnership_type}
-                    </p>
-
-                    <p className="text-sm text-muted-foreground">
-                      Contact: {part.contact_person} ({part.contact_email})
-                    </p>
-
-                    {part.description && (
-                      <p className="text-sm text-muted-foreground italic line-clamp-2">
-                        {part.description}
+                    {p.company?.name ? (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Company: {p.company.name}
                       </p>
-                    )}
-
-                    <div className="flex flex-wrap gap-4 text-sm pt-2">
-                      <span className="text-muted-foreground">
-                        📅 Start: {new Date(part.start_date).toLocaleDateString()}
-                      </span>
-                      <span className="text-muted-foreground">
-                        ⏳ End: {new Date(part.end_date).toLocaleDateString()}
-                      </span>
-                    </div>
-
-                  </div>
-
-                  {/* RIGHT */}
-                  <div className="flex flex-col items-end gap-3">
-
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(status)}`}
-                    >
-                      {status}
+                    ) : null}
+                  </Link>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs rounded-md border px-2 py-1 text-muted-foreground">
+                      {p.status || 'active'}
                     </span>
-
-                    {/* ✅ ADMIN ONLY */}
-                    {isAdmin && (
-                      <div className="flex gap-2">
-                        <Link href={`/dashboard/partnerships/${part.id}`}>
-                          <Button variant="ghost" size="sm">
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                        </Link>
-
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(part.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </div>
-                    )}
-
+                    <CanWrite>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          if (confirm('Soft-delete this partner?')) deleteMut.mutate(p.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </CanWrite>
                   </div>
-
                 </div>
-
               </Card>
             );
           })}
         </div>
       )}
-
     </div>
   );
 }

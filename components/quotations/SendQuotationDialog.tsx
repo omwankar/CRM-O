@@ -58,7 +58,8 @@ export function SendQuotationDialog({
         <DialogHeader>
           <DialogTitle>Send quotation to client</DialogTitle>
           <DialogDescription>
-            Email quote PDF for <span className="font-mono font-medium">{quotationNumber}</span> via Resend.
+            Email quote PDF for <span className="font-mono font-medium">{quotationNumber}</span> from
+            info@clarustologistics.com.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
