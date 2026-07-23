@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
@@ -21,7 +21,7 @@ import {
 import { createPartnership, PARTNER_TYPES } from '@/lib/api/partnerships';
 import { getCompanies } from '@/lib/api/companies';
 
-export default function NewPartnerPage() {
+function NewPartnerPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const presetCompanyId = searchParams.get('company_id') || '';
@@ -286,5 +286,13 @@ export default function NewPartnerPage() {
         </Card>
       </form>
     </div>
+  );
+}
+
+export default function NewPartnerPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
+      <NewPartnerPageInner />
+    </Suspense>
   );
 }

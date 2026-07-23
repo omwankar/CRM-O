@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { getHrEmployeeAttendance } from '@/lib/api/hr/attendance';
@@ -38,7 +38,7 @@ function formatTime(iso: string | null) {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-export default function HrIndividualAttendancePage() {
+function HrIndividualAttendancePageInner() {
   const { userId } = useParams<{ userId: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -192,5 +192,13 @@ export default function HrIndividualAttendancePage() {
         )}
       </Card>
     </div>
+  );
+}
+
+export default function HrIndividualAttendancePage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
+      <HrIndividualAttendancePageInner />
+    </Suspense>
   );
 }

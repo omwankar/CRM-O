@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createBuyer } from '@/lib/api/buyers';
 import { getCompanies } from '@/lib/api/companies';
@@ -19,7 +19,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
-export default function NewBuyerPage() {
+function NewBuyerPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const presetCompanyId = searchParams.get('company_id') || '';
@@ -210,5 +210,13 @@ export default function NewBuyerPage() {
         </form>
       </Card>
     </div>
+  );
+}
+
+export default function NewBuyerPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
+      <NewBuyerPageInner />
+    </Suspense>
   );
 }

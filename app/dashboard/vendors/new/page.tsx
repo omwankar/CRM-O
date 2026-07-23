@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { createVendor } from '@/lib/api/vendors';
@@ -19,7 +19,7 @@ import {
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
-export default function NewVendorPage() {
+function NewVendorPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const presetCompanyId = searchParams.get('company_id') || '';
@@ -184,5 +184,13 @@ export default function NewVendorPage() {
         </form>
       </Card>
     </div>
+  );
+}
+
+export default function NewVendorPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
+      <NewVendorPageInner />
+    </Suspense>
   );
 }

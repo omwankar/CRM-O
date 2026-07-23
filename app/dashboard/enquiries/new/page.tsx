@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -22,7 +22,7 @@ import { createEnquiry, type EnquiryInput } from '@/lib/api/enquiries';
 import { getBuyers } from '@/lib/api/buyers';
 import { ENQUIRY_CURRENCIES, ENQUIRY_STAGE_LABELS, ENQUIRY_STAGES_ORDER } from '@/types/enquiries';
 
-export default function NewEnquiryPage() {
+function NewEnquiryPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const presetOpportunityId = searchParams.get('opportunity_id');
@@ -274,5 +274,13 @@ export default function NewEnquiryPage() {
         </div>
       </Card>
     </div>
+  );
+}
+
+export default function NewEnquiryPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
+      <NewEnquiryPageInner />
+    </Suspense>
   );
 }

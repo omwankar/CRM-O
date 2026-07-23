@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -26,7 +26,7 @@ import {
   type OpportunityStage,
 } from '@/types/opportunities';
 
-export default function NewOpportunityPage() {
+function NewOpportunityPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const presetBuyerId = searchParams.get('buyer_id') || '';
@@ -188,5 +188,13 @@ export default function NewOpportunityPage() {
         </div>
       </Card>
     </div>
+  );
+}
+
+export default function NewOpportunityPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
+      <NewOpportunityPageInner />
+    </Suspense>
   );
 }

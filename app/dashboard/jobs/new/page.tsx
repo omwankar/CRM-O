@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
@@ -25,7 +25,7 @@ import { getVendors } from '@/lib/api/vendors';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { JOB_MODE_LABELS, type JobModeType } from '@/types/jobs';
 
-export default function NewJobPage() {
+function NewJobPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const opportunityIdParam = searchParams.get('opportunity_id') || '';
@@ -392,5 +392,13 @@ export default function NewJobPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function NewJobPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
+      <NewJobPageInner />
+    </Suspense>
   );
 }
