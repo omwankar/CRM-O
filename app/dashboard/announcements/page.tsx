@@ -107,7 +107,9 @@ export default function AnnouncementsPage() {
             <Megaphone className="w-8 h-8 text-amber-500" />
             Announcements
           </h1>
-          <p className="text-muted-foreground">Birthdays, anniversaries, holidays and general team updates.</p>
+          <p className="text-muted-foreground">
+            Birthdays, anniversaries, holidays and team updates. Posts auto-remove after 24 hours.
+          </p>
         </div>
         <CanWrite>
           <Button onClick={() => setDialogOpen(true)}>New announcement</Button>
@@ -174,6 +176,9 @@ export default function AnnouncementsPage() {
           <DialogHeader>
             <DialogTitle>New announcement</DialogTitle>
           </DialogHeader>
+          <p className="text-sm text-muted-foreground -mt-1">
+            Announcements stay visible for 24 hours, then are removed automatically.
+          </p>
           <div className="space-y-4 py-2">
             <div>
               <label className="text-sm font-medium block mb-1">Title</label>
