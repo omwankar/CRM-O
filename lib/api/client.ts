@@ -21,6 +21,9 @@ function friendlyApiError(raw: string): string {
   if (m.includes('more than one relationship') || m.includes('could not embed') || m.includes('pgrst')) {
     return 'Something went wrong saving your changes. Please try again.';
   }
+  if (m.includes('schema cache') || m.includes("could not find the '") || m.includes('column of')) {
+    return 'Could not save. Please try again.';
+  }
   if (m.includes('duplicate') || m.includes('unique constraint') || m.includes('already exists')) {
     return 'That record already exists.';
   }
