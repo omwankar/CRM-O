@@ -7,6 +7,36 @@ function normalizeApiBase(url: string) {
 
 const API_BASE = normalizeApiBase(rawApiBase);
 
+/** Map raw DB/API errors to messages safe to show end users. */
+function friendlyApiError(raw: string): string {
+  const m = String(raw || '').toLowerCase();
+  if (
+    m.includes('row-level security') ||
+    m.includes('permission') ||
+    m.includes('forbidden') ||
+    m.includes('not allowed')
+  ) {
+    return 'You do not have permission to do that.';
+  }
+  if (m.includes('more than one relationship') || m.includes('could not embed') || m.includes('pgrst')) {
+    return 'Something went wrong saving your changes. Please try again.';
+  }
+  if (m.includes('duplicate') || m.includes('unique constraint') || m.includes('already exists')) {
+    return 'That record already exists.';
+  }
+  if (m.includes('foreign key') || m.includes('violates')) {
+    return 'Could not save because related data is missing or invalid.';
+  }
+  if (m.includes('jwt') || m.includes('unauthorized') || m.includes('session')) {
+    return 'Your session expired. Please sign in again.';
+  }
+  // Already a short, human message from the API
+  if (raw && raw.length < 120 && !m.includes('postgres') && !m.includes('sql') && !m.includes('stack')) {
+    return raw;
+  }
+  return 'Something went wrong. Please try again.';
+}
+
 async function getAuthToken() {
   const { supabase } = await import('@/lib/auth');
   const {
@@ -41,15 +71,9 @@ export async function apiRequest(url: string, options?: RequestInit) {
     const body = await response.json().catch(() => ({ error: 'Request failed' }));
     const issues = body.issues as Array<{ path?: (string | number)[]; message?: string }> | undefined;
     if (issues?.length) {
-      const detail = issues
-        .map((i) => {
-          const field = i.path?.length ? i.path.join('.') : 'field';
-          return `${field}: ${i.message || 'invalid'}`;
-        })
-        .join('; ');
-      throw new Error(detail);
+      throw new Error('Please check the form and try again.');
     }
-    throw new Error(body.error || 'Request failed');
+    throw new Error(friendlyApiError(body.error || 'Request failed'));
   }
 
   return response.json();

@@ -46,7 +46,8 @@ DECLARE
   user_role text;
 BEGIN
   SELECT role INTO user_role FROM public.users WHERE id = user_uuid LIMIT 1;
-  RETURN COALESCE(user_role, '') IN ('super_admin', 'admin');
+  -- manager is the current write role; admin kept for legacy rows
+  RETURN COALESCE(user_role, '') IN ('super_admin', 'admin', 'manager');
 END;
 $$;
 

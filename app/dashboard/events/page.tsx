@@ -112,7 +112,9 @@ export default function EventManagerPage() {
       qc.invalidateQueries({ queryKey: ['event-feed'] });
       qc.invalidateQueries({ queryKey: ['calendar-events'] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      toast.error(e.message || 'Could not save the event. Please try again.');
+    },
   });
 
   const deleteMut = useMutation({
@@ -122,7 +124,7 @@ export default function EventManagerPage() {
       setDeleteTarget(null);
       qc.invalidateQueries({ queryKey: ['event-feed'] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: () => toast.error('Could not delete the event. Please try again.'),
   });
 
   const openCreate = () => {
