@@ -1,5 +1,4 @@
-import { Suspense } from 'react';
-import { Sidebar } from '@/components/sidebar';
+import { DashboardSidebar } from '@/components/DashboardSidebar';
 import { Notifications } from '@/components/notifications';
 
 export default function DashboardLayout({
@@ -9,10 +8,7 @@ export default function DashboardLayout({
 }) {
   return (
     <div className="flex h-svh min-h-0 w-screen overflow-hidden bg-background">
-      {/* Sidebar uses useSearchParams — must be under Suspense for static prerender */}
-      <Suspense fallback={<aside className="hidden w-64 shrink-0 border-r bg-card md:block" />}>
-        <Sidebar />
-      </Suspense>
+      <DashboardSidebar />
 
       {/* Main area — min-h-0 lets flex child shrink so only <main> scrolls (no body “double scroll”) */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">

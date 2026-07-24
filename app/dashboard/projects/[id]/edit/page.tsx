@@ -123,6 +123,7 @@ export default function ProjectEditPage() {
 
             <div>
               <Label>Assigned Person</Label>
+              <p className="mb-1 text-[11px] text-muted-foreground">Primary project owner</p>
               <select
                 value={formData.assigned_person_id || ''}
                 onChange={(e) => setFormData({ ...formData, assigned_person_id: e.target.value || undefined })}

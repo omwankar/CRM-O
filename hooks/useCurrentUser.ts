@@ -29,11 +29,12 @@ export function useCurrentUser() {
     enabled: !!userData,
   });
 
-  // Normalise legacy roles in case the migration hasn't run yet. Anything
-  // outside the new set falls back to the safest interpretation ('user').
+  // Normalise legacy roles. Until profile loads, leave role undefined so menus
+  // don't SSR as "user" then flip to super_admin on the client.
   const rawRole = profileData?.role as string | undefined;
-  const role: AppRole =
-    rawRole === 'super_admin'
+  const role: AppRole | undefined = !profileData
+    ? undefined
+    : rawRole === 'super_admin'
       ? 'super_admin'
       : rawRole === 'manager' || rawRole === 'admin'
         ? 'manager'
@@ -67,16 +68,19 @@ export function useCurrentUser() {
     );
   };
 
+  // Profile query is disabled until auth user exists — treat that as still loading
+  const isLoading = userLoading || (!!userData && (profileLoading || !profileData));
+
   return {
     user: userData,
     profile: profileData,
-    role,
+    role: role ?? 'user',
     isSuperAdmin,
     isManager,
     isUser,
     canWrite,
     canManageUsers,
     canEditTask,
-    isLoading: userLoading || profileLoading,
+    isLoading,
   };
 }

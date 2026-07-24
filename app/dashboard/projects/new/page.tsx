@@ -60,6 +60,13 @@ export default function NewProjectPage() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedRole, setSelectedRole] = useState<'admin' | 'assigned' | 'operations' | 'sales'>('assigned');
 
+  const ROLE_LABELS: Record<'admin' | 'assigned' | 'operations' | 'sales', string> = {
+    admin: 'Admin (full edit)',
+    assigned: 'Contributor (edit + notify)',
+    operations: 'Operations (view)',
+    sales: 'Sales (view)',
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
@@ -220,7 +227,7 @@ export default function NewProjectPage() {
               </div>
 
               <div>
-                <Label>Assigned Person</Label>
+                <Label>Primary assignee</Label>
                 <select
                   value={basicInfo.assigned_person_id}
                   onChange={(e) => setBasicInfo({ ...basicInfo, assigned_person_id: e.target.value })}
@@ -233,6 +240,9 @@ export default function NewProjectPage() {
                     </option>
                   ))}
                 </select>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Main owner of this project (saved on the project record).
+                </p>
               </div>
 
               <div>
@@ -369,7 +379,10 @@ export default function NewProjectPage() {
             <h2 className="text-[18px] font-medium text-foreground">Team Assignment</h2>
             
             <div>
-              <Label>Add Team Members</Label>
+              <Label>Add extra team members</Label>
+              <p className="mb-2 text-[11px] text-muted-foreground">
+                Optional. Primary assignee is already set in step 1 — use this only for additional people.
+              </p>
               <div className="flex gap-2 mt-2">
                 <Input
                   value={searchQuery}
@@ -380,11 +393,13 @@ export default function NewProjectPage() {
                   value={selectedRole}
                   onChange={(e) => setSelectedRole(e.target.value as any)}
                   className="h-10 rounded-lg border border-border bg-background px-3 py-2"
+                  title="Team member access level"
                 >
-                  <option value="admin">Admin</option>
-                  <option value="assigned">Assigned</option>
-                  <option value="operations">Operations</option>
-                  <option value="sales">Sales</option>
+                  {(Object.keys(ROLE_LABELS) as Array<keyof typeof ROLE_LABELS>).map((key) => (
+                    <option key={key} value={key}>
+                      {ROLE_LABELS[key]}
+                    </option>
+                  ))}
                 </select>
                 <Button onClick={handleSearchUsers}>Search</Button>
               </div>
@@ -418,7 +433,9 @@ export default function NewProjectPage() {
                     >
                       <div>
                         <p className="text-[13px] font-medium text-foreground">{member.name}</p>
-                        <p className="text-[11px] text-muted-foreground capitalize">{member.role}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {ROLE_LABELS[member.role as keyof typeof ROLE_LABELS] || member.role}
+                        </p>
                       </div>
                       <Button
                         variant="ghost"

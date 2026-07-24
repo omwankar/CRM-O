@@ -143,12 +143,19 @@ export function Sidebar() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  // Defer role-based menu items until after mount so SSR HTML matches first client paint
+  // (otherwise Punch Requests / HR appear only on client and cause hydration mismatch).
+  const [menuReady, setMenuReady] = useState(false);
   const { role, profile, isLoading } = useCurrentUser();
+
+  useEffect(() => {
+    setMenuReady(true);
+  }, []);
 
   const { data: punchStats } = useQuery({
     queryKey: ['punchStatsSidebar'],
     queryFn: getPunchStats,
-    enabled: role === 'super_admin',
+    enabled: menuReady && role === 'super_admin',
     refetchInterval: 60000,
   });
 
@@ -157,7 +164,10 @@ export function Sidebar() {
   }, [pathname]);
 
   const pendingCount = punchStats?.pending || 0;
-  const menuSections = getMenuSections(role, pendingCount);
+  const menuSections = getMenuSections(
+    menuReady && !isLoading ? role : undefined,
+    pendingCount,
+  );
 
   const handleLogout = async () => {
     try {

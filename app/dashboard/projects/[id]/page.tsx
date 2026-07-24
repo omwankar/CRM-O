@@ -612,10 +612,10 @@ export default function ProjectDetailPage() {
                   }
                   className="w-full h-10 rounded-lg border border-border bg-background px-3 py-2 text-[13px]"
                 >
-                  <option value="admin">Admin</option>
-                  <option value="assigned">Assigned</option>
-                  <option value="operations">Operations</option>
-                  <option value="sales">Sales</option>
+                  <option value="admin">Admin (full edit)</option>
+                  <option value="assigned">Contributor (edit + notify)</option>
+                  <option value="operations">Operations (view)</option>
+                  <option value="sales">Sales (view)</option>
                 </select>
               </div>
             </div>
