@@ -26,16 +26,17 @@ import {
 } from 'lucide-react';
 import { AnnouncementsWidget } from '@/components/announcements/AnnouncementsWidget';
 import { useIsClient } from '@/hooks/useIsClient';
+import { formatUkDate, formatUkShortDayDate, getUkHour } from '@/lib/date';
 
 function getGreeting(date: Date) {
-  const hour = date.getHours();
+  const hour = getUkHour(date);
   if (hour < 12) return 'Good morning';
   if (hour < 18) return 'Good afternoon';
   return 'Good evening';
 }
 
 function getDateLabel(date: Date) {
-  return date.toLocaleDateString('en-US', {
+  return formatUkDate(date, {
     weekday: 'long',
     month: 'short',
     day: 'numeric',
@@ -281,7 +282,7 @@ export default function DashboardPage() {
                     <div>
                       <p className="text-sm font-medium">{event.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                        {formatUkShortDayDate(event.date)}
                         {event.start_time ? `, ${event.start_time}` : ''}
                       </p>
                     </div>
@@ -330,7 +331,7 @@ export default function DashboardPage() {
                       >
                         <p className="text-sm font-medium">{task.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}
+                          {task.due_date ? formatUkDate(task.due_date) : 'No due date'}
                         </p>
                       </div>
                     ))}
@@ -346,7 +347,7 @@ export default function DashboardPage() {
                       >
                         <p className="text-sm font-medium">{project.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {project.end_date ? `End: ${new Date(project.end_date).toLocaleDateString()}` : 'No end date'}
+                          {project.end_date ? `End: ${formatUkDate(project.end_date)}` : 'No end date'}
                         </p>
                       </div>
                     ))}

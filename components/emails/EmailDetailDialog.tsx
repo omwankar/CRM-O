@@ -43,6 +43,7 @@ import {
 } from '@/lib/api/emails';
 import { getLeads } from '@/lib/api/leads';
 import { getQuotations } from '@/lib/api/quotations';
+import { formatUkDateTime } from '@/lib/date';
 
 const CATEGORIES: {
   id: EmailCategory;
@@ -71,13 +72,11 @@ const CATEGORIES: {
 ];
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleString(undefined, {
+  return formatUkDateTime(iso, {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
     year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
   });
 }
 

@@ -8,6 +8,7 @@ import { getPunchRequests, getPunchStats, approvePunchRequest, rejectPunchReques
 import { AccessDenied } from '@/components/AccessDenied';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Clock, CheckCircle, XCircle, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
+import { formatUkLongDate, formatUkTime } from '@/lib/date';
 
 function formatRelativeTime(date: string) {
   const diff = Date.now() - new Date(date).getTime();
@@ -19,21 +20,12 @@ function formatRelativeTime(date: string) {
 }
 
 function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  return formatUkLongDate(dateStr);
 }
 
 function formatTime(dateStr: string | null) {
   if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
+  return formatUkTime(dateStr);
 }
 
 export default function PunchRequestsPage() {

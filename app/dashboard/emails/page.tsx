@@ -42,14 +42,13 @@ import {
   type CompanyEmail,
 } from '@/lib/api/emails';
 import { EmailDetailDialog, EmailListMeta } from '@/components/emails/EmailDetailDialog';
+import { formatUkDateTime } from '@/lib/date';
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleString(undefined, {
+  return formatUkDateTime(iso, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
   });
 }
 

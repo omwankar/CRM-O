@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { CanWrite } from '@/components/auth/Can';
+import { formatUkDate, formatUkMonthYear } from '@/lib/date';
 import { CalendarDays, ChevronLeft, ChevronRight, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -172,7 +173,7 @@ export default function EventManagerPage() {
             <ChevronLeft className="w-4 h-4" />
           </Button>
           <span className="font-semibold">
-            {monthDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+            {formatUkMonthYear(monthDate)}
           </span>
           <Button variant="outline" size="icon" onClick={() => setMonthDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}>
             <ChevronRight className="w-4 h-4" />
@@ -190,7 +191,7 @@ export default function EventManagerPage() {
             {events.map((ev) => (
               <div key={ev.id} className="flex items-center gap-4 py-3">
                 <div className="w-24 shrink-0 text-sm">
-                  <p className="font-medium">{new Date(ev.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}</p>
+                  <p className="font-medium">{formatUkDate(ev.date, { day: '2-digit', month: 'short' })}</p>
                   {!ev.all_day && ev.start_time ? (
                     <p className="text-xs text-muted-foreground">{ev.start_time.slice(0, 5)}</p>
                   ) : null}
