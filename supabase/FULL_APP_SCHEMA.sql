@@ -429,6 +429,8 @@ CREATE TABLE IF NOT EXISTS public.projects (
   project_name TEXT NOT NULL,
   start_date DATE,
   estimated_end_date DATE,
+  assigned_person_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  supervisor_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   contact_person TEXT,
   contact_email TEXT,
   contact_phone TEXT,

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +11,7 @@ import { Card } from '@/components/ui/card';
 import { createProject, addProjectEmployee, addProjectAttachment } from '@/lib/api/projects';
 import { supabase } from '@/lib/auth';
 import { getUsers } from '@/lib/api/users';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { ArrowLeft, ArrowRight, Upload, X } from 'lucide-react';
 
 interface User {
@@ -20,9 +22,17 @@ interface User {
 
 export default function NewProjectPage() {
   const router = useRouter();
+  const { user, canWrite, isLoading: userLoading } = useCurrentUser();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    if (!userLoading && !canWrite) {
+      toast.error('Only managers can create projects.');
+      router.replace('/dashboard/projects');
+    }
+  }, [userLoading, canWrite, router]);
 
   // Fetch users on component mount
   useEffect(() => {
@@ -107,24 +117,39 @@ export default function NewProjectPage() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error('Your session expired. Please sign in again.');
+
+      const contactEmail = basicInfo.contact_email.trim();
+      const linked = linkedEmail.trim();
+      if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+        toast.error('Please enter a valid contact email.');
+        return;
+      }
+      if (linked && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(linked)) {
+        toast.error('Linked email must be a valid email address (not a web page URL).');
+        return;
+      }
 
       const createdProject = await createProject({
-        project_name: basicInfo.project_name,
+        project_name: basicInfo.project_name.trim(),
         assigned_person_id: basicInfo.assigned_person_id || undefined,
         supervisor_id: basicInfo.supervisor_id || undefined,
-        contact_email: basicInfo.contact_email,
-        contact_phone: basicInfo.contact_phone,
+        contact_email: contactEmail || undefined,
+        contact_phone: basicInfo.contact_phone.trim() || undefined,
         start_date: basicInfo.start_date,
-        estimated_end_date: basicInfo.estimated_end_date,
-        requirements_notes: requirementsNotes,
-        linked_email: linkedEmail,
+        estimated_end_date: basicInfo.estimated_end_date || undefined,
+        requirements_notes: requirementsNotes.trim() || undefined,
+        linked_email: linked || undefined,
         status: basicInfo.status,
-        created_by: user.id,
+        created_by: authUser.id,
       });
 
-      const teamMembersToAdd = team.filter((member) => member.userId !== user.id);
+      const skipIds = new Set(
+        [authUser.id, basicInfo.assigned_person_id, basicInfo.supervisor_id].filter(Boolean) as string[]
+      );
+      const teamMembersToAdd = team.filter((member) => !skipIds.has(member.userId));
+
       if (teamMembersToAdd.length > 0) {
         await Promise.all(
           teamMembersToAdd.map((member) =>
@@ -137,40 +162,57 @@ export default function NewProjectPage() {
       }
 
       if (attachments.length > 0) {
+        const uploadFailures: string[] = [];
         await Promise.all(
           attachments.map(async (file) => {
-            const fileExt = file.name.split('.').pop() || 'bin';
-            const path = `projects/${createdProject.id}/${Date.now()}-${Math.random()
-              .toString(36)
-              .slice(2)}.${fileExt}`;
+            try {
+              const fileExt = file.name.split('.').pop() || 'bin';
+              const path = `projects/${createdProject.id}/${Date.now()}-${Math.random()
+                .toString(36)
+                .slice(2)}.${fileExt}`;
 
-            const { error: uploadError } = await supabase.storage
-              .from('documents')
-              .upload(path, file, { upsert: false });
+              const { error: uploadError } = await supabase.storage
+                .from('documents')
+                .upload(path, file, { upsert: false });
 
-            if (uploadError) {
-              throw uploadError;
+              if (uploadError) {
+                uploadFailures.push(file.name);
+                return;
+              }
+
+              await addProjectAttachment(createdProject.id, {
+                file_name: file.name,
+                file_type: file.type || 'application/octet-stream',
+                file_url: path,
+                file_size: file.size,
+                uploaded_by: authUser.id,
+              });
+            } catch {
+              uploadFailures.push(file.name);
             }
-
-            await addProjectAttachment(createdProject.id, {
-              file_name: file.name,
-              file_type: file.type || 'application/octet-stream',
-              file_url: path,
-              file_size: file.size,
-              uploaded_by: user.id,
-            });
           })
         );
+        if (uploadFailures.length > 0) {
+          toast.warning(
+            `Project created, but ${uploadFailures.length} file(s) could not be uploaded. You can add them from the project page.`
+          );
+        }
       }
 
+      toast.success('Project created');
       router.push('/dashboard/projects');
     } catch (error) {
       console.error('Failed to create project:', error);
-      alert('Failed to create project. Please try again.');
+      const msg = error instanceof Error ? error.message : 'Could not create the project. Please try again.';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
+
+  if (userLoading || !canWrite) {
+    return null;
+  }
 
   const canProceedToStep2 = basicInfo.project_name && basicInfo.start_date;
   const canProceedToStep3 = true;
