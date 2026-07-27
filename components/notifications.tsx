@@ -24,6 +24,7 @@ function getIcon(type: string) {
     case 'punch_rejected':
       return <AlertCircle className="w-4 h-4 text-red-500" />;
     case 'missed_punch':
+    case 'open_session_warning':
       return <Clock3 className="w-4 h-4 text-amber-500" />;
     case 'announcement':
       return <Megaphone className="w-4 h-4 text-purple-500" />;

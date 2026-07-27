@@ -16,6 +16,7 @@ import {
 import { getLeaveBalance } from '@/lib/api/leave';
 import { Clock3, Loader2, MinusCircle, PlusCircle, Palmtree } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatUkIsoDate } from '@/lib/date';
 
 /** Weekday count (Mon-Fri) in an inclusive range. Holidays are additionally excluded by the server. */
 function countWeekdays(start: string, end: string): number {
@@ -132,6 +133,8 @@ export default function ClockPage() {
 
   const sessions = sessionsData?.sessions || [];
   const openSession = sessionsData?.openSession || null;
+  const staleOpenSession =
+    openSession && formatUkIsoDate(openSession.clock_in) < formatUkIsoDate(new Date()) ? openSession : null;
 
   const totalHours = sessions.reduce((acc: number, s: any) => {
     if (s.clock_out && s.clock_in) {
@@ -221,6 +224,12 @@ export default function ClockPage() {
           <h2 className="text-lg font-semibold">Sessions</h2>
           {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
         </div>
+
+        {staleOpenSession ? (
+          <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            You still have an open session from a previous day. Please clock out or ask your head to review it.
+          </div>
+        ) : null}
 
         <div className="mb-4 rounded-lg border border-border/60 bg-muted/20 p-3 max-w-xl">
           <div className="flex items-center justify-between gap-3">

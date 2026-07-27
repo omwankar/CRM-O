@@ -78,3 +78,12 @@ export function formatUkShortDayDate(value: string | Date) {
     day: 'numeric',
   });
 }
+
+export function formatUkIsoDate(value: string | Date) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: UK_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(asDate(value));
+}
