@@ -399,6 +399,9 @@ export default function ClockPage() {
           If your clock-in/out time exceeded the allowed window, submit a missed punch request to your head.
           Max 5 requests per month.
         </p>
+        <p className="text-xs text-muted-foreground mb-4">
+          Open sessions are auto clocked out at 18:00 UK time unless you clock out earlier.
+        </p>
 
         <form onSubmit={submitMissedPunch} className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="md:col-span-1">
