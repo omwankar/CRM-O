@@ -47,7 +47,7 @@ function getDateLabel(date: Date) {
 export default function DashboardPage() {
   const router = useRouter();
   const isClient = useIsClient();
-  const { role } = useCurrentUser();
+  const { role, profile, user } = useCurrentUser();
   const [headerCopy, setHeaderCopy] = useState<{ greeting: string; dateLabel: string } | null>(null);
 
   useEffect(() => {
@@ -99,7 +99,12 @@ export default function DashboardPage() {
     { name: 'Documents', count: stats.documents, icon: FileText, href: '/dashboard/documents', color: 'text-gray-600', bg: 'bg-gray-500/10' },
   ];
 
-  const roleLabel = role ? role.replaceAll('_', ' ') : 'user';
+  const displayName =
+    profile?.full_name?.trim() ||
+    user?.user_metadata?.full_name ||
+    profile?.email?.split('@')[0] ||
+    user?.email?.split('@')[0] ||
+    'there';
 
   const hashToHue = (input: string) => {
     let hash = 0;
@@ -135,7 +140,7 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-2xl font-semibold text-foreground">
               {isClient && headerCopy ? headerCopy.greeting : 'Welcome'},{' '}
-              <span className="capitalize">{roleLabel}</span>
+              <span>{displayName}</span>
             </h1>
             <p className="text-sm text-muted-foreground">
               {isClient && headerCopy ? headerCopy.dateLabel : '\u00A0'}
