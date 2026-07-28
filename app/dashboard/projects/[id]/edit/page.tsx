@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -73,11 +74,35 @@ export default function ProjectEditPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      await updateProject(projectId, formData);
+      const contactEmail = (formData.contact_email || '').trim();
+      const linked = (formData.linked_email || '').trim();
+      if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+        toast.error('Please enter a valid contact email.');
+        return;
+      }
+      if (linked && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(linked)) {
+        toast.error('Linked email must be a valid email address.');
+        return;
+      }
+
+      await updateProject(projectId, {
+        ...formData,
+        project_name: formData.project_name?.trim(),
+        assigned_person_id: formData.assigned_person_id || null,
+        supervisor_id: formData.supervisor_id || null,
+        contact_email: contactEmail || undefined,
+        contact_phone: formData.contact_phone?.trim() || undefined,
+        start_date: formData.start_date || undefined,
+        estimated_end_date: formData.estimated_end_date || undefined,
+        requirements_notes: formData.requirements_notes?.trim() || undefined,
+        linked_email: linked || undefined,
+      });
+      toast.success('Project updated');
       router.push(`/dashboard/projects/${projectId}`);
     } catch (error) {
       console.error('Failed to update project:', error);
-      alert('Failed to update project. Please try again.');
+      const msg = error instanceof Error ? error.message : 'Could not update the project. Please try again.';
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -201,7 +226,8 @@ export default function ProjectEditPage() {
                 <option value="Planned">Planned</option>
                 <option value="Active">Active</option>
                 <option value="On Hold">On Hold</option>
-                <option value="Closed">Closed</option>
+                <option value="Closed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
               </select>
             </div>
 

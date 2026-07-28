@@ -56,7 +56,7 @@ export default function NewProjectPage() {
     contact_phone: '',
     start_date: '',
     estimated_end_date: '',
-    status: 'Planned' as 'Active' | 'Planned' | 'On Hold' | 'Closed',
+    status: 'Planned' as 'Active' | 'Planned' | 'On Hold' | 'Closed' | 'Cancelled',
   });
 
   // Step 2: Requirements
@@ -350,7 +350,8 @@ export default function NewProjectPage() {
                   <option value="Planned">Planned</option>
                   <option value="Active">Active</option>
                   <option value="On Hold">On Hold</option>
-                  <option value="Closed">Closed</option>
+                  <option value="Closed">Completed</option>
+                  <option value="Cancelled">Cancelled</option>
                 </select>
               </div>
             </div>

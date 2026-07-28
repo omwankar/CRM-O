@@ -29,7 +29,7 @@ const statusConfig = {
     color: 'bg-slate-500/10 text-slate-700 dark:text-slate-400',
     dotColor: 'bg-slate-500',
     icon: XCircle,
-    description: 'Project has been completed or cancelled',
+    description: 'Project has been completed',
   },
   Cancelled: {
     color: 'bg-red-500/10 text-red-700 dark:text-red-400',
