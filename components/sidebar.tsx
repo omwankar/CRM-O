@@ -32,7 +32,7 @@ function getMenuSections(role?: string, pendingCount?: number): MenuSection[] {
       items: [
         { label: 'Dashboard', href: '/dashboard' },
         { label: 'My Tasks', href: '/dashboard/tasks' },
-        { label: 'Alerts', href: '/dashboard/alerts' },
+        { label: 'Alerts & Notifications', href: '/dashboard/alerts' },
       ],
     },
     {
