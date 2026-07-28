@@ -31,6 +31,7 @@ import {
   type EnquiryStage,
 } from '@/types/enquiries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { formatUkDate } from '@/lib/date';
 
 export default function EnquiriesPage() {
   const router = useRouter();
@@ -209,7 +210,7 @@ export default function EnquiriesPage() {
                     </td>
                     <td className="px-4 py-3 capitalize">{row.priority}</td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {row.deadline ? new Date(row.deadline).toLocaleDateString() : '—'}
+                      {row.deadline ? formatUkDate(row.deadline) : '—'}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">

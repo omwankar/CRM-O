@@ -10,6 +10,7 @@ import { Calendar, CalendarDayButton } from '@/components/ui/calendar';
 import { CalendarDays, PlusCircle, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { getCalendarEvents, createCalendarEvent } from '@/lib/api/calendar';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { formatUkDate, formatUkMonthYear } from '@/lib/date';
 
 type CalendarEvent = {
   id: string;
@@ -37,8 +38,7 @@ function dateStrToLocalDate(dateStr: string) {
 }
 
 function formatIsoDate(dateStr: string) {
-  const dt = dateStrToLocalDate(dateStr);
-  return dt.toLocaleDateString([], { year: 'numeric', month: 'short', day: '2-digit' });
+  return formatUkDate(dateStr);
 }
 
 function formatYMDLocal(d: Date) {
@@ -92,7 +92,7 @@ export default function CalendarPage() {
     return events.filter((ev: CalendarEvent) => ev.date === ymd);
   }, [events, selectedDay]);
 
-  const monthLabel = new Date(`${monthKey}-01T00:00:00`).toLocaleDateString([], { year: 'numeric', month: 'long' });
+  const monthLabel = formatUkMonthYear(`${monthKey}-01T00:00:00`);
 
   const handleAddEvent = (e: React.FormEvent) => {
     e.preventDefault();

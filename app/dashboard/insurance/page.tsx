@@ -16,6 +16,8 @@ import {
   EmptyContent
 } from '@/components/ui/empty'
 
+import { formatUkDate } from '@/lib/date';
+
 interface Insurance {
   id: string;
   policy_number: string | null;
@@ -245,14 +247,14 @@ export default function InsurancePage() {
                       <span className="text-muted-foreground">
                         Start:{' '}
                         {ins.start_date
-                          ? new Date(ins.start_date).toLocaleDateString()
+                          ? formatUkDate(ins.start_date)
                           : 'N/A'}
                       </span>
 
                       <span className="text-muted-foreground">
                         Expires:{' '}
                         {ins.end_date
-                          ? new Date(ins.end_date).toLocaleDateString()
+                          ? formatUkDate(ins.end_date)
                           : 'N/A'}
                       </span>
                     </div>

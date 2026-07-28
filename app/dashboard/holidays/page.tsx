@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getCompanyHolidays } from '@/lib/api/leave';
 import { ChevronLeft, ChevronRight, PartyPopper, CalendarDays } from 'lucide-react';
+import { formatUkLongDate } from '@/lib/date';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -14,8 +15,7 @@ const MONTH_NAMES = [
 ];
 
 function formatHolidayDate(iso: string) {
-  const d = new Date(`${iso}T00:00:00`);
-  return d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+  return formatUkLongDate(iso);
 }
 
 function isPast(iso: string) {

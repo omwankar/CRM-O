@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Mail, Check, ExternalLink, Copy } from 'lucide-react';
 import { ProjectEmail } from '@/types/projects';
 import { useState } from 'react';
+import { formatUkDate } from '@/lib/date';
 
 interface EmailLogSectionProps {
   emails: ProjectEmail[];
@@ -117,7 +118,7 @@ export function EmailLogSection({
                   </div>
 
                   <p className="text-[11px] text-muted-foreground whitespace-nowrap">
-                    {new Date(email.received_at).toLocaleDateString()}
+                    {formatUkDate(email.received_at)}
                   </p>
                 </div>
 

@@ -34,6 +34,7 @@ import {
   type ActivityOutcome,
   type ActivityType,
 } from '@/types/activities';
+import { formatUkDateTime } from '@/lib/date';
 
 const TYPE_ICON: Record<ActivityType, typeof Phone> = {
   call: Phone,
@@ -67,7 +68,7 @@ export function DaysSinceBadge({
         ? 'border-amber-400/50 bg-amber-500/10 text-amber-900 dark:text-amber-200'
         : 'border-emerald-400/50 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200';
   return (
-    <Badge variant="outline" className={tone} title={lastAt ? new Date(lastAt).toLocaleString() : undefined}>
+    <Badge variant="outline" className={tone} title={lastAt ? formatUkDateTime(lastAt) : undefined}>
       {d === 0 ? 'Active today' : `${d}d since activity`}
     </Badge>
   );
@@ -187,7 +188,7 @@ export function ActivityTimeline({
                       </p>
                     ) : null}
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {new Date(a.activity_date).toLocaleString()} · {formatDaysAgo(a.activity_date)}
+                      {formatUkDateTime(a.activity_date)} · {formatDaysAgo(a.activity_date)}
                       {a.creator?.full_name ? ` · ${a.creator.full_name}` : ''}
                     </p>
                   </div>

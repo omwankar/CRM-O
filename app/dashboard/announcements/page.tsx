@@ -38,6 +38,7 @@ import {
   type AnnouncementCategory,
   type CreateAnnouncementInput,
 } from '@/types/workplace';
+import { formatUkDate } from '@/lib/date';
 
 const CATEGORY_BADGE: Record<AnnouncementCategory, string> = {
   birthday: 'bg-pink-100 text-pink-800',
@@ -157,7 +158,7 @@ export default function AnnouncementsPage() {
                   <h3 className="font-semibold text-lg mt-1">{a.title}</h3>
                   <p className="text-sm mt-2 whitespace-pre-wrap text-muted-foreground">{a.body}</p>
                   <p className="text-xs text-muted-foreground mt-3">
-                    {a.author_name || 'Team'} · {new Date(a.publish_at).toLocaleDateString()}
+                    {a.author_name || 'Team'} · {formatUkDate(a.publish_at)}
                   </p>
                 </div>
                 <CanWrite>

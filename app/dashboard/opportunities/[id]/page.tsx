@@ -39,6 +39,7 @@ import {
   type OpportunityInput,
   type OpportunityStage,
 } from '@/types/opportunities';
+import { formatUkDate } from '@/lib/date';
 
 export default function OpportunityDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -245,7 +246,7 @@ export default function OpportunityDetailPage() {
                 <dt className="text-xs text-muted-foreground">Expected close</dt>
                 <dd>
                   {opp.expected_close_date
-                    ? new Date(opp.expected_close_date).toLocaleDateString()
+                    ? formatUkDate(opp.expected_close_date)
                     : '—'}
                 </dd>
               </div>

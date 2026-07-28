@@ -27,6 +27,7 @@ import {
 import { completeTask, createTask, deleteTask, getTasks } from '@/lib/api/tasks';
 import { getUsers } from '@/lib/api/users';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { formatUkDate } from '@/lib/date';
 import {
   TASK_ENTITY_LABELS,
   TASK_PRIORITY_LABELS,
@@ -170,7 +171,7 @@ export function EntityTaskList({
                     <OverdueBadge task={t} />
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Due {t.due_date ? new Date(t.due_date).toLocaleDateString() : '—'}
+                    Due {t.due_date ? formatUkDate(t.due_date) : '—'}
                     {t.assignee?.name || t.assigned_person?.name
                       ? ` · ${t.assignee?.name || t.assigned_person?.name}`
                       : ''}

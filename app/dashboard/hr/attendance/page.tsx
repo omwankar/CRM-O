@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ClipboardList, Loader2, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatUkMonthYear } from '@/lib/date';
 
 const leaveTypeLabel: Record<string, string> = {
   paid: 'Paid',
@@ -38,7 +39,7 @@ export default function HrAttendancePage() {
 
   const employees = data?.employees || [];
   const pending = data?.pending_leaves || [];
-  const monthLabel = new Date(`${month}-01`).toLocaleDateString([], { year: 'numeric', month: 'long' });
+  const monthLabel = formatUkMonthYear(`${month}-01`);
 
   return (
     <div className="space-y-6">

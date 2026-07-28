@@ -26,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { formatUkDate } from '@/lib/date';
 
 export default function QuotationsPage() {
   const router = useRouter();
@@ -232,7 +233,7 @@ export default function QuotationsPage() {
                         {q.projects?.project_name || q.standalone_project_name || '—'}
                       </td>
                       <td className={`px-4 py-3 text-sm ${deadlineTone(q.deadline)}`}>
-                        {q.deadline ? new Date(q.deadline).toLocaleDateString() : '—'}
+                        {q.deadline ? formatUkDate(q.deadline) : '—'}
                       </td>
                       <td className="px-4 py-3 text-sm font-medium tabular-nums">
                         {typeof q.vendor_quotes_count === 'number'

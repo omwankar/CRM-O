@@ -49,6 +49,7 @@ import {
 } from '@/lib/api/leads';
 import { getUsers } from '@/lib/api/users';
 import { ActivityTimeline, DaysSinceBadge } from '@/components/activities/ActivityTimeline';
+import { formatUkDateTime } from '@/lib/date';
 
 const STATUS_OPTIONS: { value: LeadStatus; label: string }[] = [
   { value: 'new', label: 'New' },
@@ -354,7 +355,7 @@ export default function LeadsPage() {
                   ) : null}
                   {showTrash && lead.deleted_at ? (
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Deleted {new Date(lead.deleted_at).toLocaleString()}
+                      Deleted {formatUkDateTime(lead.deleted_at)}
                     </p>
                   ) : null}
                 </div>

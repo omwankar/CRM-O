@@ -16,6 +16,7 @@ import { getTimelogReport } from '@/lib/api/reports';
 import { getProjects } from '@/lib/api/projects';
 import { getTasks } from '@/lib/api/tasks';
 import type { TimeLog } from '@/types/workplace';
+import { formatUkDate } from '@/lib/date';
 
 function currentMonth() {
   return new Date().toISOString().slice(0, 7);
@@ -207,7 +208,7 @@ export default function TimeLogPage() {
             {logs.map((l) => (
               <div key={l.id} className="flex items-center gap-4 py-3">
                 <div className="w-24 shrink-0 text-sm font-medium">
-                  {new Date(l.log_date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}
+                  {formatUkDate(l.log_date, { day: '2-digit', month: 'short' })}
                 </div>
                 <div className="w-20 shrink-0 text-sm text-muted-foreground">{formatHours(l.duration_minutes)}</div>
                 <div className="flex-1 min-w-0 text-sm truncate">{l.description}</div>

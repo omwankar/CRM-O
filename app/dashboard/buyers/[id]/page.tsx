@@ -13,6 +13,7 @@ import { getBuyerCreditStatus } from '@/lib/api/payments';
 import { ActivityTimeline } from '@/components/activities/ActivityTimeline';
 import { EntityTaskList } from '@/components/tasks/EntityTaskList';
 import { ArrowLeft, Edit2, Save, X, Plus, MessageSquare, History } from 'lucide-react';
+import { formatUkDateTime } from '@/lib/date';
 
 type Tab = 'overview' | 'pipeline' | 'credit' | 'tasks' | 'comments' | 'activity';
 
@@ -332,7 +333,7 @@ export default function BuyerDetailPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-medium text-sm">{comment.author?.full_name || 'User'}</span>
-                        <span className="text-xs text-muted-foreground">{new Date(comment.created_at).toLocaleString()}</span>
+                        <span className="text-xs text-muted-foreground">{formatUkDateTime(comment.created_at)}</span>
                       </div>
                       <p className="text-sm">{comment.body}</p>
                     </div>

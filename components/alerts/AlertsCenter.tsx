@@ -19,7 +19,7 @@ import {
   markNotificationRead,
 } from '@/lib/api/notifications';
 import { getExpiringAlerts, type ExpiryAlert } from '@/lib/api/alerts';
-import { formatUkDate } from '@/lib/date';
+import { formatUkDate, formatUkDatesInText } from '@/lib/date';
 import { cn } from '@/lib/utils';
 
 export type AlertsTab = 'notifications' | 'expiries';
@@ -182,7 +182,9 @@ export function AlertsCenter({ tab, onTabChange, compact = false, onItemClick }:
                         <p className="font-medium text-sm truncate">{n.title}</p>
                         {!n.is_read && <span className="w-2 h-2 bg-primary rounded-full shrink-0" />}
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{n.message}</p>
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {formatUkDatesInText(n.message)}
+                      </p>
                       <p className="text-xs text-muted-foreground mt-0.5">{formatRelativeTime(n.created_at)}</p>
                     </div>
                   </div>

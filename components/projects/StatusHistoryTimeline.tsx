@@ -2,6 +2,7 @@ import { StatusHistory } from '@/types/projects';
 import { ProjectStatusPill } from './ProjectStatusPill';
 import { CheckCircle2, Clock, PauseCircle, XCircle } from 'lucide-react';
 import { useState } from 'react';
+import { formatUkDateTime } from '@/lib/date';
 
 interface StatusHistoryTimelineProps {
   history: StatusHistory[];
@@ -47,7 +48,7 @@ export function StatusHistoryTimeline({ history }: StatusHistoryTimelineProps) {
                   </p>
                 )}
                 <p className="text-[11px] text-muted-foreground">
-                  {entry.changed_by_name} • {new Date(entry.changed_at).toLocaleString()}
+                  {entry.changed_by_name} • {formatUkDateTime(entry.changed_at)}
                 </p>
               </div>
             </div>

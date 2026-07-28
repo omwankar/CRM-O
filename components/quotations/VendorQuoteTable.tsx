@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Eye, Download, MoreHorizontal, Star, FileText, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatUkDate } from '@/lib/date';
 
 function formatCurrency(amount?: number | null, currency?: string | null) {
   if (amount == null) return '—';
@@ -117,13 +118,13 @@ export function VendorQuoteTable({
                     </TableCell>
                     <TableCell className="font-mono text-xs">{q.vendor_quote_number || '—'}</TableCell>
                     <TableCell className="text-sm tabular-nums whitespace-nowrap">
-                      {quoteDate ? new Date(quoteDate).toLocaleDateString() : '—'}
+                      {quoteDate ? formatUkDate(quoteDate) : '—'}
                     </TableCell>
                     <TableCell className="font-semibold tabular-nums whitespace-nowrap">
                       {formatCurrency(q.quoted_price, q.currency)}
                     </TableCell>
                     <TableCell className="text-sm tabular-nums whitespace-nowrap">
-                      {q.validity_date ? new Date(q.validity_date).toLocaleDateString() : '—'}
+                      {q.validity_date ? formatUkDate(q.validity_date) : '—'}
                     </TableCell>
                     <TableCell className="max-w-[140px] truncate text-sm text-muted-foreground" title={q.notes || ''}>
                       {q.notes || '—'}

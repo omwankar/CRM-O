@@ -8,6 +8,7 @@ import { CalendarCheck, Loader2, Palmtree, Users } from 'lucide-react';
 import { getLeaveBalance, getMyAttendance, getAttendanceGrid } from '@/lib/api/leave';
 import { getMyLeaveRequests } from '@/lib/api/clock';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { formatUkTime, formatUkMonthYear } from '@/lib/date';
 
 function statusBadge(status: string) {
   if (status === 'approved') return 'bg-emerald-100 text-emerald-800';
@@ -43,7 +44,7 @@ const gridLegend = [
 
 function formatTime(iso: string | null) {
   if (!iso) return '—';
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return formatUkTime(iso);
 }
 
 export default function LeaveTrackerPage() {
@@ -80,7 +81,7 @@ export default function LeaveTrackerPage() {
 
   const leaves = leavesData?.data || [];
   const pending = leaves.filter((l) => l.status === 'pending');
-  const monthLabel = new Date(`${month}-01`).toLocaleDateString([], { year: 'numeric', month: 'long' });
+  const monthLabel = formatUkMonthYear(`${month}-01`);
 
   return (
     <div className="space-y-6">

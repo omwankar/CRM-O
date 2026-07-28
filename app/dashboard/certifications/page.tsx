@@ -15,6 +15,7 @@ import {
   EmptyDescription,
   EmptyContent
 } from '@/components/ui/empty';
+import { formatUkDate } from '@/lib/date';
 
 interface Certification {
   id: string;
@@ -220,11 +221,11 @@ export default function CertificationsPage() {
 
                   <div className="flex gap-6 text-sm">
                     <span className="text-muted-foreground">
-                      Issued: {new Date(cert.issue_date).toLocaleDateString()}
+                      Issued: {formatUkDate(cert.issue_date)}
                     </span>
 
                     <span className="text-muted-foreground">
-                      Expires: {new Date(cert.expiry_date).toLocaleDateString()}
+                      Expires: {formatUkDate(cert.expiry_date)}
                     </span>
                   </div>
 

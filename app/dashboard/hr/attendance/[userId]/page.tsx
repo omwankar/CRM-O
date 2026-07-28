@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, CalendarDays, Loader2 } from 'lucide-react';
+import { formatUkTime, formatUkMonthYear } from '@/lib/date';
 
 const markerConfig: Record<
   string,
@@ -35,7 +36,7 @@ function formatSalary(amount: number | null | undefined) {
 
 function formatTime(iso: string | null) {
   if (!iso) return '—';
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return formatUkTime(iso);
 }
 
 function HrIndividualAttendancePageInner() {
@@ -52,7 +53,7 @@ function HrIndividualAttendancePageInner() {
   });
 
   const emp = data?.employee;
-  const monthLabel = new Date(`${month}-01`).toLocaleDateString([], { year: 'numeric', month: 'long' });
+  const monthLabel = formatUkMonthYear(`${month}-01`);
 
   return (
     <div className="space-y-6">

@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ChevronRight, UserRoundCheck, UserCog } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { formatUkDate } from '@/lib/date';
 
 interface ProjectCardProps {
   project: Project;
@@ -47,10 +48,10 @@ export function ProjectCard({ project, canChangeStatus = false, onChangeStatus }
         {/* Dates */}
         <div className="flex items-center gap-4 text-[12px] text-muted-foreground">
           {project.start_date && (
-            <span>Start: {new Date(project.start_date).toLocaleDateString()}</span>
+            <span>Start: {formatUkDate(project.start_date)}</span>
           )}
           {project.estimated_end_date && (
-            <span>End: {new Date(project.estimated_end_date).toLocaleDateString()}</span>
+            <span>End: {formatUkDate(project.estimated_end_date)}</span>
           )}
         </div>
 

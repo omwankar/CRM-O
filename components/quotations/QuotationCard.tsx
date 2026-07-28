@@ -5,6 +5,7 @@ import { EnquiryStageBadge } from '@/components/quotations/EnquiryStageBadge';
 import { PriorityBadge } from '@/components/quotations/PriorityBadge';
 import type { Quotation } from '@/types/quotations';
 import { ChevronRight, Calendar, Users, Briefcase, Building2 } from 'lucide-react';
+import { formatUkDate } from '@/lib/date';
 
 function formatCurrency(amount?: number | null, currency?: string | null) {
   if (amount == null) return '—';
@@ -86,7 +87,7 @@ export function QuotationCard({
           <p className="text-[12px] text-muted-foreground flex items-center gap-2">
             <Calendar className="h-3.5 w-3.5" />
             <span>Deadline:</span>{' '}
-            {quotation.deadline ? new Date(quotation.deadline).toLocaleDateString() : '—'}
+            {quotation.deadline ? formatUkDate(quotation.deadline) : '—'}
           </p>
         </div>
 

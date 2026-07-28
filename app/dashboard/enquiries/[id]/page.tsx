@@ -41,6 +41,7 @@ import {
 } from '@/types/enquiries';
 import { ActivityTimeline } from '@/components/activities/ActivityTimeline';
 import { EntityTaskList } from '@/components/tasks/EntityTaskList';
+import { formatUkDate, formatUkDateTime } from '@/lib/date';
 
 export default function EnquiryDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -370,7 +371,7 @@ export default function EnquiryDetailPage() {
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Deadline</dt>
-                <dd>{enquiry.deadline ? new Date(enquiry.deadline).toLocaleDateString() : '—'}</dd>
+                <dd>{enquiry.deadline ? formatUkDate(enquiry.deadline) : '—'}</dd>
               </div>
               {enquiry.outcome ? (
                 <div>
@@ -407,7 +408,7 @@ export default function EnquiryDetailPage() {
                   </Link>
                   <p className="text-xs text-muted-foreground capitalize">
                     {q.status.replace(/_/g, ' ')}
-                    {q.quote_sent_at ? ` · sent ${new Date(q.quote_sent_at).toLocaleString()}` : ''}
+                    {q.quote_sent_at ? ` · sent ${formatUkDateTime(q.quote_sent_at)}` : ''}
                   </p>
                 </div>
                 <Button variant="outline" size="sm" asChild>

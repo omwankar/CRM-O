@@ -14,6 +14,7 @@ import { EntityTaskList } from '@/components/tasks/EntityTaskList';
 import { JobStatusPill } from '@/components/jobs/JobStatusPill';
 import { ArrowLeft, Edit2, Save, X, Plus, MessageSquare, History, Package } from 'lucide-react';
 import type { JobStatus } from '@/types/jobs';
+import { formatUkDateTime } from '@/lib/date';
 
 type Tab = 'overview' | 'details' | 'jobs' | 'tasks' | 'comments' | 'activity';
 
@@ -274,7 +275,7 @@ export default function VendorDetailPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-medium text-sm">{comment.author?.full_name || 'User'}</span>
-                        <span className="text-xs text-muted-foreground">{new Date(comment.created_at).toLocaleString()}</span>
+                        <span className="text-xs text-muted-foreground">{formatUkDateTime(comment.created_at)}</span>
                       </div>
                       <p className="text-sm">{comment.body}</p>
                     </div>

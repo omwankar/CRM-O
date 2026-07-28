@@ -26,6 +26,7 @@ import { SendQuotationDialog } from '@/components/quotations/SendQuotationDialog
 import { getQuotationCustomerPrice } from '@/lib/quotationPricing';
 import { CanWrite } from '@/components/auth/Can';
 import { toast } from 'sonner';
+import { formatUkDateTime } from '@/lib/date';
 import type { EnquiryStage, Quotation, UpdateQuotationInput, VendorQuote } from '@/types/quotations';
 import { normalizeEnquiryStage, buildOutcomeString, closureKindToCrmStatus, isTerminalEnquiryStage, closureKindForEnquiryStage, enquiryStageForClosureKind } from '@/types/quotations';
 import { EnquiryOutcomeModal } from '@/components/quotations/EnquiryOutcomeModal';
@@ -257,7 +258,7 @@ export default function QuotationDetailPage() {
                 )}
                 {quotation.quote_sent_at ? (
                   <p className="text-xs text-muted-foreground mt-2">
-                    Quote emailed {new Date(quotation.quote_sent_at).toLocaleString()}
+                    Quote emailed {formatUkDateTime(quotation.quote_sent_at)}
                     {quotation.quote_sent_to_email ? ` to ${quotation.quote_sent_to_email}` : ''}
                   </p>
                 ) : null}

@@ -17,11 +17,12 @@ import { PriorityBadge } from '@/components/quotations/PriorityBadge';
 import { StatusStepper } from '@/components/quotations/StatusStepper';
 import { cn } from '@/lib/utils';
 import { getUsers } from '@/lib/api/users';
+import { formatUkDate } from '@/lib/date';
 
 function formatDisplayDate(iso?: string | null) {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    return formatUkDate(iso);
   } catch {
     return '—';
   }

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import type { EnquiryStage, Quotation, QuotationStatus, VendorQuote } from '@/types/quotations';
 import { ENQUIRY_STAGE_LABELS, isTerminalEnquiryStage } from '@/types/quotations';
 import { QuotationOutcomeBadge } from '@/components/quotations/QuotationOutcomeBadge';
+import { formatUkDateTime } from '@/lib/date';
 
 function formatCurrency(amount?: number | null, currency?: string | null) {
   if (amount == null) return '—';
@@ -102,7 +103,7 @@ export function QuotationStatusBar({
               Last updated on
             </p>
             <p className="mt-1.5 text-xs font-medium tabular-nums text-emerald-900/90 dark:text-emerald-100/80">
-              {quotation.updated_at ? new Date(quotation.updated_at).toLocaleString() : '—'}
+              {quotation.updated_at ? formatUkDateTime(quotation.updated_at) : '—'}
             </p>
           </div>
           <div className="lg:col-span-2">

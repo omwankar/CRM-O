@@ -30,6 +30,7 @@ import {
 } from '@/lib/api/partnerships';
 import { getCompanies } from '@/lib/api/companies';
 import type { JobStatus } from '@/types/jobs';
+import { formatUkDate } from '@/lib/date';
 
 type Tab = 'overview' | 'jobs' | 'activity';
 
@@ -305,11 +306,11 @@ export default function PartnerDetailPage() {
               </p>
               <p>
                 <span className="text-muted-foreground">Start:</span>{' '}
-                {partner.start_date ? new Date(partner.start_date).toLocaleDateString() : '—'}
+                {partner.start_date ? formatUkDate(partner.start_date) : '—'}
               </p>
               <p>
                 <span className="text-muted-foreground">End:</span>{' '}
-                {partner.end_date ? new Date(partner.end_date).toLocaleDateString() : '—'}
+                {partner.end_date ? formatUkDate(partner.end_date) : '—'}
               </p>
             </div>
             <div className="sm:col-span-2 space-y-2">

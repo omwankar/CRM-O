@@ -45,6 +45,7 @@ import {
 } from '@/components/ui/dialog';
 import { ArrowLeft, Banknote, FileText, Link2, Loader2, Mail, Save, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatUkDateTime } from '@/lib/date';
 
 function invoiceToForm(inv: Invoice): InvoiceFormValues {
   return invoiceToFormValues(inv);
@@ -226,7 +227,7 @@ export default function InvoiceDetailPage() {
           </p>
           {invoice.sent_at && (
             <p className="text-xs text-muted-foreground mt-2">
-              Sent {new Date(invoice.sent_at).toLocaleString()} to {invoice.sent_to_email}
+              Sent {formatUkDateTime(invoice.sent_at)} to {invoice.sent_to_email}
             </p>
           )}
           {invoice.quotation && (

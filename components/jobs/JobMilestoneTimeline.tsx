@@ -1,5 +1,6 @@
 import type { JobStatusHistory } from '@/types/jobs';
 import { JOB_STATUS_LABELS, type JobStatus } from '@/types/jobs';
+import { formatUkDateTime } from '@/lib/date';
 
 export function JobMilestoneTimeline({ history }: { history: JobStatusHistory[] }) {
   if (!history.length) {
@@ -21,7 +22,7 @@ export function JobMilestoneTimeline({ history }: { history: JobStatusHistory[] 
             </p>
             <p className="text-muted-foreground mt-0.5">{h.reason}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              {h.changed_by_name} · {new Date(h.changed_at).toLocaleString()}
+              {h.changed_by_name} · {formatUkDateTime(h.changed_at)}
             </p>
           </div>
         </li>

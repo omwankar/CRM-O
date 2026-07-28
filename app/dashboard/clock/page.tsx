@@ -16,7 +16,7 @@ import {
 import { getLeaveBalance } from '@/lib/api/leave';
 import { Clock3, Loader2, MinusCircle, PlusCircle, Palmtree } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatUkIsoDate } from '@/lib/date';
+import { formatUkIsoDate, formatUkDate, formatUkTime, formatUkMonthYear } from '@/lib/date';
 
 /** Weekday count (Mon-Fri) in an inclusive range. Holidays are additionally excluded by the server. */
 function countWeekdays(start: string, end: string): number {
@@ -46,13 +46,11 @@ function addMonths(d: Date, delta: number) {
 
 function formatIsoTime(iso: string | null | undefined) {
   if (!iso) return '--';
-  const dt = new Date(iso);
-  return dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return formatUkTime(iso);
 }
 
 function formatIsoDate(iso: string) {
-  const dt = new Date(iso);
-  return dt.toLocaleDateString([], { year: 'numeric', month: 'short', day: '2-digit' });
+  return formatUkDate(iso);
 }
 
 export default function ClockPage() {
@@ -156,8 +154,8 @@ export default function ClockPage() {
     });
   };
 
-  const monthLabel = new Date(`${monthKey}-01T00:00:00Z`).toLocaleDateString([], { year: 'numeric', month: 'long' });
-  const todayLabel = new Date().toLocaleDateString([], {
+  const monthLabel = formatUkMonthYear(`${monthKey}-01T00:00:00Z`);
+  const todayLabel = formatUkDate(new Date(), {
     year: 'numeric',
     month: 'short',
     day: '2-digit',

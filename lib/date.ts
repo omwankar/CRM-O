@@ -1,8 +1,16 @@
 const UK_LOCALE = 'en-GB';
 const UK_TIME_ZONE = 'Europe/London';
+const DATE_ONLY_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+const ISO_DATE_IN_TEXT_RE = /\b(\d{4})-(\d{2})-(\d{2})\b/g;
 
 function asDate(value: string | Date) {
-  return value instanceof Date ? value : new Date(value);
+  if (value instanceof Date) return value;
+  const dateOnly = value.match(DATE_ONLY_RE);
+  if (dateOnly) {
+    // Noon avoids day-shift when converting calendar dates across timezones
+    return new Date(`${dateOnly[1]}-${dateOnly[2]}-${dateOnly[3]}T12:00:00`);
+  }
+  return new Date(value);
 }
 
 function formatWithOptions(value: string | Date, options: Intl.DateTimeFormatOptions) {
@@ -12,20 +20,12 @@ function formatWithOptions(value: string | Date, options: Intl.DateTimeFormatOpt
   }).format(asDate(value));
 }
 
-export function getUkNow() {
-  return new Date();
-}
-
-export function getUkHour(value: string | Date) {
-  const hour = new Intl.DateTimeFormat(UK_LOCALE, {
-    timeZone: UK_TIME_ZONE,
-    hour: '2-digit',
-    hour12: false,
-  }).format(asDate(value));
-  return Number.parseInt(hour, 10);
-}
-
+/** DD/MM/YYYY for a calendar date string or Date. */
 export function formatUkDate(value: string | Date, options: Intl.DateTimeFormatOptions = {}) {
+  if (typeof value === 'string' && DATE_ONLY_RE.test(value) && Object.keys(options).length === 0) {
+    const [, y, m, d] = value.match(DATE_ONLY_RE)!;
+    return `${d}/${m}/${y}`;
+  }
   return formatWithOptions(value, {
     day: '2-digit',
     month: '2-digit',
@@ -74,11 +74,12 @@ export function formatUkLongDate(value: string | Date) {
 export function formatUkShortDayDate(value: string | Date) {
   return formatWithOptions(value, {
     weekday: 'short',
-    month: 'short',
-    day: 'numeric',
+    day: '2-digit',
+    month: '2-digit',
   });
 }
 
+/** YYYY-MM-DD in Europe/London. */
 export function formatUkIsoDate(value: string | Date) {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: UK_TIME_ZONE,
@@ -86,4 +87,22 @@ export function formatUkIsoDate(value: string | Date) {
     month: '2-digit',
     day: '2-digit',
   }).format(asDate(value));
+}
+
+/** Rewrite any YYYY-MM-DD substrings in free text to DD/MM/YYYY. */
+export function formatUkDatesInText(text: string) {
+  return String(text || '').replace(ISO_DATE_IN_TEXT_RE, (_match, y, m, d) => `${d}/${m}/${y}`);
+}
+
+export function getUkNow() {
+  return new Date();
+}
+
+export function getUkHour(value: string | Date) {
+  const hour = new Intl.DateTimeFormat(UK_LOCALE, {
+    timeZone: UK_TIME_ZONE,
+    hour: '2-digit',
+    hour12: false,
+  }).format(asDate(value));
+  return Number.parseInt(hour, 10);
 }

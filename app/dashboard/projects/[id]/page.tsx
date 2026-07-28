@@ -27,6 +27,7 @@ import { supabase } from '@/lib/auth';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Project } from '@/types/projects';
 import { ArrowLeft, Edit, Download, X } from 'lucide-react';
+import { formatUkDate, formatUkDateTime } from '@/lib/date';
 
 export default function ProjectDetailPage() {
   const router = useRouter();
@@ -237,8 +238,8 @@ export default function ProjectDetailPage() {
       ['Status', project.status],
       ['Contact Email', project.contact_email || '-'],
       ['Contact Phone', project.contact_phone || '-'],
-      ['Start Date', project.start_date ? new Date(project.start_date).toLocaleDateString() : '-'],
-      ['Estimated End Date', project.estimated_end_date ? new Date(project.estimated_end_date).toLocaleDateString() : '-'],
+      ['Start Date', project.start_date ? formatUkDate(project.start_date) : '-'],
+      ['Estimated End Date', project.estimated_end_date ? formatUkDate(project.estimated_end_date) : '-'],
       ['Linked Email', project.linked_email || '-'],
       ['Notes', project.requirements_notes || '-'],
       ['Team Members', String(project.employees?.length || 0)],
@@ -254,7 +255,7 @@ export default function ProjectDetailPage() {
             ${rows.map(([k, v]) => `<tr><td style="font-weight: 600; width: 240px;">${k}</td><td>${String(v)}</td></tr>`).join('')}
           </table>
           <h3 style="margin-top: 24px;">Status History</h3>
-          <ul>${history.map((h) => `<li>${new Date(h.changed_at).toLocaleString()} - ${h.old_status || 'None'} -> ${h.new_status} (${h.reason})</li>`).join('')}</ul>
+          <ul>${history.map((h) => `<li>${formatUkDateTime(h.changed_at)} - ${h.old_status || 'None'} -> ${h.new_status} (${h.reason})</li>`).join('')}</ul>
           <h3 style="margin-top: 24px;">Attachments</h3>
           <ul>${(project.attachments || []).map((a) => `<li>${a.file_name}</li>`).join('')}</ul>
         </body>
@@ -342,7 +343,7 @@ export default function ProjectDetailPage() {
             <code className="text-[13px] text-muted-foreground font-mono">{project.project_id}</code>
           </div>
           <p className="text-[14px] text-muted-foreground">
-            Last updated {new Date(project.updated_at).toLocaleString()}
+            Last updated {formatUkDateTime(project.updated_at)}
           </p>
         </div>
         {canEdit && (
@@ -413,13 +414,13 @@ export default function ProjectDetailPage() {
           <div>
             <label className="text-[12px] text-muted-foreground">Start Date</label>
             <p className="text-[14px] text-foreground mt-1">
-              {project.start_date ? new Date(project.start_date).toLocaleDateString() : '-'}
+              {project.start_date ? formatUkDate(project.start_date) : '-'}
             </p>
           </div>
           <div>
             <label className="text-[12px] text-muted-foreground">Estimated End Date</label>
             <p className="text-[14px] text-foreground mt-1">
-              {project.estimated_end_date ? new Date(project.estimated_end_date).toLocaleDateString() : '-'}
+              {project.estimated_end_date ? formatUkDate(project.estimated_end_date) : '-'}
             </p>
           </div>
         </div>

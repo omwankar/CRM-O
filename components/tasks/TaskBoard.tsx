@@ -28,6 +28,7 @@ import {
 import { completeTask, createTask, deleteTask, getTasks, updateTask } from '@/lib/api/tasks';
 import { getUsers } from '@/lib/api/users';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { formatUkDate } from '@/lib/date';
 import {
   TASK_ENTITY_LABELS,
   TASK_PRIORITY_LABELS,
@@ -278,7 +279,7 @@ export function TasksBoard({
                   )}
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Due {t.due_date ? new Date(t.due_date).toLocaleDateString() : '—'}
+                  Due {t.due_date ? formatUkDate(t.due_date) : '—'}
                   {' · '}
                   {t.assignee?.name || t.assigned_person?.name || 'Unassigned'}
                   {t.priority ? ` · ${TASK_PRIORITY_LABELS[t.priority]}` : ''}

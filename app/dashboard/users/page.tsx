@@ -12,6 +12,7 @@ import { EditUserModal } from '@/components/users/EditUserModal';
 import { DeactivateDialog } from '@/components/users/DeactivateDialog';
 import { Users, UserPlus, Search, Key, Power, Edit2, Shield, Building2, Phone } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { formatUkDate } from '@/lib/date';
 
 const roleColors: Record<string, string> = {
   super_admin: 'bg-purple-600 text-white',
@@ -51,7 +52,7 @@ function formatRelativeTime(date: string | null) {
   if (minutes < 60) return `${minutes}m ago`;
   if (hours < 24) return `${hours}h ago`;
   if (days < 30) return `${days}d ago`;
-  return new Date(date).toLocaleDateString();
+  return formatUkDate(date);
 }
 
 export default function UsersPage() {

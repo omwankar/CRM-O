@@ -37,6 +37,7 @@ import {
   type ActivityType,
 } from '@/types/activities';
 import type { TaskEntityType } from '@/types/tasks';
+import { formatUkDateTime } from '@/lib/date';
 
 const TYPE_ICON: Record<ActivityType, typeof Phone> = {
   call: Phone,
@@ -201,7 +202,7 @@ export default function ActivitiesPage() {
                       <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{a.notes}</p>
                     ) : null}
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {new Date(a.activity_date).toLocaleString()}
+                      {formatUkDateTime(a.activity_date)}
                       {a.creator?.full_name ? ` · ${a.creator.full_name}` : ''}
                       {href ? (
                         <>

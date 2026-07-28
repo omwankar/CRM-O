@@ -13,6 +13,7 @@ import { Project, ProjectFilters as Filters } from '@/types/projects';
 import Link from 'next/link';
 import { Plus, LayoutGrid, Table } from 'lucide-react';
 import { CanWrite } from '@/components/auth/Can';
+import { formatUkDate } from '@/lib/date';
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -313,12 +314,12 @@ export default function ProjectsPage() {
                       </td>
                       <td className="px-4 py-3 text-[13px] text-muted-foreground">
                         {project.start_date
-                          ? new Date(project.start_date).toLocaleDateString()
+                          ? formatUkDate(project.start_date)
                           : '-'}
                       </td>
                       <td className="px-4 py-3 text-[13px] text-muted-foreground">
                         {project.estimated_end_date
-                          ? new Date(project.estimated_end_date).toLocaleDateString()
+                          ? formatUkDate(project.estimated_end_date)
                           : '-'}
                       </td>
                       <td className="px-4 py-3">

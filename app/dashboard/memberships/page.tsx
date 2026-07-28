@@ -15,6 +15,7 @@ import {
   EmptyDescription,
   EmptyContent
 } from '@/components/ui/empty';
+import { formatUkDate } from '@/lib/date';
 
 interface Membership {
   id: string;
@@ -105,7 +106,7 @@ export default function MembershipsPage() {
   const formatDate = (date: string | null) => {
     if (!date) return 'N/A';
     const d = new Date(date);
-    return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString();
+    return isNaN(d.getTime()) ? 'N/A' : formatUkDate(date);
   };
 
   return (

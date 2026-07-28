@@ -30,6 +30,7 @@ import {
   OPPORTUNITY_STAGES_ORDER,
   type OpportunityStage,
 } from '@/types/opportunities';
+import { formatUkDate } from '@/lib/date';
 
 type ViewMode = 'list' | 'kanban';
 
@@ -281,7 +282,7 @@ export default function OpportunitiesPage() {
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {opp.expected_close_date
-                      ? new Date(opp.expected_close_date).toLocaleDateString()
+                      ? formatUkDate(opp.expected_close_date)
                       : '—'}
                   </td>
                 </tr>
