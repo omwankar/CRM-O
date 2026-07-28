@@ -51,8 +51,22 @@ export function formatUkTime(value: string | Date, options: Intl.DateTimeFormatO
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
+    hourCycle: 'h23',
     ...options,
   });
+}
+
+/** Time with UK zone label, e.g. 08:16 BST */
+export function formatUkTimeLabeled(value: string | Date) {
+  if (!value) return '--';
+  const time = formatUkTime(value);
+  const zone = new Intl.DateTimeFormat(UK_LOCALE, {
+    timeZone: UK_TIME_ZONE,
+    timeZoneName: 'short',
+  })
+    .formatToParts(asDate(value))
+    .find((p) => p.type === 'timeZoneName')?.value;
+  return zone ? `${time} ${zone}` : `${time} UK`;
 }
 
 export function formatUkMonthYear(value: string | Date) {

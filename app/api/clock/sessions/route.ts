@@ -2,18 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-function toMonthKey(d: Date) {
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-}
-
-function parseMonthRange(month: string) {
-  // month: YYYY-MM
+function parseMonthRangeUk(month: string) {
+  // Expand UTC window slightly so UK-local days near month edges are included,
+  // then filter by Europe/London calendar month.
   const [yStr, mStr] = month.split('-');
   const year = Number(yStr);
-  const monthNum = Number(mStr); // 1-12
+  const monthNum = Number(mStr);
   const start = new Date(Date.UTC(year, monthNum - 1, 1, 0, 0, 0, 0));
+  start.setUTCDate(start.getUTCDate() - 1);
   const endExclusive = new Date(Date.UTC(year, monthNum, 1, 0, 0, 0, 0));
+  endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
   return { start, endExclusive };
+}
+
+function ukDateKey(iso: string) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/London',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(iso));
 }
 
 export async function GET(request: NextRequest) {
@@ -42,10 +50,12 @@ export async function GET(request: NextRequest) {
   }
 
   const url = new URL(request.url);
-  const monthParam = url.searchParams.get('month') || toMonthKey(new Date());
-  const { start, endExclusive } = parseMonthRange(monthParam);
+  const monthParam =
+    url.searchParams.get('month') ||
+    ukDateKey(new Date().toISOString()).slice(0, 7);
+  const { start, endExclusive } = parseMonthRangeUk(monthParam);
 
-  const { data: sessions, error: sessionsErr } = await supabase
+  const { data: rawSessions, error: sessionsErr } = await supabase
     .from('clock_sessions')
     .select('id, clock_in, clock_out, notes')
     .eq('user_id', user.id)
@@ -57,10 +67,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: sessionsErr.message }, { status: 400 });
   }
 
-  // Count missed punches for this month.
-  const { count: missedCount, error: missedCountErr } = await supabase
+  const sessions = (rawSessions || []).filter((s) => ukDateKey(s.clock_in).startsWith(monthParam));
+
+  // Count missed punches for this month (UK calendar month).
+  const { data: missedRows, error: missedCountErr } = await supabase
     .from('missed_punch_requests')
-    .select('*', { count: 'exact', head: true })
+    .select('id, requested_at')
     .eq('user_id', user.id)
     .gte('requested_at', start.toISOString())
     .lt('requested_at', endExclusive.toISOString());
@@ -69,7 +81,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: missedCountErr.message }, { status: 400 });
   }
 
-  const totalMinutes = (sessions || []).reduce((acc, s) => {
+  const missedCount = (missedRows || []).filter((r) =>
+    ukDateKey(r.requested_at).startsWith(monthParam)
+  ).length;
+
+  const totalMinutes = sessions.reduce((acc, s) => {
     if (!s.clock_in || !s.clock_out) return acc;
     const inMs = new Date(s.clock_in).getTime();
     const outMs = new Date(s.clock_out).getTime();
@@ -77,11 +93,7 @@ export async function GET(request: NextRequest) {
     return acc + Math.max(0, diff / 60000);
   }, 0);
 
-  const workDays = new Set(
-    (sessions || [])
-      .filter((s) => !!s.clock_in)
-      .map((s) => new Date(s.clock_in as string).toISOString().slice(0, 10)),
-  ).size;
+  const workDays = new Set(sessions.map((s) => ukDateKey(s.clock_in))).size;
 
   const { data: openSessions } = await supabase
     .from('clock_sessions')
@@ -97,12 +109,12 @@ export async function GET(request: NextRequest) {
       ok: true,
       month: monthParam,
       openSession,
-      sessions: sessions || [],
+      sessions,
       summary: {
         totalMinutes,
         totalHours: totalMinutes / 60,
         workDays,
-        missedPunchCount: missedCount ?? 0,
+        missedPunchCount: missedCount,
       },
     },
     { status: 200 },

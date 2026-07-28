@@ -8,7 +8,7 @@ import { getPunchRequests, getPunchStats, approvePunchRequest, rejectPunchReques
 import { AccessDenied } from '@/components/AccessDenied';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Clock, CheckCircle, XCircle, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
-import { formatUkLongDate, formatUkTime } from '@/lib/date';
+import { formatUkLongDate, formatUkTimeLabeled } from '@/lib/date';
 
 function formatRelativeTime(date: string) {
   const diff = Date.now() - new Date(date).getTime();
@@ -25,7 +25,7 @@ function formatDate(dateStr: string) {
 
 function formatTime(dateStr: string | null) {
   if (!dateStr) return '-';
-  return formatUkTime(dateStr);
+  return formatUkTimeLabeled(dateStr);
 }
 
 export default function PunchRequestsPage() {

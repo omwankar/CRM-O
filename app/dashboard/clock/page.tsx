@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,7 @@ import {
 import { getLeaveBalance } from '@/lib/api/leave';
 import { Clock3, Loader2, MinusCircle, PlusCircle, Palmtree } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatUkIsoDate, formatUkDate, formatUkTime, formatUkMonthYear } from '@/lib/date';
+import { formatUkIsoDate, formatUkDate, formatUkTimeLabeled, formatUkMonthYear, formatUkDateTime } from '@/lib/date';
 
 /** Weekday count (Mon-Fri) in an inclusive range. Holidays are additionally excluded by the server. */
 function countWeekdays(start: string, end: string): number {
@@ -34,35 +34,42 @@ function countWeekdays(start: string, end: string): number {
   return count;
 }
 
-function formatMonthKey(d: Date) {
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+function formatMonthKeyFromDate(d: Date) {
+  return formatUkIsoDate(d).slice(0, 7);
 }
 
-function addMonths(d: Date, delta: number) {
-  const copy = new Date(d.getTime());
-  copy.setUTCMonth(copy.getUTCMonth() + delta);
-  return copy;
+function addMonthsUk(monthKey: string, delta: number) {
+  const [y, m] = monthKey.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1 + delta, 1, 12));
+  return formatMonthKeyFromDate(date);
 }
 
-function formatIsoTime(iso: string | null | undefined) {
+function formatSessionTime(iso: string | null | undefined) {
   if (!iso) return '--';
-  return formatUkTime(iso);
+  return formatUkTimeLabeled(iso);
 }
 
-function formatIsoDate(iso: string) {
+function formatSessionDate(iso: string) {
   return formatUkDate(iso);
 }
 
 export default function ClockPage() {
   const queryClient = useQueryClient();
-  const [monthDate, setMonthDate] = useState(() => new Date());
-  const monthKey = useMemo(() => formatMonthKey(monthDate), [monthDate]);
+  const [monthKey, setMonthKey] = useState(() => formatMonthKeyFromDate(new Date()));
+  const [ukNowLabel, setUkNowLabel] = useState('');
 
   const [missedType, setMissedType] = useState<'clock_in' | 'clock_out'>('clock_in');
   const [missedReason, setMissedReason] = useState('');
   const [leaveStart, setLeaveStart] = useState('');
   const [leaveEnd, setLeaveEnd] = useState('');
   const [leaveReason, setLeaveReason] = useState('');
+
+  useEffect(() => {
+    const tick = () => setUkNowLabel(formatUkDateTime(new Date()));
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const { data: sessionsData, isLoading } = useQuery({
     queryKey: ['clock-sessions', monthKey],
@@ -142,7 +149,7 @@ export default function ClockPage() {
     return acc;
   }, 0);
 
-  const workDays = new Set(sessions.map((s: any) => new Date(s.clock_in).toDateString())).size;
+  const workDays = new Set(sessions.map((s: any) => formatUkIsoDate(s.clock_in))).size;
   const missedPunchCount = sessionsData?.summary?.missedPunchCount || 0;
 
   const submitMissedPunch = (e: React.FormEvent) => {
@@ -154,7 +161,7 @@ export default function ClockPage() {
     });
   };
 
-  const monthLabel = formatUkMonthYear(`${monthKey}-01T00:00:00Z`);
+  const monthLabel = formatUkMonthYear(`${monthKey}-01T12:00:00Z`);
   const todayLabel = formatUkDate(new Date(), {
     year: 'numeric',
     month: 'short',
@@ -164,14 +171,16 @@ export default function ClockPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-3xl font-bold">Clock In/Out</h1>
-          <p className="text-muted-foreground">Track time, work days, and missed punch requests.</p>
+          <p className="text-muted-foreground">
+            Track time, work days, and missed punch requests. All times are UK (Europe/London).
+          </p>
         </div>
         <Card className="px-4 py-2">
-          <p className="text-xs text-muted-foreground">Today's Date</p>
-          <p className="text-sm font-semibold">{todayLabel}</p>
+          <p className="text-xs text-muted-foreground">UK time now</p>
+          <p className="text-sm font-semibold tabular-nums">{ukNowLabel || todayLabel}</p>
         </Card>
       </div>
 
@@ -207,10 +216,10 @@ export default function ClockPage() {
 
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setMonthDate((d) => addMonths(d, -1))}>
+          <Button variant="outline" onClick={() => setMonthKey((m) => addMonthsUk(m, -1))}>
             Prev
           </Button>
-          <Button variant="outline" onClick={() => setMonthDate((d) => addMonths(d, 1))}>
+          <Button variant="outline" onClick={() => setMonthKey((m) => addMonthsUk(m, 1))}>
             Next
           </Button>
         </div>
@@ -265,8 +274,9 @@ export default function ClockPage() {
             )}
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            Open session: {openSession ? formatIsoDate(openSession.clock_in) : 'None'}
+            Open session: {openSession ? formatSessionDate(openSession.clock_in) : 'None'}
           </p>
+          <p className="mt-1 text-[11px] text-muted-foreground">Session times shown in UK time.</p>
         </div>
 
         {isLoading ? (
@@ -282,9 +292,9 @@ export default function ClockPage() {
               return (
                 <div key={s.id} className="flex items-start justify-between rounded-xl border border-border/70 bg-muted/20 p-3">
                   <div>
-                    <p className="font-medium text-sm">{formatIsoDate(s.clock_in)}</p>
+                    <p className="font-medium text-sm">{formatSessionDate(s.clock_in)}</p>
                     <p className="text-xs text-muted-foreground">
-                      In: {formatIsoTime(s.clock_in)} | Out: {formatIsoTime(s.clock_out)}
+                      In: {formatSessionTime(s.clock_in)} | Out: {formatSessionTime(s.clock_out)}
                     </p>
                     {s.notes ? <p className="text-xs mt-1">{s.notes}</p> : null}
                   </div>
@@ -375,7 +385,7 @@ export default function ClockPage() {
                 <li key={l.id} className="text-sm border rounded-lg p-3">
                   <div className="flex justify-between">
                     <span className="font-medium">
-                      {l.start_date} → {l.end_date}
+                      {formatUkDate(l.start_date)} → {formatUkDate(l.end_date)}
                     </span>
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full capitalize ${
