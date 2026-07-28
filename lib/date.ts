@@ -28,7 +28,7 @@ export function getUkHour(value: string | Date) {
 export function formatUkDate(value: string | Date, options: Intl.DateTimeFormatOptions = {}) {
   return formatWithOptions(value, {
     day: '2-digit',
-    month: 'short',
+    month: '2-digit',
     year: 'numeric',
     ...options,
   });
@@ -37,7 +37,7 @@ export function formatUkDate(value: string | Date, options: Intl.DateTimeFormatO
 export function formatUkDateTime(value: string | Date, options: Intl.DateTimeFormatOptions = {}) {
   return formatWithOptions(value, {
     day: '2-digit',
-    month: 'short',
+    month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',

@@ -38,8 +38,8 @@ function getGreeting(date: Date) {
 function getDateLabel(date: Date) {
   return formatUkDate(date, {
     weekday: 'long',
-    month: 'short',
-    day: 'numeric',
+    day: '2-digit',
+    month: '2-digit',
     year: 'numeric',
   });
 }
