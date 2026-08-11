@@ -320,12 +320,19 @@ export default function CompanyEmailsPage() {
   });
 
   const backfillMut = useMutation({
-    mutationFn: () => backfillEmailSignatures(300),
+    mutationFn: () => backfillEmailSignatures(300, { all: true, force: true }),
     onSuccess: (result) => {
-      toast.success(
-        `Parsed ${result.updated} emails — found ${result.phones} phones, ${result.companies} companies` +
-          (result.errors ? ` (${result.errors} errors)` : ''),
-      );
+      if (result.background) {
+        toast.success(
+          result.message ||
+            'Full signature parse started for all emails. This runs in the background — check back in a few minutes.',
+        );
+      } else {
+        toast.success(
+          `Parsed ${result.updated ?? 0} emails — found ${result.phones ?? 0} phones, ${result.companies ?? 0} companies` +
+            (result.errors ? ` (${result.errors} errors)` : ''),
+        );
+      }
       qc.invalidateQueries({ queryKey: ['email-contacts-extract'] });
       qc.invalidateQueries({ queryKey: ['company-emails'] });
     },
@@ -411,11 +418,19 @@ export default function CompanyEmailsPage() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => backfillMut.mutate()}
+                onClick={() => {
+                  if (
+                    confirm(
+                      'Re-parse phone & company from ALL inbound emails in the database? This runs in the background and may take a while. Outlook is not changed.',
+                    )
+                  ) {
+                    backfillMut.mutate();
+                  }
+                }}
                 disabled={backfillMut.isPending || syncMut.isPending || !stats?.graph_configured}
               >
                 <Phone className={`w-4 h-4 mr-2 ${backfillMut.isPending ? 'animate-pulse' : ''}`} />
-                {backfillMut.isPending ? 'Parsing signatures…' : 'Parse signatures'}
+                {backfillMut.isPending ? 'Starting…' : 'Parse all signatures'}
               </Button>
             </>}
           </div>

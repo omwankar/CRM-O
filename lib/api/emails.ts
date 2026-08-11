@@ -183,16 +183,18 @@ export async function importEmailContacts(
   }) as Promise<{ imported: number; skipped: number; errors: string[] }>;
 }
 
-export async function backfillEmailSignatures(limit = 300) {
+export async function backfillEmailSignatures(limit = 300, opts: { all?: boolean; force?: boolean } = {}) {
   return apiRequest('/emails/backfill-signatures', {
     method: 'POST',
-    body: JSON.stringify({ limit }),
+    body: JSON.stringify({ limit, all: opts.all, force: opts.force }),
   }) as Promise<{
     success: boolean;
-    processed: number;
-    updated: number;
-    phones: number;
-    companies: number;
-    errors: number;
+    background?: boolean;
+    message?: string;
+    processed?: number;
+    updated?: number;
+    phones?: number;
+    companies?: number;
+    errors?: number;
   }>;
 }
