@@ -43,6 +43,7 @@ import {
   getEmailStats,
   getMailboxes,
   importEmailContacts,
+  backfillEmailSignatures,
   purgeSyncedEmails,
   syncCompanyEmails,
   type CompanyEmail,
@@ -318,6 +319,19 @@ export default function CompanyEmailsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const backfillMut = useMutation({
+    mutationFn: () => backfillEmailSignatures(300),
+    onSuccess: (result) => {
+      toast.success(
+        `Parsed ${result.updated} emails — found ${result.phones} phones, ${result.companies} companies` +
+          (result.errors ? ` (${result.errors} errors)` : ''),
+      );
+      qc.invalidateQueries({ queryKey: ['email-contacts-extract'] });
+      qc.invalidateQueries({ queryKey: ['company-emails'] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const statCards = useMemo(
     () => [
       { label: 'Total emails', value: stats?.total ?? 0 },
@@ -394,6 +408,14 @@ export default function CompanyEmailsPage() {
               <Button onClick={() => syncMut.mutate()} disabled={syncMut.isPending || !stats?.graph_configured}>
                 <RefreshCw className={`w-4 h-4 mr-2 ${syncMut.isPending ? 'animate-spin' : ''}`} />
                 {syncMut.isPending ? 'Syncing…' : 'Sync now'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => backfillMut.mutate()}
+                disabled={backfillMut.isPending || syncMut.isPending || !stats?.graph_configured}
+              >
+                <Phone className={`w-4 h-4 mr-2 ${backfillMut.isPending ? 'animate-pulse' : ''}`} />
+                {backfillMut.isPending ? 'Parsing signatures…' : 'Parse signatures'}
               </Button>
             </>}
           </div>
