@@ -30,16 +30,23 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   Trash2,
+  Users,
+  Check,
+  Phone,
+  Building2,
 } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import {
   discoverCompanyMailboxes,
   getCompanyEmails,
+  getEmailContacts,
   getEmailStats,
   getMailboxes,
+  importEmailContacts,
   purgeSyncedEmails,
   syncCompanyEmails,
   type CompanyEmail,
+  type ExtractedEmailContact,
 } from '@/lib/api/emails';
 import { EmailDetailDialog, EmailListMeta } from '@/components/emails/EmailDetailDialog';
 import { formatUkDateTime } from '@/lib/date';
@@ -71,9 +78,173 @@ function LinkBadges({ email }: { email: CompanyEmail }) {
   );
 }
 
+function ExtractContactsDialog({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const qc = useQueryClient();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [contactSearch, setContactSearch] = useState('');
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['email-contacts-extract'],
+    queryFn: getEmailContacts,
+    enabled: open,
+  });
+
+  const contacts = data?.data || [];
+  const filtered = contacts.filter((c) => {
+    if (!contactSearch) return true;
+    const s = contactSearch.toLowerCase();
+    return (
+      c.email.toLowerCase().includes(s) ||
+      (c.name || '').toLowerCase().includes(s) ||
+      (c.company || '').toLowerCase().includes(s)
+    );
+  });
+
+  const newContacts = filtered.filter((c) => !c.already_contact);
+  const allNewSelected = newContacts.length > 0 && newContacts.every((c) => selected.has(c.email));
+
+  function toggleAll() {
+    if (allNewSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(newContacts.map((c) => c.email)));
+    }
+  }
+
+  const importMut = useMutation({
+    mutationFn: (items: ExtractedEmailContact[]) => importEmailContacts(items),
+    onSuccess: (result) => {
+      toast.success(`Imported ${result.imported} contact${result.imported !== 1 ? 's' : ''}${result.skipped ? `, ${result.skipped} already existed` : ''}`);
+      if (result.errors?.length) {
+        toast.error(`${result.errors.length} failed to import`);
+      }
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ['email-contacts-extract'] });
+      qc.invalidateQueries({ queryKey: ['contacts'] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function handleImport() {
+    const toImport = contacts.filter((c) => selected.has(c.email));
+    if (!toImport.length) return;
+    importMut.mutate(toImport);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Users className="w-5 h-5" />
+            Extract Contacts from Emails
+          </DialogTitle>
+        </DialogHeader>
+
+        <p className="text-sm text-muted-foreground -mt-2">
+          Unique senders found in your inbox. Phone and company are parsed from email signatures (available after next sync).
+        </p>
+
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              className="pl-9"
+              placeholder="Search by name, email or company…"
+              value={contactSearch}
+              onChange={(e) => setContactSearch(e.target.value)}
+            />
+          </div>
+          {newContacts.length > 0 && (
+            <Button variant="outline" size="sm" onClick={toggleAll}>
+              {allNewSelected ? 'Deselect all' : `Select all new (${newContacts.length})`}
+            </Button>
+          )}
+        </div>
+
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">Loading senders…</p>
+        ) : (
+          <div className="overflow-y-auto flex-1 border rounded-md divide-y">
+            {filtered.length === 0 ? (
+              <p className="text-sm text-muted-foreground p-6 text-center">No senders found</p>
+            ) : (
+              filtered.map((c) => (
+                <label
+                  key={c.email}
+                  className={`flex items-start gap-3 p-3 cursor-pointer hover:bg-muted/40 transition-colors ${c.already_contact ? 'opacity-50' : ''}`}
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-1 accent-primary"
+                    disabled={c.already_contact}
+                    checked={selected.has(c.email)}
+                    onChange={(e) => {
+                      const next = new Set(selected);
+                      e.target.checked ? next.add(c.email) : next.delete(c.email);
+                      setSelected(next);
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm truncate">{c.name || c.email}</span>
+                      {c.already_contact && (
+                        <Badge variant="secondary" className="text-[10px] shrink-0">
+                          <Check className="w-3 h-3 mr-1" /> Already a contact
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="text-[10px] shrink-0">
+                        {c.count} email{c.count !== 1 ? 's' : ''}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">{c.email}</p>
+                    <div className="flex gap-3 mt-0.5 flex-wrap">
+                      {c.phone && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Phone className="w-3 h-3" /> {c.phone}
+                        </span>
+                      )}
+                      {c.company && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Building2 className="w-3 h-3" /> {c.company}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </label>
+              ))
+            )}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-2 border-t">
+          <p className="text-sm text-muted-foreground">
+            {selected.size} selected
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            <Button
+              onClick={handleImport}
+              disabled={selected.size === 0 || importMut.isPending}
+            >
+              {importMut.isPending ? 'Importing…' : `Import ${selected.size || ''} contacts`}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function CompanyEmailsPage() {
   const qc = useQueryClient();
-  const { isSuperAdmin, profile, isLoading: userLoading } = useCurrentUser();
+  const { isSuperAdmin, canWrite, profile, isLoading: userLoading } = useCurrentUser();
   const inboxEnabled = !userLoading;
 
   const [search, setSearch] = useState('');
@@ -81,6 +252,7 @@ export default function CompanyEmailsPage() {
   const [linked, setLinked] = useState('all');
   const [category, setCategory] = useState('all');
   const [discoverOpen, setDiscoverOpen] = useState(false);
+  const [extractOpen, setExtractOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const { data: stats, error: statsError, isError: statsIsError } = useQuery({
@@ -180,36 +352,45 @@ export default function CompanyEmailsPage() {
             </p>
           ) : null}
         </div>
-        {isSuperAdmin ? (
+        {(isSuperAdmin || canWrite) ? (
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
-              onClick={() => discoverMut.mutate()}
-              disabled={discoverMut.isPending || !stats?.graph_configured}
+              onClick={() => setExtractOpen(true)}
             >
-              {discoverMut.isPending ? 'Checking…' : 'Preview Azure users'}
+              <Users className="w-4 h-4 mr-2" />
+              Extract Contacts
             </Button>
-            <Button
-              variant="outline"
-              className="text-red-600 hover:text-red-600 border-red-500/40"
-              disabled={purgeMut.isPending || !stats?.total}
-              onClick={() => {
-                if (
-                  confirm(
-                    `Delete all ${stats?.total ?? 0} synced emails and reset mailboxes? This cannot be undone. You can sync again after.`,
-                  )
-                ) {
-                  purgeMut.mutate();
-                }
-              }}
-            >
-              <Trash2 className={`w-4 h-4 mr-2 ${purgeMut.isPending ? 'animate-pulse' : ''}`} />
-              {purgeMut.isPending ? 'Clearing…' : 'Clear all emails'}
-            </Button>
-            <Button onClick={() => syncMut.mutate()} disabled={syncMut.isPending || !stats?.graph_configured}>
-              <RefreshCw className={`w-4 h-4 mr-2 ${syncMut.isPending ? 'animate-spin' : ''}`} />
-              {syncMut.isPending ? 'Syncing…' : 'Sync now'}
-            </Button>
+            {isSuperAdmin && <>
+              <Button
+                variant="outline"
+                onClick={() => discoverMut.mutate()}
+                disabled={discoverMut.isPending || !stats?.graph_configured}
+              >
+                {discoverMut.isPending ? 'Checking…' : 'Preview Azure users'}
+              </Button>
+              <Button
+                variant="outline"
+                className="text-red-600 hover:text-red-600 border-red-500/40"
+                disabled={purgeMut.isPending || !stats?.total}
+                onClick={() => {
+                  if (
+                    confirm(
+                      `Delete all ${stats?.total ?? 0} synced emails and reset mailboxes? This cannot be undone. You can sync again after.`,
+                    )
+                  ) {
+                    purgeMut.mutate();
+                  }
+                }}
+              >
+                <Trash2 className={`w-4 h-4 mr-2 ${purgeMut.isPending ? 'animate-pulse' : ''}`} />
+                {purgeMut.isPending ? 'Clearing…' : 'Clear all emails'}
+              </Button>
+              <Button onClick={() => syncMut.mutate()} disabled={syncMut.isPending || !stats?.graph_configured}>
+                <RefreshCw className={`w-4 h-4 mr-2 ${syncMut.isPending ? 'animate-spin' : ''}`} />
+                {syncMut.isPending ? 'Syncing…' : 'Sync now'}
+              </Button>
+            </>}
           </div>
         ) : null}
       </div>
@@ -408,6 +589,8 @@ export default function CompanyEmailsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ExtractContactsDialog open={extractOpen} onClose={() => setExtractOpen(false)} />
     </div>
   );
 }

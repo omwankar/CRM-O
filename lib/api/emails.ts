@@ -157,3 +157,28 @@ export async function categorizeCompanyEmail(
     body: JSON.stringify(data),
   }) as Promise<CompanyEmail>;
 }
+
+export interface ExtractedEmailContact {
+  name: string | null;
+  email: string;
+  phone: string | null;
+  company: string | null;
+  count: number;
+  already_contact: boolean;
+}
+
+export async function getEmailContacts() {
+  return apiRequest('/emails/contacts-extract') as Promise<{
+    data: ExtractedEmailContact[];
+    total: number;
+  }>;
+}
+
+export async function importEmailContacts(
+  contacts: Array<{ name?: string | null; email: string; phone?: string | null; company?: string | null }>,
+) {
+  return apiRequest('/emails/contacts-extract/import', {
+    method: 'POST',
+    body: JSON.stringify({ contacts }),
+  }) as Promise<{ imported: number; skipped: number; errors: string[] }>;
+}
