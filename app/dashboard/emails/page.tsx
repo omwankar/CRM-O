@@ -89,7 +89,7 @@ function ExtractContactsDialog({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [contactSearch, setContactSearch] = useState('');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error: extractError } = useQuery({
     queryKey: ['email-contacts-extract'],
     queryFn: getEmailContacts,
     enabled: open,
@@ -170,6 +170,11 @@ function ExtractContactsDialog({
 
         {isLoading ? (
           <p className="text-sm text-muted-foreground py-8 text-center">Loading senders…</p>
+        ) : extractError ? (
+          <div className="border border-red-500/50 bg-red-500/10 rounded-md p-4">
+            <p className="text-sm font-medium">Could not load senders</p>
+            <p className="text-sm text-muted-foreground mt-1">{(extractError as Error).message}</p>
+          </div>
         ) : (
           <div className="overflow-y-auto flex-1 border rounded-md divide-y">
             {filtered.length === 0 ? (
