@@ -58,6 +58,7 @@ export default function DashboardPage() {
   const { data: dashboardData, isLoading } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: getDashboardStats,
+    staleTime: 60 * 1000,
   });
 
   const { data: punchStats } = useQuery({

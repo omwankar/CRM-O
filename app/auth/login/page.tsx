@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { FieldGroup, FieldLabel } from '@/components/ui/field';
 import Link from 'next/link';
 import { AuthShell } from '@/components/auth-shell';
+import { WarmApi } from '@/components/WarmApi';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -47,6 +48,8 @@ const handleLogin = async (e: React.FormEvent) => {
 };
 
   return (
+    <>
+    <WarmApi />
     <AuthShell title="Welcome Back" subtitle="Sign in to your CRM account">
           {error && (
             <div className="mb-6 rounded-lg border border-destructive/40 bg-destructive/15 p-4 text-sm text-destructive">
@@ -103,5 +106,6 @@ const handleLogin = async (e: React.FormEvent) => {
             </div>
           </div>
     </AuthShell>
+    </>
   );
 }

@@ -1,5 +1,6 @@
 import { DashboardSidebar } from '@/components/DashboardSidebar';
 import { Notifications } from '@/components/notifications';
+import { WarmApi } from '@/components/WarmApi';
 
 export default function DashboardLayout({
   children,
@@ -8,6 +9,7 @@ export default function DashboardLayout({
 }) {
   return (
     <div className="flex h-svh min-h-0 w-screen overflow-hidden bg-background">
+      <WarmApi />
       <DashboardSidebar />
 
       {/* Main area — min-h-0 lets flex child shrink so only <main> scrolls (no body “double scroll”) */}

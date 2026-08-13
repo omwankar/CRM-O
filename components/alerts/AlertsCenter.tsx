@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import {
@@ -250,16 +251,26 @@ export function AlertsCenter({ tab, onTabChange, compact = false, onItemClick }:
 }
 
 export function useAlertsBadgeCount() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setReady(true), 1500);
+    return () => window.clearTimeout(t);
+  }, []);
+
   const { data: countData } = useQuery({
     queryKey: ['notifications-unread-count'],
     queryFn: getUnreadCount,
-    refetchInterval: 60000,
+    enabled: ready,
+    staleTime: 60 * 1000,
+    refetchInterval: 60_000,
   });
 
   const { data: expiryData } = useQuery({
     queryKey: ['alerts-expiring'],
     queryFn: () => getExpiringAlerts(),
-    refetchInterval: 120000,
+    enabled: ready,
+    staleTime: 2 * 60 * 1000,
+    refetchInterval: 120_000,
   });
 
   const unread = countData?.count || 0;
