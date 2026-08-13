@@ -105,17 +105,22 @@ export async function GET(request: NextRequest) {
   const openSession = openSessions?.[0] || null;
   let pendingForgotClockOut = false;
 
-  if (openSession && ukDateKey(openSession.clock_in) < ukDateKey(new Date().toISOString())) {
-    pendingForgotClockOut = true;
-    try {
-      const { ensureForgotClockOutPunchRequest } = await import('@/lib/clockForgotOut');
+  try {
+    const { hasPendingAutomaticClockOutRequest, ensureForgotClockOutPunchRequest } = await import(
+      '@/lib/clockForgotOut'
+    );
+    pendingForgotClockOut = await hasPendingAutomaticClockOutRequest(supabase, user.id);
+    if (openSession && ukDateKey(openSession.clock_in) < ukDateKey(new Date().toISOString())) {
+      pendingForgotClockOut = true;
       await ensureForgotClockOutPunchRequest(supabase, {
         id: openSession.id,
         user_id: user.id,
         clock_in: openSession.clock_in,
       });
-    } catch {
-      /* ignore duplicate / RLS */
+    }
+  } catch {
+    if (openSession && ukDateKey(openSession.clock_in) < ukDateKey(new Date().toISOString())) {
+      pendingForgotClockOut = true;
     }
   }
 

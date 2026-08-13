@@ -46,6 +46,22 @@ export function isStaleOpenSession(clockInIso: string, now = new Date()) {
 export const FORGOT_CLOCK_OUT_LOCK_MESSAGE =
   'You forgot to clock out. An automatic punch request was sent to super admin. You can clock in and out again after it is approved.';
 
+export async function hasPendingAutomaticClockOutRequest(
+  supabase: { from: (table: string) => any },
+  userId: string,
+) {
+  const { data } = await supabase
+    .from('missed_punch_requests')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('type', 'clock_out')
+    .eq('status', 'pending')
+    .ilike('reason', 'Automatic:%')
+    .limit(1)
+    .maybeSingle();
+  return Boolean(data?.id);
+}
+
 export async function ensureForgotClockOutPunchRequest(
   supabase: { from: (table: string) => any },
   session: { id: string; user_id: string; clock_in: string },

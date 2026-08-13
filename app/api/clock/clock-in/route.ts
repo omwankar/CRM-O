@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import {
   FORGOT_CLOCK_OUT_LOCK_MESSAGE,
   ensureForgotClockOutPunchRequest,
+  hasPendingAutomaticClockOutRequest,
   isStaleOpenSession,
 } from '@/lib/clockForgotOut';
 
@@ -18,9 +19,7 @@ export async function POST(_request: NextRequest) {
       getAll() {
         return cookieStore.getAll();
       },
-      setAll() {
-        // No cookie writes needed for this endpoint.
-      },
+      setAll() {},
     },
   });
 
@@ -59,6 +58,14 @@ export async function POST(_request: NextRequest) {
     return NextResponse.json({ error: 'You are already clocked in' }, { status: 400 });
   }
 
+  try {
+    if (await hasPendingAutomaticClockOutRequest(supabase, user.id)) {
+      return NextResponse.json({ error: FORGOT_CLOCK_OUT_LOCK_MESSAGE }, { status: 400 });
+    }
+  } catch {
+    /* ignore lookup errors */
+  }
+
   const nowIso = new Date().toISOString();
 
   const { data, error } = await supabase
@@ -73,19 +80,3 @@ export async function POST(_request: NextRequest) {
 
   return NextResponse.json({ ok: true, session: data }, { status: 200 });
 }
-
-  const nowIso = new Date().toISOString();
-
-  const { data, error } = await supabase
-    .from('clock_sessions')
-    .insert({ user_id: user.id, clock_in: nowIso })
-    .select('*')
-    .maybeSingle();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
-  }
-
-  return NextResponse.json({ ok: true, session: data }, { status: 200 });
-}
-

@@ -140,6 +140,7 @@ export default function ClockPage() {
   const openSession = sessionsData?.openSession || null;
   const staleOpenSession =
     openSession && formatUkIsoDate(openSession.clock_in) < formatUkIsoDate(new Date()) ? openSession : null;
+  const waitingApproval = Boolean(staleOpenSession || sessionsData?.pendingForgotClockOut);
 
   const totalHours = sessions.reduce((acc: number, s: any) => {
     if (s.clock_out && s.clock_in) {
@@ -232,10 +233,10 @@ export default function ClockPage() {
           {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
         </div>
 
-        {staleOpenSession ? (
+        {waitingApproval ? (
           <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
-            You forgot to clock out. An automatic punch request was sent to super admin (including your name).
-            You cannot clock in or out until a super admin approves it on Punch Requests.
+            You were auto clocked out at end of day. A punch request was sent to super admin (including your name).
+            You cannot clock in until a super admin approves it on Punch Requests.
           </div>
         ) : null}
 
@@ -246,7 +247,7 @@ export default function ClockPage() {
               <Button
                 onClick={() => clockInMutation.mutate(undefined)}
                 className="h-8 px-4"
-                disabled={clockInMutation.isPending || Boolean(staleOpenSession)}
+                disabled={clockInMutation.isPending || waitingApproval}
               >
                 {clockInMutation.isPending ? (
                   <span className="inline-flex items-center gap-2">
@@ -257,7 +258,7 @@ export default function ClockPage() {
                   'Clock In'
                 )}
               </Button>
-            ) : staleOpenSession ? (
+            ) : waitingApproval ? (
               <Button className="h-8 px-4" disabled>
                 Waiting for approval
               </Button>
