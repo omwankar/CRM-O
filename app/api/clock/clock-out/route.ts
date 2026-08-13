@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import {
+  FORGOT_CLOCK_OUT_LOCK_MESSAGE,
+  ensureForgotClockOutPunchRequest,
+  isStaleOpenSession,
+} from '@/lib/clockForgotOut';
 
 export async function POST(_request: NextRequest) {
   const cookieStore = await cookies();
@@ -43,6 +48,19 @@ export async function POST(_request: NextRequest) {
 
   if (!openSession) {
     return NextResponse.json({ error: 'No open clock session found' }, { status: 400 });
+  }
+
+  if (isStaleOpenSession(openSession.clock_in)) {
+    try {
+      await ensureForgotClockOutPunchRequest(supabase, {
+        id: openSession.id,
+        user_id: user.id,
+        clock_in: openSession.clock_in,
+      });
+    } catch {
+      /* request may already exist */
+    }
+    return NextResponse.json({ error: FORGOT_CLOCK_OUT_LOCK_MESSAGE }, { status: 400 });
   }
 
   const nowIso = new Date().toISOString();

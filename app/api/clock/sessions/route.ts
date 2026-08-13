@@ -103,12 +103,28 @@ export async function GET(request: NextRequest) {
     .limit(1);
 
   const openSession = openSessions?.[0] || null;
+  let pendingForgotClockOut = false;
+
+  if (openSession && ukDateKey(openSession.clock_in) < ukDateKey(new Date().toISOString())) {
+    pendingForgotClockOut = true;
+    try {
+      const { ensureForgotClockOutPunchRequest } = await import('@/lib/clockForgotOut');
+      await ensureForgotClockOutPunchRequest(supabase, {
+        id: openSession.id,
+        user_id: user.id,
+        clock_in: openSession.clock_in,
+      });
+    } catch {
+      /* ignore duplicate / RLS */
+    }
+  }
 
   return NextResponse.json(
     {
       ok: true,
       month: monthParam,
       openSession,
+      pendingForgotClockOut,
       sessions,
       summary: {
         totalMinutes,

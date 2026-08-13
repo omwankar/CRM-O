@@ -233,8 +233,9 @@ export default function ClockPage() {
         </div>
 
         {staleOpenSession ? (
-          <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-            You still have an open session from a previous day. Please clock out or ask your head to review it.
+          <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+            You forgot to clock out. An automatic punch request was sent to super admin (including your name).
+            You cannot clock in or out until a super admin approves it on Punch Requests.
           </div>
         ) : null}
 
@@ -245,7 +246,7 @@ export default function ClockPage() {
               <Button
                 onClick={() => clockInMutation.mutate(undefined)}
                 className="h-8 px-4"
-                disabled={clockInMutation.isPending}
+                disabled={clockInMutation.isPending || Boolean(staleOpenSession)}
               >
                 {clockInMutation.isPending ? (
                   <span className="inline-flex items-center gap-2">
@@ -255,6 +256,10 @@ export default function ClockPage() {
                 ) : (
                   'Clock In'
                 )}
+              </Button>
+            ) : staleOpenSession ? (
+              <Button className="h-8 px-4" disabled>
+                Waiting for approval
               </Button>
             ) : (
               <Button

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import {
+  FORGOT_CLOCK_OUT_LOCK_MESSAGE,
+  ensureForgotClockOutPunchRequest,
+  isStaleOpenSession,
+} from '@/lib/clockForgotOut';
 
 export async function POST(_request: NextRequest) {
   const cookieStore = await cookies();
@@ -27,10 +32,9 @@ export async function POST(_request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Prevent double clock-in by checking for an open session.
   const { data: openSession, error: openErr } = await supabase
     .from('clock_sessions')
-    .select('id')
+    .select('id, user_id, clock_in')
     .eq('user_id', user.id)
     .is('clock_out', null)
     .maybeSingle();
@@ -40,8 +44,35 @@ export async function POST(_request: NextRequest) {
   }
 
   if (openSession) {
+    if (isStaleOpenSession(openSession.clock_in)) {
+      try {
+        await ensureForgotClockOutPunchRequest(supabase, {
+          id: openSession.id,
+          user_id: user.id,
+          clock_in: openSession.clock_in,
+        });
+      } catch {
+        /* request may already exist */
+      }
+      return NextResponse.json({ error: FORGOT_CLOCK_OUT_LOCK_MESSAGE }, { status: 400 });
+    }
     return NextResponse.json({ error: 'You are already clocked in' }, { status: 400 });
   }
+
+  const nowIso = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from('clock_sessions')
+    .insert({ user_id: user.id, clock_in: nowIso })
+    .select('*')
+    .maybeSingle();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  return NextResponse.json({ ok: true, session: data }, { status: 200 });
+}
 
   const nowIso = new Date().toISOString();
 

@@ -225,6 +225,12 @@ export default function PunchRequestsPage() {
                 )}
               </div>
 
+              {request.reason && (
+                <div className="mb-4 p-3 bg-muted rounded-lg">
+                  <p className="text-sm text-muted-foreground">Reason / employee:</p>
+                  <p className="text-sm">{request.reason}</p>
+                </div>
+              )}
               {request.notes && (
                 <div className="mb-4 p-3 bg-muted rounded-lg">
                   <p className="text-sm text-muted-foreground">Notes from employee:</p>
@@ -237,7 +243,9 @@ export default function PunchRequestsPage() {
                   {approvingId === request.id ? (
                     <div className="p-3 bg-green-50 rounded-lg">
                       <p className="text-sm text-green-700 mb-2">
-                        This will create a clock session from {formatTime(request.requested_clock_in)} to {formatTime(request.requested_clock_out)}.
+                        {request.requested_clock_out
+                          ? `This will clock ${request.user?.full_name || 'the employee'} out at ${formatTime(request.requested_clock_out)} and unlock clock in/out.`
+                          : 'This will apply the punch and unlock clock in/out for the employee.'}
                       </p>
                       <div className="flex gap-2">
                         <Button
