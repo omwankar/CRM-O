@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { CheckCircle2, Plus, Trash2, Loader2 } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { completeTask, createTask, deleteTask, getTasks, updateTask } from '@/lib/api/tasks';
 import { getUsers } from '@/lib/api/users';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -42,6 +50,52 @@ import {
 import { EntityRecordPicker } from '@/components/tasks/EntityRecordPicker';
 
 export { EntityTaskList } from '@/components/tasks/EntityTaskList';
+
+type TaskForm = {
+  title: string;
+  description: string;
+  entity_type: '' | TaskEntityType;
+  entity_id: string;
+  entity_label: string;
+  assignee_id: string;
+  supervisor_id: string;
+  due_date: string;
+  priority: TaskPriority;
+};
+
+function emptyForm(assigneeId = ''): TaskForm {
+  return {
+    title: '',
+    description: '',
+    entity_type: '',
+    entity_id: '',
+    entity_label: '',
+    assignee_id: assigneeId,
+    supervisor_id: '',
+    due_date: new Date().toISOString().slice(0, 10),
+    priority: 'medium',
+  };
+}
+
+function formFromTask(t: Task): TaskForm {
+  return {
+    title: t.title || t.task_title || '',
+    description: t.description || t.notes || '',
+    entity_type: (t.entity_type || '') as '' | TaskEntityType,
+    entity_id: t.entity_id || '',
+    entity_label: t.project?.project_name || '',
+    assignee_id: t.assignee_id || t.assigned_person_id || '',
+    supervisor_id: t.supervisor_id || '',
+    due_date: (t.due_date || '').slice(0, 10),
+    priority: t.priority || 'medium',
+  };
+}
+
+function personName(t: Task, who: 'assignee' | 'creator' | 'supervisor') {
+  if (who === 'assignee') return t.assignee?.name || t.assigned_person?.name || 'Unassigned';
+  if (who === 'creator') return t.creator?.name || '—';
+  return t.supervisor?.name || '—';
+}
 
 function OverdueBadge({ task }: { task: Task }) {
   if (!task.overdue) return null;
@@ -69,23 +123,14 @@ export function TasksBoard({
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search, 300);
-  const [open, setOpen] = useState(false);
+  const [dialog, setDialog] = useState<'create' | 'edit' | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [completeTarget, setCompleteTarget] = useState<Task | null>(null);
   const [logActivity, setLogActivity] = useState(true);
-
-  const [form, setForm] = useState({
-    title: '',
-    description: '',
-    entity_type: '' as '' | TaskEntityType,
-    entity_id: '',
-    entity_label: '',
-    assignee_id: '',
-    supervisor_id: '',
-    due_date: new Date().toISOString().slice(0, 10),
-    priority: 'medium' as TaskPriority,
-  });
+  const [form, setForm] = useState<TaskForm>(emptyForm());
 
   const activeView = lockView ? defaultView : view;
+  const formOpen = dialog !== null;
 
   const { data, isLoading } = useQuery({
     queryKey: ['tasks', activeView, status, priority, overdueOnly, debouncedSearch],
@@ -103,7 +148,7 @@ export function TasksBoard({
   const { data: users = [] } = useQuery({
     queryKey: ['users-tasks-board'],
     queryFn: () => getUsers({ limit: 200, is_active: 'true' }),
-    enabled: open,
+    enabled: formOpen,
   });
 
   const userList = useMemo(() => {
@@ -133,7 +178,26 @@ export function TasksBoard({
       }),
     onSuccess: () => {
       toast.success('Task created');
-      setOpen(false);
+      setDialog(null);
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updateMut = useMutation({
+    mutationFn: () =>
+      updateTask(editingTask!.id, {
+        title: form.title.trim(),
+        description: form.description.trim() || null,
+        assignee_id: form.assignee_id,
+        supervisor_id: form.supervisor_id || null,
+        due_date: form.due_date,
+        priority: form.priority,
+      }),
+    onSuccess: () => {
+      toast.success('Task updated');
+      setDialog(null);
+      setEditingTask(null);
       qc.invalidateQueries({ queryKey: ['tasks'] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -188,19 +252,22 @@ export function TasksBoard({
     team: 'Team',
   };
 
+  const saving = createMut.isPending || updateMut.isPending;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{viewTitle[activeView] || 'Tasks'}</h1>
           <p className="mt-1 text-muted-foreground">
-            All tasks in one place — overdue shown in red.
+            All tasks in one place — overdue shown in red. Click a row to view or edit.
           </p>
         </div>
         <Button
           onClick={() => {
-            setForm((f) => ({ ...f, assignee_id: user?.id || '' }));
-            setOpen(true);
+            setEditingTask(null);
+            setForm(emptyForm(user?.id || ''));
+            setDialog('create');
           }}
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -281,36 +348,54 @@ export function TasksBoard({
       ) : rows.length === 0 ? (
         <Card className="p-10 text-center text-sm text-muted-foreground">No tasks in this view.</Card>
       ) : (
-        <div className="space-y-2">
-          {rows.map((t) => (
-            <Card key={t.id} className="flex flex-wrap items-start justify-between gap-3 p-4">
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-medium">{t.title || t.task_title}</p>
-                  <Badge variant="secondary">{TASK_STATUS_LABELS[t.status] || t.status}</Badge>
-                  <OverdueBadge task={t} />
-                  {t.entity_type ? (
-                    <Badge variant="outline">{TASK_ENTITY_LABELS[t.entity_type]}</Badge>
-                  ) : (
-                    <Badge variant="outline">Standalone</Badge>
-                  )}
-                </div>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Due {t.due_date ? formatUkDate(t.due_date) : '—'}
-                  {' · '}
-                  {t.assignee?.name || t.assigned_person?.name || 'Unassigned'}
-                  {t.priority ? ` · ${TASK_PRIORITY_LABELS[t.priority]}` : ''}
-                  {t.task_id ? ` · ${t.task_id}` : ''}
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {t.status !== 'completed' && t.status !== 'cancelled' ? (
-                  <>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Task</TableHead>
+              <TableHead>Assigned to</TableHead>
+              <TableHead>Assigned by</TableHead>
+              <TableHead>Due date</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Priority</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((t) => (
+              <TableRow
+                key={t.id}
+                className={`cursor-pointer ${t.overdue ? 'text-red-700 dark:text-red-300' : ''}`}
+                onClick={() => {
+                  setEditingTask(t);
+                  setForm(formFromTask(t));
+                  setDialog('edit');
+                }}
+              >
+                <TableCell className="min-w-[180px] whitespace-normal">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="font-medium">{t.title || t.task_title}</span>
+                    <OverdueBadge task={t} />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {t.task_id || ''}
+                    {t.entity_type ? ` · ${TASK_ENTITY_LABELS[t.entity_type]}` : ' · Standalone'}
+                  </p>
+                </TableCell>
+                <TableCell>{personName(t, 'assignee')}</TableCell>
+                <TableCell>{personName(t, 'creator')}</TableCell>
+                <TableCell>{t.due_date ? formatUkDate(t.due_date) : '—'}</TableCell>
+                <TableCell>{t.created_at ? formatUkDate(t.created_at) : '—'}</TableCell>
+                <TableCell>
+                  {t.status !== 'completed' && t.status !== 'cancelled' ? (
                     <Select
                       value={t.status}
                       onValueChange={(v) => statusMut.mutate({ id: t.id, status: v as TaskStatus })}
                     >
-                      <SelectTrigger className="h-8 w-[140px] text-xs">
+                      <SelectTrigger
+                        className="h-8 w-[130px] text-xs"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -319,32 +404,68 @@ export function TasksBoard({
                         <SelectItem value="cancelled">Cancelled</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button size="sm" variant="outline" onClick={() => setCompleteTarget(t)}>
-                      Complete
+                  ) : (
+                    <Badge variant="secondary">{TASK_STATUS_LABELS[t.status] || t.status}</Badge>
+                  )}
+                </TableCell>
+                <TableCell>{TASK_PRIORITY_LABELS[t.priority] || t.priority}</TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      title="View / edit"
+                      onClick={() => {
+                        setEditingTask(t);
+                        setForm(formFromTask(t));
+                        setDialog('edit');
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
                     </Button>
-                  </>
-                ) : null}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    if (confirm('Delete this task?')) deleteMut.mutate(t.id);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
+                    {t.status !== 'completed' && t.status !== 'cancelled' ? (
+                      <Button size="sm" variant="outline" onClick={() => setCompleteTarget(t)}>
+                        Complete
+                      </Button>
+                    ) : null}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        if (confirm('Delete this task?')) deleteMut.mutate(t.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={formOpen}
+        onOpenChange={(o) => {
+          if (!o) {
+            setDialog(null);
+            setEditingTask(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>New task</DialogTitle>
+            <DialogTitle>{dialog === 'edit' ? 'View / edit task' : 'New task'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3">
+            {dialog === 'edit' && editingTask ? (
+              <p className="text-xs text-muted-foreground">
+                Assigned by {personName(editingTask, 'creator')}
+                {editingTask.created_at ? ` on ${formatUkDate(editingTask.created_at)}` : ''}
+                {editingTask.task_id ? ` · ${editingTask.task_id}` : ''}
+              </p>
+            ) : null}
             <div className="grid gap-1.5">
               <Label>Title *</Label>
               <Input
@@ -353,7 +474,7 @@ export function TasksBoard({
               />
             </div>
             <div className="grid gap-1.5">
-              <Label>Assignee *</Label>
+              <Label>Assigned to *</Label>
               <Select
                 value={form.assignee_id || undefined}
                 onValueChange={(v) => setForm((f) => ({ ...f, assignee_id: v }))}
@@ -417,45 +538,54 @@ export function TasksBoard({
                 </Select>
               </div>
             </div>
-            <div className="grid gap-1.5">
-              <Label>Link to record (optional)</Label>
-              <Select
-                value={form.entity_type || 'none'}
-                onValueChange={(v) =>
-                  setForm((f) => ({
-                    ...f,
-                    entity_type: v === 'none' ? '' : (v as TaskEntityType),
-                    entity_id: '',
-                    entity_label: '',
-                  }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Standalone (no link)</SelectItem>
-                  {(Object.keys(TASK_ENTITY_LABELS) as TaskEntityType[]).map((t) => (
+            {dialog === 'create' ? (
+              <div className="grid gap-1.5">
+                <Label>Link to record (optional)</Label>
+                <Select
+                  value={form.entity_type || 'none'}
+                  onValueChange={(v) =>
+                    setForm((f) => ({
+                      ...f,
+                      entity_type: v === 'none' ? '' : (v as TaskEntityType),
+                      entity_id: '',
+                      entity_label: '',
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Standalone (no link)</SelectItem>
+                    {(Object.keys(TASK_ENTITY_LABELS) as TaskEntityType[]).map((t) => (
                       <SelectItem key={t} value={t}>
                         {TASK_ENTITY_LABELS[t]}
                       </SelectItem>
                     ))}
-                </SelectContent>
-              </Select>
-              {form.entity_type ? (
-                <EntityRecordPicker
-                  entityType={form.entity_type}
-                  value={form.entity_id}
-                  label={form.entity_label}
-                  onChange={(id, label) =>
-                    setForm((f) => ({ ...f, entity_id: id, entity_label: label }))
-                  }
-                />
-              ) : null}
-              <p className="text-[11px] text-muted-foreground">
-                Search by name or number — or create the task from a record’s detail page to link it automatically.
+                  </SelectContent>
+                </Select>
+                {form.entity_type ? (
+                  <EntityRecordPicker
+                    entityType={form.entity_type}
+                    value={form.entity_id}
+                    label={form.entity_label}
+                    onChange={(id, label) =>
+                      setForm((f) => ({ ...f, entity_id: id, entity_label: label }))
+                    }
+                  />
+                ) : null}
+                <p className="text-[11px] text-muted-foreground">
+                  Search by name or number — or create the task from a record’s detail page to link it automatically.
+                </p>
+              </div>
+            ) : editingTask?.entity_type ? (
+              <p className="text-xs text-muted-foreground">
+                Linked to {TASK_ENTITY_LABELS[editingTask.entity_type]}
+                {form.entity_label ? ` · ${form.entity_label}` : ''}
               </p>
-            </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Standalone task (no linked record).</p>
+            )}
             <div className="grid gap-1.5">
               <Label>Description</Label>
               <Textarea
@@ -466,14 +596,20 @@ export function TasksBoard({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDialog(null);
+                setEditingTask(null);
+              }}
+            >
               Cancel
             </Button>
             <Button
-              disabled={!form.title.trim() || !form.assignee_id || !form.due_date || createMut.isPending}
-              onClick={() => createMut.mutate()}
+              disabled={!form.title.trim() || !form.assignee_id || !form.due_date || saving}
+              onClick={() => (dialog === 'edit' ? updateMut.mutate() : createMut.mutate())}
             >
-              Create
+              {dialog === 'edit' ? 'Save changes' : 'Create'}
             </Button>
           </DialogFooter>
         </DialogContent>
