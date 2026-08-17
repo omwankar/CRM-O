@@ -164,11 +164,19 @@ export function TasksBoard({
   const rows = data?.data || data?.tasks || [];
 
   const viewTitle: Record<string, string> = {
-    mine: 'My Tasks',
-    sales: 'Sales Tasks',
-    operations: 'Operations Tasks',
-    finance: 'Finance Tasks',
-    team: 'Team Tasks',
+    mine: 'Tasks',
+    sales: 'Sales',
+    operations: 'Operations',
+    finance: 'Finance',
+    team: 'Team',
+  };
+
+  const viewTabLabel: Record<string, string> = {
+    mine: 'Mine',
+    sales: 'Sales',
+    operations: 'Operations',
+    finance: 'Finance',
+    team: 'Team',
   };
 
   return (
@@ -177,7 +185,7 @@ export function TasksBoard({
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{viewTitle[activeView] || 'Tasks'}</h1>
           <p className="mt-1 text-muted-foreground">
-            Unified tasks across sales, operations, and finance — overdue shown in red.
+            All tasks in one place — overdue shown in red.
           </p>
         </div>
         <Button
@@ -201,7 +209,7 @@ export function TasksBoard({
                 variant={activeView === v ? 'default' : 'outline'}
                 onClick={() => setView(v)}
               >
-                {viewTitle[v]}
+                {viewTabLabel[v]}
               </Button>
             ))}
             {isManager ? (

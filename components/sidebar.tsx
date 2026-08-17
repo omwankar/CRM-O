@@ -31,7 +31,7 @@ function getMenuSections(role?: string, pendingCount?: number): MenuSection[] {
       label: 'Overview',
       items: [
         { label: 'Dashboard', href: '/dashboard' },
-        { label: 'My Tasks', href: '/dashboard/tasks' },
+        { label: 'Tasks', href: '/dashboard/tasks' },
         { label: 'Alerts & Notifications', href: '/dashboard/alerts' },
       ],
     },
@@ -56,7 +56,6 @@ function getMenuSections(role?: string, pendingCount?: number): MenuSection[] {
         { label: 'Opportunities', href: '/dashboard/opportunities' },
         { label: 'Contacts', href: '/dashboard/contacts' },
         { label: 'Activities', href: '/dashboard/activities' },
-        { label: 'Sales Tasks', href: '/dashboard/tasks?view=sales' },
         { label: 'Quotations', href: '/dashboard/quotations' },
         { label: 'Sales Reports', href: '/dashboard/sales-reports' },
         { label: 'Companies', href: '/dashboard/companies' },
@@ -69,7 +68,6 @@ function getMenuSections(role?: string, pendingCount?: number): MenuSection[] {
       items: [
         { label: 'Jobs / Shipments', href: '/dashboard/jobs' },
         { label: 'Projects', href: '/dashboard/projects' },
-        { label: 'Operations Tasks', href: '/dashboard/tasks?view=operations' },
         { label: 'Vendors', href: '/dashboard/vendors' },
         { label: 'Partners', href: '/dashboard/partnerships' },
       ],
@@ -81,7 +79,6 @@ function getMenuSections(role?: string, pendingCount?: number): MenuSection[] {
         ...(role === 'manager' || role === 'super_admin' || role === 'admin'
           ? [{ label: 'Credit status', href: '/dashboard/finance/credit-status' }]
           : []),
-        { label: 'Finance Tasks', href: '/dashboard/tasks?view=finance' },
       ],
     },
     {
@@ -126,11 +123,7 @@ function isItemActive(pathname: string, href: string, search: string = '') {
   if (href === '/dashboard') return pathname === '/dashboard';
 
   if (href.startsWith('/dashboard/tasks')) {
-    if (pathname !== '/dashboard/tasks' && !pathname.startsWith('/dashboard/tasks/')) return false;
-    const hrefView = new URL(href, 'http://local').searchParams.get('view');
-    const currentView = new URLSearchParams(search).get('view');
-    if (!hrefView) return !currentView; // My Tasks
-    return currentView === hrefView;
+    return pathname === '/dashboard/tasks' || pathname.startsWith('/dashboard/tasks/');
   }
 
   return pathname === href || pathname.startsWith(`${href}/`);

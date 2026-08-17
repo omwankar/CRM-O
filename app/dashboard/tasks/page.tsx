@@ -8,8 +8,7 @@ import type { TaskView } from '@/types/tasks';
 function TasksPageInner() {
   const params = useSearchParams();
   const view = (params.get('view') as TaskView) || 'mine';
-  const locked = Boolean(params.get('view'));
-  return <TasksBoard defaultView={view} lockView={locked && view !== 'mine'} />;
+  return <TasksBoard defaultView={view} />;
 }
 
 export default function TasksPage() {
