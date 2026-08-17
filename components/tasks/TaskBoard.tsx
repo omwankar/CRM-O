@@ -59,9 +59,9 @@ export function TasksBoard({
   defaultView?: TaskView;
   lockView?: boolean;
 }) {
-  const { user } = useCurrentUser();
+  const { user, profile, role } = useCurrentUser();
   const qc = useQueryClient();
-  const isManager = user?.role === 'manager' || user?.role === 'super_admin';
+  const isManager = role === 'manager' || role === 'super_admin';
 
   const [view, setView] = useState<TaskView>(defaultView);
   const [status, setStatus] = useState<string>('all');
@@ -102,13 +102,22 @@ export function TasksBoard({
 
   const { data: users = [] } = useQuery({
     queryKey: ['users-tasks-board'],
-    queryFn: () => getUsers(),
+    queryFn: () => getUsers({ limit: 200, is_active: 'true' }),
     enabled: open,
   });
 
   const userList = useMemo(() => {
-    return Array.isArray(users) ? users : (users as any)?.data || [];
-  }, [users]);
+    const list = Array.isArray(users) ? users : (users as any)?.data || [];
+    const arr = Array.isArray(list) ? [...list] : [];
+    if (user?.id && !arr.some((u: any) => u.id === user.id)) {
+      arr.unshift({
+        id: user.id,
+        full_name: profile?.full_name || user.email,
+        email: user.email,
+      });
+    }
+    return arr;
+  }, [users, user, profile]);
 
   const createMut = useMutation({
     mutationFn: () =>

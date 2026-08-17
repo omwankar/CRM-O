@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { CheckCircle2, Plus, Trash2, Loader2 } from 'lucide-react';
@@ -56,7 +56,7 @@ export function EntityTaskList({
   entityId: string;
   title?: string;
 }) {
-  const { user } = useCurrentUser();
+  const { user, profile } = useCurrentUser();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [completeTarget, setCompleteTarget] = useState<Task | null>(null);
@@ -78,9 +78,22 @@ export function EntityTaskList({
 
   const { data: users = [] } = useQuery({
     queryKey: ['users-task-picker'],
-    queryFn: () => getUsers(),
+    queryFn: () => getUsers({ limit: 200, is_active: 'true' }),
     enabled: open,
   });
+
+  const userList = useMemo(() => {
+    const list = Array.isArray(users) ? users : (users as any)?.data || [];
+    const arr = Array.isArray(list) ? [...list] : [];
+    if (user?.id && !arr.some((u: any) => u.id === user.id)) {
+      arr.unshift({
+        id: user.id,
+        full_name: profile?.full_name || user.email,
+        email: user.email,
+      });
+    }
+    return arr;
+  }, [users, user, profile]);
 
   const createMut = useMutation({
     mutationFn: () =>
@@ -233,7 +246,7 @@ export function EntityTaskList({
                   <SelectValue placeholder="Select user" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(Array.isArray(users) ? users : (users as any)?.data || []).map((u: any) => (
+                  {userList.map((u: any) => (
                     <SelectItem key={u.id} value={u.id}>
                       {u.full_name || u.email}
                     </SelectItem>
