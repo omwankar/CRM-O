@@ -60,7 +60,7 @@ export function TeamSection({
       ) : (
         <div className="space-y-2">
           {employees.map((employee) => {
-            const config = roleConfig[employee.role];
+            const config = roleConfig[employee.role] || roleConfig.assigned;
             const Icon = config.icon;
 
             return (
