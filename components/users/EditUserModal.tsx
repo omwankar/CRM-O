@@ -63,22 +63,16 @@ export function EditUserModal({ user, onClose }: EditUserModalProps) {
             <label className="text-sm font-medium mb-1 block">Role</label>
             <select
               className="w-full h-10 rounded-md border border-input bg-background px-3"
-              value={role === 'super_admin' ? 'super_admin' : role === 'manager' || role === 'admin' ? 'manager' : 'user'}
+              value={role === 'admin' ? 'manager' : role}
               onChange={(e) => setRole(e.target.value)}
-              disabled={user.role === 'super_admin'}
             >
-              <option value="user">User · read-only, owns their tasks</option>
-              <option value="manager">Manager · full CRM access</option>
-              {/* Super admin can only be granted via the database, never the UI. */}
-              {user.role === 'super_admin' && (
-                <option value="super_admin">Super Admin</option>
-              )}
+              <option value="user">User · own tasks and self-service HR</option>
+              <option value="manager">Manager · full CRM access, no user management</option>
+              <option value="super_admin">Super Admin · everything, including users and punch approvals</option>
             </select>
-            {user.role === 'super_admin' && (
-              <p className="mt-1 text-xs text-muted-foreground">
-                Super admin role can only be changed directly in the database.
-              </p>
-            )}
+            <p className="mt-1 text-xs text-muted-foreground">
+              Super Admin sees Users, Punch Requests, and Company Inbox. They must sign out and sign back in after this change.
+            </p>
           </div>
           <div>
             <label className="text-sm font-medium mb-1 block">Department</label>

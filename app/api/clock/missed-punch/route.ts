@@ -99,18 +99,26 @@ export async function POST(request: NextRequest) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
+  const { data: profile } = await adminClient
+    .from('users')
+    .select('full_name, email')
+    .eq('id', user.id)
+    .maybeSingle();
+  const who = profile?.full_name || profile?.email || 'An employee';
+
   const { data: heads } = await adminClient
     .from('users')
     .select('id')
-    .in('role', ['super_admin', 'admin']);
+    .in('role', ['super_admin', 'admin'])
+    .eq('is_active', true);
 
   if (heads?.length) {
     await adminClient.from('notifications').insert(
       heads.map((h) => ({
         user_id: h.id,
-        type: 'missed_punch',
-        title: 'Missed punch request',
-        message: `A ${type === 'clock_in' ? 'clock-in' : 'clock-out'} missed punch request was submitted.`,
+        type: 'punch_request',
+        title: 'Punch request',
+        message: `${who} submitted a ${type === 'clock_in' ? 'clock-in' : 'clock-out'} punch request.`,
       }))
     );
   }

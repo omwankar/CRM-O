@@ -1,12 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { CalendarCheck, Loader2, Palmtree, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CalendarCheck, Check, Loader2, Palmtree, Users, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { getLeaveBalance, getMyAttendance, getAttendanceGrid } from '@/lib/api/leave';
 import { getMyLeaveRequests } from '@/lib/api/clock';
+import { decideLeave, getHrLeaves } from '@/lib/api/hr/leaves';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { formatUkTime, formatUkMonthYear } from '@/lib/date';
 
@@ -53,6 +56,7 @@ export default function LeaveTrackerPage() {
   const year = Number(month.slice(0, 4)) || now.getFullYear();
   const { role } = useCurrentUser();
   const isManager = role === 'manager' || role === 'super_admin';
+  const qc = useQueryClient();
 
   const {
     data: grid,
@@ -79,8 +83,29 @@ export default function LeaveTrackerPage() {
     queryFn: getMyLeaveRequests,
   });
 
+  const { data: teamPendingData, isLoading: teamPendingLoading } = useQuery({
+    queryKey: ['hr-pending-leaves'],
+    queryFn: () => getHrLeaves({ status: 'pending' }),
+    enabled: isManager,
+  });
+
+  const decideMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'approved' | 'rejected' }) =>
+      decideLeave(id, status),
+    onSuccess: () => {
+      toast.success('Leave updated');
+      qc.invalidateQueries({ queryKey: ['hr-pending-leaves'] });
+      qc.invalidateQueries({ queryKey: ['my-leave-requests'] });
+      qc.invalidateQueries({ queryKey: ['hr-team-attendance'] });
+      qc.invalidateQueries({ queryKey: ['attendance-grid'] });
+      qc.invalidateQueries({ queryKey: ['leave-balance'] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const leaves = leavesData?.data || [];
   const pending = leaves.filter((l) => l.status === 'pending');
+  const teamPending = teamPendingData?.data || [];
   const monthLabel = formatUkMonthYear(`${month}-01`);
 
   return (
@@ -114,10 +139,65 @@ export default function LeaveTrackerPage() {
           </p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs text-muted-foreground">Pending requests</p>
-          <p className="text-2xl font-bold tabular-nums">{leavesLoading ? '—' : pending.length}</p>
+          <p className="text-xs text-muted-foreground">
+            {isManager ? 'Team pending approvals' : 'Pending requests'}
+          </p>
+          <p className="text-2xl font-bold tabular-nums">
+            {isManager
+              ? teamPendingLoading
+                ? '—'
+                : teamPending.length
+              : leavesLoading
+                ? '—'
+                : pending.length}
+          </p>
         </Card>
       </div>
+
+      {isManager ? (
+        <Card className="p-5 border-amber-500/30">
+          <h2 className="text-lg font-semibold mb-3">Leave approvals</h2>
+          {teamPendingLoading ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : teamPending.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No pending leave requests.</p>
+          ) : (
+            <ul className="space-y-2">
+              {teamPending.map((l) => (
+                <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 text-sm border rounded-lg p-3">
+                  <div>
+                    <p className="font-medium">
+                      {l.requester_name || 'Employee'} · {l.start_date} → {l.end_date}
+                    </p>
+                    <p className="text-xs text-muted-foreground capitalize">
+                      {l.leave_type === 'lop' ? 'LOP' : l.leave_type || 'leave'}
+                      {l.reason ? ` · ${l.reason}` : ''}
+                    </p>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={decideMutation.isPending}
+                      onClick={() => decideMutation.mutate({ id: l.id, status: 'approved' })}
+                    >
+                      <Check className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={decideMutation.isPending}
+                      onClick={() => decideMutation.mutate({ id: l.id, status: 'rejected' })}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      ) : null}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="p-5">

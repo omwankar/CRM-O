@@ -53,3 +53,32 @@ export async function completeTask(
 export async function deleteTask(id: string): Promise<void> {
   await apiRequest(`/tasks/${id}`, { method: 'DELETE' });
 }
+
+export async function getTaskAttachments(taskId: string): Promise<{ data: TaskAttachment[] }> {
+  return apiRequest(`/tasks/${taskId}/attachments`);
+}
+
+export async function addTaskAttachment(
+  taskId: string,
+  input: { file_name: string; file_type?: string; file_url: string; file_size?: number },
+) {
+  return apiRequest(`/tasks/${taskId}/attachments`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteTaskAttachment(taskId: string, attachmentId: string) {
+  await apiRequest(`/tasks/${taskId}/attachments/${attachmentId}`, { method: 'DELETE' });
+}
+
+export interface TaskAttachment {
+  id: string;
+  task_id: string;
+  file_name: string;
+  file_type: string | null;
+  file_url: string;
+  file_size: number;
+  uploaded_by: string | null;
+  created_at: string;
+}

@@ -138,9 +138,6 @@ export default function ClockPage() {
 
   const sessions = sessionsData?.sessions || [];
   const openSession = sessionsData?.openSession || null;
-  const staleOpenSession =
-    openSession && formatUkIsoDate(openSession.clock_in) < formatUkIsoDate(new Date()) ? openSession : null;
-  const waitingApproval = Boolean(staleOpenSession || sessionsData?.pendingForgotClockOut);
 
   const totalHours = sessions.reduce((acc: number, s: any) => {
     if (s.clock_out && s.clock_in) {
@@ -233,13 +230,6 @@ export default function ClockPage() {
           {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
         </div>
 
-        {waitingApproval ? (
-          <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
-            You were auto clocked out at end of day. A punch request was sent to super admin (including your name).
-            You cannot clock in until a super admin approves it on Punch Requests.
-          </div>
-        ) : null}
-
         <div className="mb-4 rounded-lg border border-border/60 bg-muted/20 p-3 max-w-xl">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-medium">Today Action</p>
@@ -247,7 +237,7 @@ export default function ClockPage() {
               <Button
                 onClick={() => clockInMutation.mutate(undefined)}
                 className="h-8 px-4"
-                disabled={clockInMutation.isPending || waitingApproval}
+                disabled={clockInMutation.isPending}
               >
                 {clockInMutation.isPending ? (
                   <span className="inline-flex items-center gap-2">
@@ -257,10 +247,6 @@ export default function ClockPage() {
                 ) : (
                   'Clock In'
                 )}
-              </Button>
-            ) : waitingApproval ? (
-              <Button className="h-8 px-4" disabled>
-                Waiting for approval
               </Button>
             ) : (
               <Button
@@ -423,7 +409,7 @@ export default function ClockPage() {
           Max 5 requests per month.
         </p>
         <p className="text-xs text-muted-foreground mb-4">
-          Open sessions are auto clocked out at 18:00 UK time unless you clock out earlier.
+          Open sessions are auto clocked out at 18:00 UK time. You can clock in the next day without waiting for approval.
         </p>
 
         <form onSubmit={submitMissedPunch} className="grid grid-cols-1 gap-4 md:grid-cols-3">

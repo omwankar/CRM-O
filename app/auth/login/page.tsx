@@ -38,6 +38,12 @@ const handleLogin = async (e: React.FormEvent) => {
       throw new Error(payload.error || 'Failed to sign in');
     }
 
+    try {
+      sessionStorage.removeItem('crm.currentProfile');
+    } catch {
+      /* ignore */
+    }
+
     router.replace('/dashboard');
 
   } catch (err: any) {

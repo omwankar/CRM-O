@@ -35,7 +35,7 @@ export function InviteUserModal({ onClose }: InviteUserModalProps) {
   const queryClient = useQueryClient();
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState<'manager' | 'user'>('user');
+  const [role, setRole] = useState<'super_admin' | 'manager' | 'user'>('user');
   const [department, setDepartment] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -279,11 +279,12 @@ export function InviteUserModal({ onClose }: InviteUserModalProps) {
             <select
               className="w-full h-10 rounded-md border border-input bg-background px-3"
               value={role}
-              onChange={(e) => setRole(e.target.value as 'manager' | 'user')}
+              onChange={(e) => setRole(e.target.value as 'super_admin' | 'manager' | 'user')}
               required
             >
-              <option value="user">User · read-only, can update tasks allocated to them</option>
-              <option value="manager">Manager · full read/write across the CRM</option>
+              <option value="user">User · own tasks and self-service HR</option>
+              <option value="manager">Manager · full CRM access, no user management</option>
+              <option value="super_admin">Super Admin · everything, including users and punch approvals</option>
             </select>
           </div>
           <div>

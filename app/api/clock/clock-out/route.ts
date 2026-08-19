@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import {
-  FORGOT_CLOCK_OUT_LOCK_MESSAGE,
-  ensureForgotClockOutPunchRequest,
-  isStaleOpenSession,
-} from '@/lib/clockForgotOut';
+import { closeStaleOpenSession, isStaleOpenSession } from '@/lib/clockForgotOut';
 
 export async function POST(_request: NextRequest) {
   const cookieStore = await cookies();
@@ -52,15 +48,17 @@ export async function POST(_request: NextRequest) {
 
   if (isStaleOpenSession(openSession.clock_in)) {
     try {
-      await ensureForgotClockOutPunchRequest(supabase, {
+      await closeStaleOpenSession(supabase, {
         id: openSession.id,
-        user_id: user.id,
         clock_in: openSession.clock_in,
       });
     } catch {
-      /* request may already exist */
+      /* already closed */
     }
-    return NextResponse.json({ error: FORGOT_CLOCK_OUT_LOCK_MESSAGE }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Yesterday’s session was closed automatically. Clock in again for today.' },
+      { status: 400 },
+    );
   }
 
   const nowIso = new Date().toISOString();

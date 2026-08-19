@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import {
-  FORGOT_CLOCK_OUT_LOCK_MESSAGE,
-  ensureForgotClockOutPunchRequest,
-  hasPendingAutomaticClockOutRequest,
-  isStaleOpenSession,
-} from '@/lib/clockForgotOut';
+import { closeStaleOpenSession, isStaleOpenSession } from '@/lib/clockForgotOut';
 
 export async function POST(_request: NextRequest) {
   const cookieStore = await cookies();
@@ -45,25 +40,19 @@ export async function POST(_request: NextRequest) {
   if (openSession) {
     if (isStaleOpenSession(openSession.clock_in)) {
       try {
-        await ensureForgotClockOutPunchRequest(supabase, {
+        await closeStaleOpenSession(supabase, {
           id: openSession.id,
-          user_id: user.id,
           clock_in: openSession.clock_in,
         });
-      } catch {
-        /* request may already exist */
+      } catch (e) {
+        return NextResponse.json(
+          { error: e instanceof Error ? e.message : 'Could not close yesterday’s session' },
+          { status: 400 },
+        );
       }
-      return NextResponse.json({ error: FORGOT_CLOCK_OUT_LOCK_MESSAGE }, { status: 400 });
+    } else {
+      return NextResponse.json({ error: 'You are already clocked in' }, { status: 400 });
     }
-    return NextResponse.json({ error: 'You are already clocked in' }, { status: 400 });
-  }
-
-  try {
-    if (await hasPendingAutomaticClockOutRequest(supabase, user.id)) {
-      return NextResponse.json({ error: FORGOT_CLOCK_OUT_LOCK_MESSAGE }, { status: 400 });
-    }
-  } catch {
-    /* ignore lookup errors */
   }
 
   const nowIso = new Date().toISOString();

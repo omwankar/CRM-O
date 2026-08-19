@@ -103,24 +103,16 @@ export async function GET(request: NextRequest) {
     .limit(1);
 
   const openSession = openSessions?.[0] || null;
-  let pendingForgotClockOut = false;
 
-  try {
-    const { hasPendingAutomaticClockOutRequest, ensureForgotClockOutPunchRequest } = await import(
-      '@/lib/clockForgotOut'
-    );
-    pendingForgotClockOut = await hasPendingAutomaticClockOutRequest(supabase, user.id);
-    if (openSession && ukDateKey(openSession.clock_in) < ukDateKey(new Date().toISOString())) {
-      pendingForgotClockOut = true;
-      await ensureForgotClockOutPunchRequest(supabase, {
+  if (openSession && ukDateKey(openSession.clock_in) < ukDateKey(new Date().toISOString())) {
+    try {
+      const { closeStaleOpenSession } = await import('@/lib/clockForgotOut');
+      await closeStaleOpenSession(supabase, {
         id: openSession.id,
-        user_id: user.id,
         clock_in: openSession.clock_in,
       });
-    }
-  } catch {
-    if (openSession && ukDateKey(openSession.clock_in) < ukDateKey(new Date().toISOString())) {
-      pendingForgotClockOut = true;
+    } catch {
+      /* ignore */
     }
   }
 
@@ -128,8 +120,10 @@ export async function GET(request: NextRequest) {
     {
       ok: true,
       month: monthParam,
-      openSession,
-      pendingForgotClockOut,
+      openSession: openSession && ukDateKey(openSession.clock_in) === ukDateKey(new Date().toISOString())
+        ? openSession
+        : null,
+      pendingForgotClockOut: false,
       sessions,
       summary: {
         totalMinutes,

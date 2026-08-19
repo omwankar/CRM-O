@@ -118,6 +118,13 @@ export async function signInWithEmail(email: string, password: string) {
 
 // 👉 Sign Out
 export async function signOut() {
+  if (typeof window !== 'undefined') {
+    try {
+      sessionStorage.removeItem('crm.currentProfile');
+    } catch {
+      /* ignore */
+    }
+  }
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
 }

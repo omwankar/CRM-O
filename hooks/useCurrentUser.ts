@@ -8,6 +8,15 @@ export type AppRole = 'super_admin' | 'manager' | 'user';
 
 const PROFILE_CACHE_KEY = 'crm.currentProfile';
 
+export function clearCurrentProfileCache() {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.removeItem(PROFILE_CACHE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 function readCachedProfile() {
   if (typeof window === 'undefined') return undefined;
   try {
@@ -54,8 +63,9 @@ export function useCurrentUser() {
       return profile;
     },
     enabled: !!userData,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 15 * 1000,
     gcTime: 30 * 60 * 1000,
+    refetchOnMount: 'always',
     placeholderData: () => readCachedProfile(),
   });
 

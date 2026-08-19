@@ -48,6 +48,7 @@ import {
   type TaskView,
 } from '@/types/tasks';
 import { EntityRecordPicker } from '@/components/tasks/EntityRecordPicker';
+import { TaskFilesComments } from '@/components/tasks/TaskFilesComments';
 
 export { EntityTaskList } from '@/components/tasks/EntityTaskList';
 
@@ -454,7 +455,7 @@ export function TasksBoard({
           }
         }}
       >
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{dialog === 'edit' ? 'View / edit task' : 'New task'}</DialogTitle>
           </DialogHeader>
@@ -594,6 +595,7 @@ export function TasksBoard({
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               />
             </div>
+            {dialog === 'edit' && editingTask ? <TaskFilesComments taskId={editingTask.id} /> : null}
           </div>
           <DialogFooter>
             <Button

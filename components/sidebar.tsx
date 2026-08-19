@@ -170,6 +170,11 @@ export function Sidebar() {
       const { signOut } = await import('@/lib/auth');
       await signOut();
     } finally {
+      try {
+        sessionStorage.removeItem('crm.currentProfile');
+      } catch {
+        /* ignore */
+      }
       router.replace('/auth/login');
       router.refresh();
     }
