@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { ClipboardList, Loader2, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatUkMonthYear, ukMonthKey } from '@/lib/date';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 const leaveTypeLabel: Record<string, string> = {
   paid: 'Paid',
@@ -21,6 +22,7 @@ export default function HrAttendancePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [month, setMonth] = useState(ukMonthKey());
+  const { isSuperAdmin } = useCurrentUser();
 
   const { data, isLoading } = useQuery({
     queryKey: ['hr-team-attendance', month],
@@ -56,7 +58,7 @@ export default function HrAttendancePage() {
         <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-44" />
       </div>
 
-      {pending.length > 0 && (
+      {isSuperAdmin && pending.length > 0 && (
         <Card className="p-4 border-amber-200 bg-amber-50/50">
           <h2 className="font-semibold mb-3">Pending leave requests ({pending.length})</h2>
           <ul className="space-y-2">

@@ -53,7 +53,7 @@ function formatTime(iso: string | null) {
 export default function LeaveTrackerPage() {
   const [month, setMonth] = useState(ukMonthKey());
   const year = Number(month.slice(0, 4)) || new Date().getFullYear();
-  const { role } = useCurrentUser();
+  const { role, isSuperAdmin } = useCurrentUser();
   const isManager = role === 'manager' || role === 'super_admin';
   const qc = useQueryClient();
 
@@ -85,7 +85,7 @@ export default function LeaveTrackerPage() {
   const { data: teamPendingData, isLoading: teamPendingLoading } = useQuery({
     queryKey: ['hr-pending-leaves'],
     queryFn: () => getHrLeaves({ status: 'pending' }),
-    enabled: isManager,
+    enabled: isSuperAdmin,
   });
 
   const decideMutation = useMutation({
@@ -139,10 +139,10 @@ export default function LeaveTrackerPage() {
         </Card>
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">
-            {isManager ? 'Team pending approvals' : 'Pending requests'}
+            {isSuperAdmin ? 'Team pending approvals' : 'Pending requests'}
           </p>
           <p className="text-2xl font-bold tabular-nums">
-            {isManager
+            {isSuperAdmin
               ? teamPendingLoading
                 ? '—'
                 : teamPending.length
@@ -153,7 +153,7 @@ export default function LeaveTrackerPage() {
         </Card>
       </div>
 
-      {isManager ? (
+      {isSuperAdmin ? (
         <Card className="p-5 border-amber-500/30">
           <h2 className="text-lg font-semibold mb-3">Leave approvals</h2>
           {teamPendingLoading ? (

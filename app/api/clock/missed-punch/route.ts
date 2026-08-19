@@ -93,8 +93,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  // Notify heads (super_admin/admin) about the new request.
-  // Use service role so we can insert notifications for multiple users reliably.
+  // Notify Super Admin about the new request.
   const adminClient = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -109,7 +108,7 @@ export async function POST(request: NextRequest) {
   const { data: heads } = await adminClient
     .from('users')
     .select('id')
-    .in('role', ['super_admin', 'admin'])
+    .eq('role', 'super_admin')
     .eq('is_active', true);
 
   if (heads?.length) {

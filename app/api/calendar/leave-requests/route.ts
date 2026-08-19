@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  // Notify both Admin and Super Admin.
+  // Notify Super Admin.
   const adminClient = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -142,7 +142,8 @@ export async function POST(request: NextRequest) {
   const { data: heads } = await adminClient
     .from('users')
     .select('id')
-    .in('role', ['super_admin', 'manager', 'admin']);
+    .eq('role', 'super_admin')
+    .eq('is_active', true);
 
   if (heads?.length) {
     await adminClient.from('notifications').insert(
@@ -187,8 +188,8 @@ export async function PATCH(request: NextRequest) {
     .eq('id', user.id)
     .maybeSingle();
 
-  if (!['super_admin', 'manager', 'admin'].includes(roleRow?.role || '')) {
-    return NextResponse.json({ error: 'Only admin/super_admin can review leaves' }, { status: 403 });
+  if (roleRow?.role !== 'super_admin') {
+    return NextResponse.json({ error: 'Only Super Admin can review leaves' }, { status: 403 });
   }
 
   const body = (await request.json().catch(() => ({}))) as LeaveDecisionBody;

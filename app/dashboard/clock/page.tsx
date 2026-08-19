@@ -405,7 +405,7 @@ export default function ClockPage() {
       <Card className="p-5">
         <h2 className="text-lg font-semibold mb-3">Missed Punch Request</h2>
         <p className="text-sm text-muted-foreground mb-4">
-          If your clock-in/out time exceeded the allowed window, submit a missed punch request to your head.
+          If your clock-in/out time exceeded the allowed window, submit a missed punch request to Super Admin.
           Max 5 requests per month.
         </p>
         <p className="text-xs text-muted-foreground mb-4">
