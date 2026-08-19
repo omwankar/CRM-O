@@ -17,8 +17,11 @@ function friendlyUploadError(raw: string): string {
   if (m.includes('row-level security') || m.includes('permission') || m.includes('forbidden')) {
     return 'You do not have permission to upload documents. Ask a manager or try again.';
   }
-  if (m.includes('storage') || m.includes('bucket') || m.includes('payload too large')) {
-    return 'Could not upload the file. Check the file size and try again.';
+  if (m.includes('deleted_at') || m.includes('column') && m.includes('does not exist')) {
+    return 'Could not load documents. Please try again.';
+  }
+  if (m.includes('could not save')) {
+    return msg;
   }
   if (m.includes('network') || m.includes('fetch') || m.includes('cannot reach')) {
     return 'Could not reach the server. Check your connection and try again.';
