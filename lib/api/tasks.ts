@@ -60,7 +60,7 @@ export async function getTaskAttachments(taskId: string): Promise<{ data: TaskAt
 
 export async function addTaskAttachment(
   taskId: string,
-  input: { file_name: string; file_type?: string; file_url: string; file_size?: number },
+  input: { file_name: string; file_type?: string; file_url: string; file_size?: number; folder?: string | null },
 ) {
   return apiRequest(`/tasks/${taskId}/attachments`, {
     method: 'POST',
@@ -79,6 +79,7 @@ export interface TaskAttachment {
   file_type: string | null;
   file_url: string;
   file_size: number;
+  folder?: string | null;
   uploaded_by: string | null;
   created_at: string;
 }

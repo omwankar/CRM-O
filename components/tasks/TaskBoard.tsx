@@ -620,7 +620,7 @@ export function TasksBoard({
       </Dialog>
 
       <Dialog open={!!completeTarget} onOpenChange={(o) => !o && setCompleteTarget(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Complete task</DialogTitle>
           </DialogHeader>
@@ -635,8 +635,13 @@ export function TasksBoard({
               <span>Log this as an activity on the linked record?</span>
             </label>
           ) : (
-            <p className="text-sm text-muted-foreground">Mark completed.</p>
+            <p className="text-sm text-muted-foreground">
+              Upload invoice folders if needed, then mark completed.
+            </p>
           )}
+          {completeTarget?.id ? (
+            <TaskFilesComments taskId={completeTarget.id} showComments={false} />
+          ) : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => setCompleteTarget(null)}>
               Cancel

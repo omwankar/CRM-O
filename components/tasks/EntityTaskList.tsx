@@ -28,6 +28,7 @@ import { completeTask, createTask, deleteTask, getTasks } from '@/lib/api/tasks'
 import { getUsers } from '@/lib/api/users';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { formatUkDate } from '@/lib/date';
+import { TaskFilesComments } from '@/components/tasks/TaskFilesComments';
 import {
   TASK_ENTITY_LABELS,
   TASK_PRIORITY_LABELS,
@@ -307,7 +308,7 @@ export function EntityTaskList({
       </Dialog>
 
       <Dialog open={!!completeTarget} onOpenChange={(o) => !o && setCompleteTarget(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Complete task</DialogTitle>
           </DialogHeader>
@@ -325,8 +326,13 @@ export function EntityTaskList({
               </span>
             </label>
           ) : (
-            <p className="text-sm text-muted-foreground">Mark this standalone task as completed.</p>
+            <p className="text-sm text-muted-foreground">
+              Upload invoice folders if needed, then mark completed.
+            </p>
           )}
+          {completeTarget?.id ? (
+            <TaskFilesComments taskId={completeTarget.id} showComments={false} />
+          ) : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => setCompleteTarget(null)}>
               Cancel

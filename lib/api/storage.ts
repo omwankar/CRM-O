@@ -65,21 +65,61 @@ export async function uploadCrmFile(folder: string, file: File): Promise<Uploade
   };
 }
 
-export function pickFiles(options?: { multiple?: boolean; accept?: string }): Promise<File[]> {
+const JUNK_FILE = /^(?:\.DS_Store|Thumbs\.db|desktop\.ini)$/i;
+
+function isJunkFile(file: File) {
+  return !file.name || JUNK_FILE.test(file.name);
+}
+
+function relativePath(file: File) {
+  return String((file as File & { webkitRelativePath?: string }).webkitRelativePath || '')
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '');
+}
+
+/** Top-level folder from a directory pick, e.g. "Jan invoices/a.pdf" → "Jan invoices". */
+export function folderNameFromFile(file: File): string | null {
+  const parts = relativePath(file).split('/').filter(Boolean);
+  return parts.length >= 2 ? parts[0] : null;
+}
+
+/** Path inside the top folder, e.g. "Jan invoices/vendor/a.pdf" → "vendor/a.pdf". */
+export function fileNameFromFolderPick(file: File): string {
+  const parts = relativePath(file).split('/').filter(Boolean);
+  if (parts.length >= 2) return parts.slice(1).join('/');
+  return file.name;
+}
+
+function hideAndPick(input: HTMLInputElement): Promise<File[]> {
+  input.style.position = 'fixed';
+  input.style.left = '-9999px';
   return new Promise((resolve) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.multiple = Boolean(options?.multiple);
-    if (options?.accept) input.accept = options.accept;
-    input.style.position = 'fixed';
-    input.style.left = '-9999px';
     const done = (files: File[]) => {
       input.remove();
-      resolve(files);
+      resolve(files.filter((f) => !isJunkFile(f)));
     };
     input.addEventListener('change', () => done(Array.from(input.files || [])));
     input.addEventListener('cancel', () => done([]));
     document.body.appendChild(input);
     input.click();
   });
+}
+
+export function pickFiles(options?: { multiple?: boolean; accept?: string }): Promise<File[]> {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.multiple = Boolean(options?.multiple);
+  if (options?.accept) input.accept = options.accept;
+  return hideAndPick(input);
+}
+
+/** Native folder picker. Files include webkitRelativePath so folder names can be kept. */
+export function pickFolder(): Promise<File[]> {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.multiple = true;
+  input.setAttribute('webkitdirectory', '');
+  input.setAttribute('directory', '');
+  (input as HTMLInputElement & { webkitdirectory: boolean }).webkitdirectory = true;
+  return hideAndPick(input);
 }
