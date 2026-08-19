@@ -21,7 +21,7 @@ function friendlyUploadError(raw: string): string {
     return 'Could not load documents. Please try again.';
   }
   if (m.includes('could not save')) {
-    return msg;
+    return 'Could not save the document. Please try again.';
   }
   if (m.includes('network') || m.includes('fetch') || m.includes('cannot reach')) {
     return 'Could not reach the server. Check your connection and try again.';
