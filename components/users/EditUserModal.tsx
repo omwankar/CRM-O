@@ -65,7 +65,7 @@ export function EditUserModal({ user, onClose }: EditUserModalProps) {
             <select
               className="w-full h-10 rounded-md border border-input bg-background px-3"
               value={role}
-              onChange={(e) => setRole(e.target.value)}
+              onChange={(e) => setRole(normalizeAppRole(e.target.value))}
             >
               <option value="user">User · own tasks and self-service HR</option>
               <option value="manager">Manager · full CRM access, no user management</option>
