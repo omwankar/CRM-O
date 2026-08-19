@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { supabase } from '@/lib/auth';
+import { getInsurancePolicy, updateInsurance } from '@/lib/api/insurance';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -36,18 +36,18 @@ export default function EditInsurancePage() {
 
   const fetchInsurance = async () => {
     try {
-      const { data, error: fetchError } = await supabase
-        .from('insurance')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (fetchError) throw fetchError;
+      const data = await getInsurancePolicy(id);
       if (data) {
         setFormData({
-          ...data,
-          coverage_amount: data.coverage_amount.toString(),
-          premium: data.premium.toString(),
+          policy_number: data.policy_number || '',
+          provider: data.provider || data.provider_name || '',
+          insurance_type: data.insurance_type || data.policy_type || '',
+          coverage_amount: data.coverage_amount != null ? String(data.coverage_amount) : '',
+          premium: data.premium != null ? String(data.premium) : data.premium_amount != null ? String(data.premium_amount) : '',
+          start_date: data.start_date ? String(data.start_date).slice(0, 10) : '',
+          end_date: data.end_date ? String(data.end_date).slice(0, 10) : data.expiry_date ? String(data.expiry_date).slice(0, 10) : '',
+          agent_name: data.agent_name || '',
+          agent_phone: data.agent_phone || '',
         });
       }
     } catch (err: any) {
@@ -68,16 +68,17 @@ export default function EditInsurancePage() {
     setSaving(true);
 
     try {
-      const { error: updateError } = await supabase
-        .from('insurance')
-        .update({
-          ...formData,
-          coverage_amount: parseFloat(formData.coverage_amount),
-          premium: parseFloat(formData.premium),
-        })
-        .eq('id', id);
-
-      if (updateError) throw updateError;
+      await updateInsurance(id, {
+        policy_number: formData.policy_number,
+        provider: formData.provider,
+        insurance_type: formData.insurance_type,
+        coverage_amount: formData.coverage_amount ? parseFloat(formData.coverage_amount) : undefined,
+        premium: formData.premium ? parseFloat(formData.premium) : undefined,
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        agent_name: formData.agent_name || undefined,
+        agent_phone: formData.agent_phone || undefined,
+      });
       router.push('/dashboard/insurance');
     } catch (err: any) {
       setError(err.message || 'Failed to update insurance');

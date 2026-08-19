@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/auth';
+import { resolveStorageUrl } from '@/lib/api/storage';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -34,9 +34,8 @@ function formatSize(bytes?: number | null) {
   return `${value.toFixed(value < 10 && unit > 0 ? 1 : 0)} ${units[unit]}`;
 }
 
-function downloadAttachment(path: string) {
-  const { data } = supabase.storage.from('documents').getPublicUrl(path);
-  window.open(data.publicUrl, '_blank');
+async function downloadAttachment(path: string) {
+  window.open(await resolveStorageUrl(path), '_blank');
 }
 
 export function KbAttachments({

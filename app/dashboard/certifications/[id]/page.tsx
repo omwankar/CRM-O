@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { supabase } from '@/lib/auth';
+import { getCertification, updateCertification } from '@/lib/api/certifications';
+import { uploadCrmFile } from '@/lib/api/storage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -36,22 +37,15 @@ export default function EditCertificationPage() {
 
   const fetchCertification = async () => {
     try {
-      const { data, error: fetchError } = await supabase
-        .from('certifications')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (fetchError) throw fetchError;
-
+      const data = await getCertification(id);
       if (data) {
         setFormData({
           name: data.certification_name || '',
           issuer: data.issuing_authority || '',
           issue_date: data.issue_date || '',
           expiry_date: data.expiry_date || '',
-          credential_id: data.credential_id || '',
-          certificate_file: data.certificate_file || '',
+          credential_id: data.certificate_number || data.credential_id || '',
+          certificate_file: data.document_url || data.certificate_file || '',
         });
       }
     } catch (err: any) {
@@ -74,37 +68,19 @@ export default function EditCertificationPage() {
     try {
       let fileUrl = formData.certificate_file;
 
-      // ✅ If new file uploaded
       if (file) {
-        const fileName = `${Date.now()}-${file.name}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('certificates')
-          .upload(fileName, file);
-
-        if (uploadError) throw uploadError;
-
-        const { data } = supabase.storage
-          .from('certificates')
-          .getPublicUrl(fileName);
-
-        fileUrl = data.publicUrl;
+        const uploaded = await uploadCrmFile('certifications', file);
+        fileUrl = uploaded.url || uploaded.path;
       }
 
-      // ✅ Update DB
-      const { error: updateError } = await supabase
-        .from('certifications')
-        .update({
-          certification_name: formData.name,
-          issuing_authority: formData.issuer,
-          issue_date: formData.issue_date,
-          expiry_date: formData.expiry_date,
-          credential_id: formData.credential_id,
-          certificate_file: fileUrl,
-        })
-        .eq('id', id);
-
-      if (updateError) throw updateError;
+      await updateCertification(id, {
+        certification_name: formData.name,
+        issuing_authority: formData.issuer,
+        issue_date: formData.issue_date,
+        expiry_date: formData.expiry_date,
+        certificate_number: formData.credential_id || undefined,
+        document_url: fileUrl || undefined,
+      });
 
       router.push('/dashboard/certifications');
     } catch (err: any) {

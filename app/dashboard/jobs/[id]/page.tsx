@@ -41,7 +41,7 @@ import { getUsers } from '@/lib/api/users';
 import { getVendors } from '@/lib/api/vendors';
 import { apiRequest } from '@/lib/api/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { supabase } from '@/lib/auth';
+import { resolveStorageUrl, uploadCrmFile } from '@/lib/api/storage';
 import {
   JOB_MODE_LABELS,
   type JobModeType,
@@ -161,36 +161,20 @@ export default function JobDetailPage() {
 
   const uploadAttachment = async (file: File) => {
     if (!id || !user?.id) return;
-    const path = `jobs/${id}/${Date.now()}-${file.name}`;
-    const { error: upErr } = await supabase.storage.from('attachments').upload(path, file);
-    if (upErr) {
-      // fallback: try documents bucket naming used elsewhere, or store metadata-only URL
-      const { data: pub } = supabase.storage.from('documents').getPublicUrl(path);
-      try {
-        await supabase.storage.from('documents').upload(path, file);
-        await addJobAttachment(id, {
-          file_name: file.name,
-          file_type: file.type,
-          file_url: pub.publicUrl,
-          file_size: file.size,
-          uploaded_by: user.id,
-        });
-      } catch (e: any) {
-        toast.error(e?.message || 'Upload failed');
-        return;
-      }
-    } else {
-      const { data: pub } = supabase.storage.from('attachments').getPublicUrl(path);
+    try {
+      const uploaded = await uploadCrmFile(`jobs/${id}`, file);
       await addJobAttachment(id, {
         file_name: file.name,
         file_type: file.type,
-        file_url: pub.publicUrl,
+        file_url: uploaded.url || uploaded.path,
         file_size: file.size,
         uploaded_by: user.id,
       });
+      toast.success('Attachment added');
+      refresh();
+    } catch (e: any) {
+      toast.error(e?.message || 'Upload failed');
     }
-    toast.success('Attachment added');
-    refresh();
   };
 
   if (isLoading || !job) {
@@ -649,7 +633,16 @@ export default function JobDetailPage() {
           <ul className="space-y-2 text-sm">
             {(job.attachments || []).map((a) => (
               <li key={a.id} className="flex items-center justify-between gap-2">
-                <a href={a.file_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
+                <a
+                  href={a.file_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-600 hover:underline"
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    window.open(await resolveStorageUrl(a.file_url), '_blank');
+                  }}
+                >
                   {a.file_name}
                 </a>
                 {canWrite && (

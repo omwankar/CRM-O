@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { addTaskAttachment, deleteTaskAttachment, getTaskAttachments } from '@/lib/api/tasks';
 import { createComment, getComments } from '@/lib/api/comments';
-import { supabase } from '@/lib/auth';
+import { pickFiles, resolveStorageUrl, uploadCrmFile } from '@/lib/api/storage';
 import { formatUkDateTime } from '@/lib/date';
 
 export function TaskFilesComments({ taskId }: { taskId: string }) {
@@ -47,28 +47,16 @@ export function TaskFilesComments({ taskId }: { taskId: string }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  async function fileUrl(path: string) {
-    const { data } = supabase.storage.from('documents').getPublicUrl(path);
-    return data.publicUrl;
-  }
-
-  async function onFiles(list: FileList | null) {
-    if (!list?.length) return;
+  async function onFiles(list: File[]) {
+    if (!list.length) return;
     setUploading(true);
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error('Sign in again');
-      for (const file of Array.from(list)) {
-        const ext = file.name.split('.').pop() || 'bin';
-        const path = `tasks/${taskId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error } = await supabase.storage.from('documents').upload(path, file, { upsert: false });
-        if (error) throw error;
+      for (const file of list) {
+        const uploaded = await uploadCrmFile(`tasks/${taskId}`, file);
         await addTaskAttachment(taskId, {
           file_name: file.name,
           file_type: file.type || 'application/octet-stream',
-          file_url: path,
+          file_url: uploaded.path,
           file_size: file.size,
         });
       }
@@ -85,20 +73,20 @@ export function TaskFilesComments({ taskId }: { taskId: string }) {
     <div className="grid gap-4 border-t pt-3">
       <div className="grid gap-1.5">
         <p className="text-sm font-medium">Documents</p>
-        <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-primary">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="w-fit px-0 text-primary"
+          disabled={uploading}
+          onClick={async () => {
+            const files = await pickFiles({ multiple: true });
+            await onFiles(files);
+          }}
+        >
           <Paperclip className="h-4 w-4" />
           {uploading ? 'Uploading…' : 'Upload file'}
-          <input
-            type="file"
-            className="hidden"
-            multiple
-            disabled={uploading}
-            onChange={(e) => {
-              void onFiles(e.target.files);
-              e.target.value = '';
-            }}
-          />
-        </label>
+        </Button>
         {files.length === 0 ? (
           <p className="text-xs text-muted-foreground">No files yet.</p>
         ) : (
@@ -108,7 +96,7 @@ export function TaskFilesComments({ taskId }: { taskId: string }) {
                 <button
                   type="button"
                   className="truncate text-left text-primary underline-offset-2 hover:underline"
-                  onClick={async () => window.open(await fileUrl(f.file_url), '_blank')}
+                  onClick={async () => window.open(await resolveStorageUrl(f.file_url), '_blank')}
                 >
                   {f.file_name}
                 </button>

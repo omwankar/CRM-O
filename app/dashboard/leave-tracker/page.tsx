@@ -11,7 +11,7 @@ import { getLeaveBalance, getMyAttendance, getAttendanceGrid } from '@/lib/api/l
 import { getMyLeaveRequests } from '@/lib/api/clock';
 import { decideLeave, getHrLeaves } from '@/lib/api/hr/leaves';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { formatUkTime, formatUkMonthYear } from '@/lib/date';
+import { formatUkTime, formatUkMonthYear, ukMonthKey } from '@/lib/date';
 
 function statusBadge(status: string) {
   if (status === 'approved') return 'bg-emerald-100 text-emerald-800';
@@ -51,9 +51,8 @@ function formatTime(iso: string | null) {
 }
 
 export default function LeaveTrackerPage() {
-  const now = new Date();
-  const [month, setMonth] = useState(now.toISOString().slice(0, 7));
-  const year = Number(month.slice(0, 4)) || now.getFullYear();
+  const [month, setMonth] = useState(ukMonthKey());
+  const year = Number(month.slice(0, 4)) || new Date().getFullYear();
   const { role } = useCurrentUser();
   const isManager = role === 'manager' || role === 'super_admin';
   const qc = useQueryClient();
@@ -304,7 +303,7 @@ export default function LeaveTrackerPage() {
           <p className="p-8 text-center text-rose-600 text-sm">
             Couldn&apos;t load the grid: {gridError instanceof Error ? gridError.message : 'Unknown error'}
           </p>
-        ) : !grid?.employees?.length ? (
+        ) : !grid?.employees?.length || !grid?.days?.length ? (
           <p className="p-8 text-center text-muted-foreground">No employees</p>
         ) : (
           <div className="overflow-x-auto">

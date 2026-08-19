@@ -39,8 +39,8 @@ export default function NewInsurancePage() {
     try {
       await createInsurance({
         ...formData,
-        coverage_amount: parseFloat(formData.coverage_amount),
-        premium: parseFloat(formData.premium),
+        coverage_amount: formData.coverage_amount ? parseFloat(formData.coverage_amount) : undefined,
+        premium: formData.premium ? parseFloat(formData.premium) : undefined,
       });
       router.push('/dashboard/insurance');
     } catch (err: any) {

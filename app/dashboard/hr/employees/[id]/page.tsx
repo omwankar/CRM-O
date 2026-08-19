@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { CanWrite, CanManageUsers } from '@/components/auth/Can';
 import { ArrowLeft, CalendarDays, Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
+import { ukMonthKey } from '@/lib/date';
 
 function formatSalary(amount: number | null | undefined) {
   if (amount == null) return '—';
@@ -64,7 +65,7 @@ export default function HrEmployeeDetailPage() {
     enabled: !!id,
   });
 
-  const month = new Date().toISOString().slice(0, 7);
+  const month = ukMonthKey();
   const { data: teamAttendance } = useQuery({
     queryKey: ['hr-team-attendance', month],
     queryFn: () => getHrTeamAttendance(month),

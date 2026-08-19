@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart3, Download, Loader2 } from 'lucide-react';
+import { ukMonthKey } from '@/lib/date';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import {
   getQuotationReport,
@@ -41,7 +42,7 @@ function downloadCsv(filename: string, rows: Array<Record<string, string | numbe
 }
 
 function currentMonth() {
-  return new Date().toISOString().slice(0, 7);
+  return ukMonthKey();
 }
 
 function yearStart() {

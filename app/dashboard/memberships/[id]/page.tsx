@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { supabase } from '@/lib/auth';
+import { getMembership, updateMembership } from '@/lib/api/memberships';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -34,33 +34,15 @@ export default function EditMembershipPage() {
 
   const fetchMembership = async () => {
     try {
-      const { data, error: fetchError } = await supabase
-        .from('memberships')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (fetchError) throw fetchError;
-
+      const data = await getMembership(id);
       if (data) {
         setFormData({
           organization_name: data.organization_name || '',
-          membership_type: data.membership_type || '',
-          membership_number: data.membership_number || '',
-
-          // ✅ FIX DATE FORMAT
-          join_date: data.join_date
-            ? data.join_date.split('T')[0]
-            : '',
-
-          renewal_date: data.renewal_date
-            ? data.renewal_date.split('T')[0]
-            : '',
-
-          // ✅ FIX NUMBER → STRING
-          membership_fee: data.membership_fee
-            ? String(data.membership_fee)
-            : '',
+          membership_type: data.membership_type || data.membership_level || '',
+          membership_number: data.membership_number || data.membership_id || data.member_id || '',
+          join_date: data.join_date ? String(data.join_date).split('T')[0] : '',
+          renewal_date: data.renewal_date ? String(data.renewal_date).split('T')[0] : '',
+          membership_fee: data.membership_fee ? String(data.membership_fee) : '',
         });
       }
     } catch (err: any) {
@@ -81,26 +63,14 @@ export default function EditMembershipPage() {
     setSaving(true);
 
     try {
-      const payload = {
+      await updateMembership(id, {
         organization_name: formData.organization_name,
         membership_type: formData.membership_type,
         membership_number: formData.membership_number,
-
-        join_date: formData.join_date || null,
-        renewal_date: formData.renewal_date || null,
-
-        // ✅ STRING → NUMBER
-        membership_fee: formData.membership_fee
-          ? parseFloat(formData.membership_fee)
-          : null,
-      };
-
-      const { error: updateError } = await supabase
-        .from('memberships')
-        .update(payload)
-        .eq('id', id);
-
-      if (updateError) throw updateError;
+        join_date: formData.join_date || undefined,
+        renewal_date: formData.renewal_date || undefined,
+        membership_fee: formData.membership_fee ? parseFloat(formData.membership_fee) : undefined,
+      });
 
       router.push('/dashboard/memberships');
     } catch (err: any) {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { supabase } from '@/lib/auth';
+import { getDocument, updateDocument } from '@/lib/api/documents';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -20,7 +20,7 @@ export default function EditDocumentPage() {
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     document_name: '',
-    document_type: '',
+    module: '',
     file_path: '',
     expiry_date: '',
   });
@@ -31,19 +31,13 @@ export default function EditDocumentPage() {
 
   const fetchDocument = async () => {
     try {
-      const { data, error: fetchError } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (fetchError) throw fetchError;
+      const data = await getDocument(id);
       if (data) {
         setFormData({
-          document_name: data.document_name,
-          document_type: data.document_type,
-          file_path: data.file_path,
-          expiry_date: data.expiry_date || '',
+          document_name: data.document_name || data.file_name || '',
+          module: data.module || data.related_table || data.document_type || '',
+          file_path: data.file_path || data.file_url || '',
+          expiry_date: data.expiry_date ? String(data.expiry_date).slice(0, 10) : '',
         });
       }
     } catch (err: any) {
@@ -64,16 +58,13 @@ export default function EditDocumentPage() {
     setSaving(true);
 
     try {
-      const { error: updateError } = await supabase
-        .from('documents')
-        .update({
-          document_name: formData.document_name,
-          document_type: formData.document_type,
-          expiry_date: formData.expiry_date || null,
-        })
-        .eq('id', id);
-
-      if (updateError) throw updateError;
+      await updateDocument(id, {
+        document_name: formData.document_name,
+        file_name: formData.document_name,
+        module: formData.module,
+        related_table: formData.module,
+        expiry_date: formData.expiry_date || null,
+      });
       router.push('/dashboard/documents');
     } catch (err: any) {
       setError(err.message || 'Failed to update document');
@@ -115,11 +106,11 @@ export default function EditDocumentPage() {
           </FieldGroup>
 
           <FieldGroup>
-            <FieldLabel htmlFor="document_type">Document Type *</FieldLabel>
+            <FieldLabel htmlFor="module">Module / category *</FieldLabel>
             <Input
-              id="document_type"
-              name="document_type"
-              value={formData.document_type}
+              id="module"
+              name="module"
+              value={formData.module}
               onChange={handleChange}
               required
             />

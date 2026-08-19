@@ -23,6 +23,7 @@ import {
   updateProject,
 } from '@/lib/api/projects';
 import { getUsers } from '@/lib/api/users';
+import { uploadCrmFile } from '@/lib/api/storage';
 import { supabase } from '@/lib/auth';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Project } from '@/types/projects';
@@ -115,13 +116,6 @@ export default function ProjectDetailPage() {
     globalRole === 'super_admin' ||
     globalRole === 'manager';
 
-  const resolveAttachmentUrl = (fileUrl: string) => {
-    if (!fileUrl) return '#';
-    if (/^https?:\/\//i.test(fileUrl)) return fileUrl;
-    const { data } = supabase.storage.from('documents').getPublicUrl(fileUrl);
-    return data.publicUrl;
-  };
-
   const handleAttachmentUpload = async (files: File[]) => {
     try {
       const {
@@ -131,21 +125,12 @@ export default function ProjectDetailPage() {
 
       await Promise.all(
         files.map(async (file) => {
-          const extension = file.name.split('.').pop() || 'bin';
-          const path = `projects/${project.id}/${Date.now()}-${Math.random()
-            .toString(36)
-            .slice(2)}.${extension}`;
-
-          const { error: uploadError } = await supabase.storage
-            .from('documents')
-            .upload(path, file, { upsert: false });
-
-          if (uploadError) throw uploadError;
+          const uploaded = await uploadCrmFile(`projects/${project.id}`, file);
 
           await addProjectAttachment(project.id, {
             file_name: file.name,
             file_type: file.type || 'application/octet-stream',
-            file_url: path,
+            file_url: uploaded.path,
             file_size: file.size,
             uploaded_by: user.id,
           });
@@ -155,7 +140,7 @@ export default function ProjectDetailPage() {
       await fetchProject();
     } catch (error) {
       console.error('Failed to upload attachment:', error);
-      alert('Failed to upload attachment.');
+      alert(error instanceof Error ? error.message : 'Failed to upload attachment.');
     }
   };
 
@@ -437,10 +422,7 @@ export default function ProjectDetailPage() {
             </p>
           </div>
           <AttachmentsSection
-            attachments={(project.attachments || []).map((attachment) => ({
-              ...attachment,
-              file_url: resolveAttachmentUrl(attachment.file_url),
-            }))}
+            attachments={project.attachments || []}
             canUpload={canEdit}
             onUpload={canEdit ? handleAttachmentUpload : undefined}
             onDelete={canEdit ? handleAttachmentDelete : undefined}

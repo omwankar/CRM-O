@@ -103,6 +103,11 @@ export function formatUkIsoDate(value: string | Date) {
   }).format(asDate(value));
 }
 
+/** YYYY-MM month key in Europe/London (for attendance / leave filters). */
+export function ukMonthKey(value: string | Date = new Date()) {
+  return formatUkIsoDate(value).slice(0, 7);
+}
+
 /** Rewrite any YYYY-MM-DD substrings in free text to DD/MM/YYYY. */
 export function formatUkDatesInText(text: string) {
   return String(text || '').replace(ISO_DATE_IN_TEXT_RE, (_match, y, m, d) => `${d}/${m}/${y}`);

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { getDocuments, deleteDocument } from '@/lib/api/documents';
-import { supabase } from '@/lib/auth';
+import { resolveStorageUrl } from '@/lib/api/storage';
 import { Plus, Search, Download, FileText, Trash2 } from 'lucide-react';
 import { CanWrite } from '@/components/auth/Can';
 
@@ -18,25 +18,7 @@ export default function DocumentsPage() {
 
   const { data: documentsData, isLoading, error } = useQuery({
     queryKey: ['documents'],
-    queryFn: async () => {
-      try {
-        return await getDocuments({});
-      } catch {
-        // Fallback to direct Supabase fetch if backend documents route fails.
-        const orderedResult = await supabase
-          .from('documents')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (!orderedResult.error) {
-          return { data: orderedResult.data || [] };
-        }
-
-        const plainResult = await supabase.from('documents').select('*');
-        if (plainResult.error) throw new Error(plainResult.error.message || 'Failed to load documents');
-        return { data: plainResult.data || [] };
-      }
-    },
+    queryFn: () => getDocuments({ limit: 100 }),
   });
 
   const deleteMutation = useMutation({
@@ -56,10 +38,8 @@ export default function DocumentsPage() {
       )
     : documents;
 
-  const downloadFile = (path: string) => {
-    const { supabase } = require('@/lib/auth');
-    const { data } = supabase.storage.from('documents').getPublicUrl(path);
-    window.open(data.publicUrl, '_blank');
+  const downloadFile = async (path: string) => {
+    window.open(await resolveStorageUrl(path), '_blank');
   };
 
   const handleDelete = (doc: any) => {
@@ -123,14 +103,16 @@ export default function DocumentsPage() {
                   <Button variant="ghost" size="sm" onClick={() => downloadFile(doc.file_url)}>
                     <Download className="w-4 h-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(doc)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </Button>
+                  <CanWrite>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(doc)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </Button>
+                  </CanWrite>
                 </div>
               </div>
             </Card>

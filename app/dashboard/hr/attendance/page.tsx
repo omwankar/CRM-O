@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ClipboardList, Loader2, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatUkMonthYear } from '@/lib/date';
+import { formatUkMonthYear, ukMonthKey } from '@/lib/date';
 
 const leaveTypeLabel: Record<string, string> = {
   paid: 'Paid',
@@ -20,7 +20,7 @@ const leaveTypeLabel: Record<string, string> = {
 export default function HrAttendancePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [month, setMonth] = useState(ukMonthKey());
 
   const { data, isLoading } = useQuery({
     queryKey: ['hr-team-attendance', month],

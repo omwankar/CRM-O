@@ -1,7 +1,10 @@
+'use client';
+
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FileText, FileImage, FileSpreadsheet, X, Upload } from 'lucide-react';
 import { ProjectAttachment } from '@/types/projects';
+import { pickFiles, resolveStorageUrl } from '@/lib/api/storage';
 
 interface AttachmentsSectionProps {
   attachments: ProjectAttachment[];
@@ -37,32 +40,26 @@ export function AttachmentsSection({
   onUpload,
   onDelete,
 }: AttachmentsSectionProps) {
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && onUpload) {
-      onUpload(Array.from(e.target.files));
-    }
-  };
-
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="text-[14px] font-medium text-foreground">Attachments</h4>
         {canUpload && onUpload && (
-          <label>
-            <input
-              type="file"
-              multiple
-              className="hidden"
-              accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg"
-              onChange={handleFileChange}
-            />
-            <Button variant="ghost" size="sm" asChild>
-              <span>
-                <Upload className="h-4 w-4 mr-2" />
-                Upload
-              </span>
-            </Button>
-          </label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={async () => {
+              const files = await pickFiles({
+                multiple: true,
+                accept: '.pdf,.docx,.xlsx,.png,.jpg,.jpeg',
+              });
+              if (files.length) onUpload(files);
+            }}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Upload
+          </Button>
         )}
       </div>
 
@@ -91,10 +88,14 @@ export function AttachmentsSection({
                 className={`${iconConfig.bg} ${iconConfig.color} hover:bg-opacity-80 transition-colors`}
               >
                 <a
-                  href={attachment.file_url}
+                  href="#"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1.5 hover:underline"
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    window.open(await resolveStorageUrl(attachment.file_url), '_blank');
+                  }}
                 >
                   <Icon className="h-3.5 w-3.5" />
                   <span className="max-w-[150px] truncate">{attachment.file_name}</span>

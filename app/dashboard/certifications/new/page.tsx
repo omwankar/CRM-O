@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/auth';
+import { createCertification } from '@/lib/api/certifications';
+import { uploadCrmFile } from '@/lib/api/storage';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -12,6 +14,7 @@ import { ArrowLeft } from 'lucide-react';
 
 export default function NewCertificationPage() {
   const router = useRouter();
+  const { user } = useCurrentUser();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -39,39 +42,20 @@ export default function NewCertificationPage() {
     try {
       let fileUrl: string | null = null;
 
-      // ✅ Upload file to Supabase Storage
       if (file) {
-        const fileName = `${Date.now()}-${file.name}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('certificates') // bucket name
-          .upload(fileName, file);
-
-        if (uploadError) throw uploadError;
-
-        // ✅ Get public URL
-        const { data } = supabase.storage
-          .from('certificates')
-          .getPublicUrl(fileName);
-
-        fileUrl = data.publicUrl;
+        const uploaded = await uploadCrmFile('certifications', file);
+        fileUrl = uploaded.url || uploaded.path;
       }
 
-      // ✅ Insert into DB
-      const { error: insertError } = await supabase
-        .from('certifications')
-        .insert([
-          {
-            certification_name: formData.name,
-            issuing_authority: formData.issuer,
-            issue_date: formData.issue_date,
-            expiry_date: formData.expiry_date,
-            credential_id: formData.credential_id,
-            certificate_file: fileUrl, // 🔥 saved file URL
-          },
-        ]);
-
-      if (insertError) throw insertError;
+      await createCertification({
+        certification_name: formData.name,
+        issuing_authority: formData.issuer,
+        issue_date: formData.issue_date,
+        expiry_date: formData.expiry_date,
+        certificate_number: formData.credential_id || undefined,
+        document_url: fileUrl || undefined,
+        user_id: user?.id,
+      });
 
       router.push('/dashboard/certifications');
     } catch (err: any) {

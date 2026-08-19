@@ -16,10 +16,10 @@ import { getTimelogReport } from '@/lib/api/reports';
 import { getProjects } from '@/lib/api/projects';
 import { getTasks } from '@/lib/api/tasks';
 import type { TimeLog } from '@/types/workplace';
-import { formatUkDate } from '@/lib/date';
+import { formatUkDate, ukMonthKey } from '@/lib/date';
 
 function currentMonth() {
-  return new Date().toISOString().slice(0, 7);
+  return ukMonthKey();
 }
 
 function formatHours(minutes: number) {

@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { supabase } from '@/lib/auth';
 import { createDocument } from '@/lib/api/documents';
+import { uploadCrmFile } from '@/lib/api/storage';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +28,7 @@ function friendlyUploadError(raw: string): string {
 
 export default function NewDocumentPage() {
   const router = useRouter();
-  const { user } = useCurrentUser();
+  const { user, canWrite, isLoading } = useCurrentUser();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -58,21 +58,16 @@ export default function NewDocumentPage() {
 
     setLoading(true);
     try {
-      const fileExt = file.name.split('.').pop() || 'bin';
-      const filePath = `library/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+      const uploaded = await uploadCrmFile('library', file);
 
-      const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, file);
-      if (uploadError) throw new Error(uploadError.message);
-
-      // Insert via Express API (service role) so managers are not blocked by RLS
       await createDocument({
         module: module.trim(),
         related_table: module.trim(),
         record_id: null,
         file_name: file.name,
         document_name: file.name,
-        file_url: filePath,
-        file_path: filePath,
+        file_url: uploaded.path,
+        file_path: uploaded.path,
         file_size: file.size,
         file_type: file.type || 'application/octet-stream',
         uploaded_by: user?.id,
@@ -86,6 +81,18 @@ export default function NewDocumentPage() {
       setLoading(false);
     }
   };
+
+  if (!isLoading && !canWrite) {
+    return (
+      <div className="space-y-6">
+        <Link href="/dashboard/documents" className="flex items-center gap-2 text-primary hover:underline">
+          <ArrowLeft className="w-4 h-4" />
+          Back to Documents
+        </Link>
+        <p className="text-sm text-muted-foreground">You do not have permission to upload documents.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

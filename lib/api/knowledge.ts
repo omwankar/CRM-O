@@ -1,5 +1,5 @@
 import { apiRequest } from '@/lib/api/client';
-import { supabase } from '@/lib/auth';
+import { uploadCrmFile } from '@/lib/api/storage';
 import type {
   CreateKbArticleInput,
   KbArticle,
@@ -61,15 +61,10 @@ export async function deleteKbAttachment(attachmentId: string) {
 
 /** Uploads a file to the documents storage bucket, then registers it on the article. */
 export async function uploadKbAttachmentFile(articleId: string, file: File) {
-  const ext = file.name.includes('.') ? `.${file.name.split('.').pop()}` : '';
-  const storagePath = `kb/${articleId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
-  const { error: uploadError } = await supabase.storage
-    .from('documents')
-    .upload(storagePath, file, { contentType: file.type || undefined });
-  if (uploadError) throw uploadError;
+  const uploaded = await uploadCrmFile(`kb/${articleId}`, file);
   return addKbAttachment(articleId, {
     file_name: file.name,
-    storage_path: storagePath,
+    storage_path: uploaded.path,
     mime_type: file.type || null,
     size_bytes: file.size,
   });

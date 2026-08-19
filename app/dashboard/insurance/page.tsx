@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/auth';
+import { getInsurance, deleteInsurance } from '@/lib/api/insurance';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -27,6 +29,9 @@ interface Insurance {
   start_date: string;
   end_date: string;
   premium: number | null;
+  premium_amount?: number | null;
+  provider_name?: string | null;
+  expiry_date?: string;
 }
 
 export default function InsurancePage() {
@@ -34,13 +39,11 @@ export default function InsurancePage() {
   const [filteredInsurances, setFilteredInsurances] = useState<Insurance[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-  const [role, setRole] = useState<string | null>(null);
-
-  const isAdmin = role !== 'user';
+  const { canWrite } = useCurrentUser();
+  const isAdmin = canWrite;
 
   useEffect(() => {
     fetchInsurances();
-    fetchRole();
   }, []);
 
   useEffect(() => {
@@ -52,36 +55,14 @@ export default function InsurancePage() {
     setFilteredInsurances(filtered);
   }, [search, insurances]);
 
-  const fetchRole = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) return;
-
-    const { data } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    setRole(data?.role || null);
-  };
-
   const fetchInsurances = async () => {
     try {
       setLoading(true);
-
-      const { data, error } = await supabase
-        .from('insurance')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      setInsurances(data || []);
+      const result = await getInsurance({ limit: 100 });
+      setInsurances(result.data || []);
     } catch (error) {
       console.error('Failed to fetch insurances:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to load insurance');
     } finally {
       setLoading(false);
     }
@@ -89,20 +70,13 @@ export default function InsurancePage() {
 
   const handleDelete = async (id: string) => {
     if (!isAdmin) return;
-
     if (!confirm('Are you sure you want to delete this insurance?')) return;
-
     try {
-      const { error } = await supabase
-        .from('insurance')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await deleteInsurance(id);
       setInsurances((prev) => prev.filter((i) => i.id !== id));
+      toast.success('Insurance deleted');
     } catch (error) {
-      console.error('Failed to delete insurance:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete insurance');
     }
   };
 
@@ -207,7 +181,7 @@ export default function InsurancePage() {
         /* LIST */
         <div className="grid gap-4">
           {filteredInsurances.map((ins) => {
-            const status = getStatus(ins.end_date);
+            const status = getStatus(ins.end_date || ins.expiry_date || '');
 
             return (
               <Card key={ins.id} className="p-6">
@@ -217,7 +191,7 @@ export default function InsurancePage() {
 
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-lg font-semibold text-foreground">
-                        {ins.provider || 'N/A'}
+                        {ins.provider || ins.provider_name || 'N/A'}
                       </h3>
 
                       <span
@@ -241,7 +215,7 @@ export default function InsurancePage() {
                       </span>
 
                       <span className="text-muted-foreground">
-                        Premium: {formatCurrency(ins.premium)}
+                        Premium: {formatCurrency(ins.premium ?? ins.premium_amount ?? null)}
                       </span>
 
                       <span className="text-muted-foreground">
@@ -253,8 +227,8 @@ export default function InsurancePage() {
 
                       <span className="text-muted-foreground">
                         Expires:{' '}
-                        {ins.end_date
-                          ? formatUkDate(ins.end_date)
+                        {ins.end_date || ins.expiry_date
+                          ? formatUkDate((ins.end_date || ins.expiry_date) as string)
                           : 'N/A'}
                       </span>
                     </div>

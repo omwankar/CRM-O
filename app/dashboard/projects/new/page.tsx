@@ -11,6 +11,7 @@ import { Card } from '@/components/ui/card';
 import { createProject, addProjectEmployee, addProjectAttachment } from '@/lib/api/projects';
 import { supabase } from '@/lib/auth';
 import { getUsers } from '@/lib/api/users';
+import { uploadCrmFile } from '@/lib/api/storage';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { ArrowLeft, ArrowRight, Upload, X } from 'lucide-react';
 
@@ -166,24 +167,12 @@ export default function NewProjectPage() {
         await Promise.all(
           attachments.map(async (file) => {
             try {
-              const fileExt = file.name.split('.').pop() || 'bin';
-              const path = `projects/${createdProject.id}/${Date.now()}-${Math.random()
-                .toString(36)
-                .slice(2)}.${fileExt}`;
-
-              const { error: uploadError } = await supabase.storage
-                .from('documents')
-                .upload(path, file, { upsert: false });
-
-              if (uploadError) {
-                uploadFailures.push(file.name);
-                return;
-              }
+              const uploaded = await uploadCrmFile(`projects/${createdProject.id}`, file);
 
               await addProjectAttachment(createdProject.id, {
                 file_name: file.name,
                 file_type: file.type || 'application/octet-stream',
-                file_url: path,
+                file_url: uploaded.path,
                 file_size: file.size,
                 uploaded_by: authUser.id,
               });

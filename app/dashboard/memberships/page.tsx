@@ -1,7 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/auth';
+import { useMemo, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { getMemberships, deleteMembership } from '@/lib/api/memberships';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,95 +16,48 @@ import {
   EmptyMedia,
   EmptyTitle,
   EmptyDescription,
-  EmptyContent
+  EmptyContent,
 } from '@/components/ui/empty';
 import { formatUkDate } from '@/lib/date';
 
-interface Membership {
-  id: string;
-  organization_name: string;
-  membership_id: string;
-  membership_level: string;
-  join_date: string;
-  renewal_date: string;
+function memberNumber(mem: any) {
+  return mem.membership_number || mem.membership_id || mem.member_id || '';
+}
+
+function memberLevel(mem: any) {
+  return mem.membership_type || mem.membership_level || '';
 }
 
 export default function MembershipsPage() {
-  const [memberships, setMemberships] = useState<Membership[]>([]);
-  const [filteredMemberships, setFilteredMemberships] = useState<Membership[]>([]);
+  const { canWrite } = useCurrentUser();
+  const qc = useQueryClient();
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [role, setRole] = useState<string | null>(null);
 
-  const isAdmin = role !== 'user';
+  const { data, isLoading } = useQuery({
+    queryKey: ['memberships'],
+    queryFn: () => getMemberships({ limit: 100 }),
+  });
 
-  useEffect(() => {
-    fetchMemberships();
-    fetchRole();
-  }, []);
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => deleteMembership(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['memberships'] });
+      toast.success('Membership deleted');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
-  useEffect(() => {
-    const filtered = memberships.filter(
-      (mem) =>
-        mem.organization_name.toLowerCase().includes(search.toLowerCase()) ||
-        mem.membership_id.toLowerCase().includes(search.toLowerCase())
-    );
-    setFilteredMemberships(filtered);
+  const memberships = data?.data || [];
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    if (!q) return memberships;
+    return memberships.filter((mem: any) => {
+      const name = String(mem.organization_name || '').toLowerCase();
+      const id = String(memberNumber(mem)).toLowerCase();
+      const level = String(memberLevel(mem)).toLowerCase();
+      return name.includes(q) || id.includes(q) || level.includes(q);
+    });
   }, [search, memberships]);
-
-  const fetchRole = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) return;
-
-    const { data } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    setRole(data?.role || null);
-  };
-
-  const fetchMemberships = async () => {
-    try {
-      setLoading(true);
-
-      const { data, error } = await supabase
-        .from('memberships')
-        .select('*')
-        .order('id', { ascending: false });
-
-      if (error) throw error;
-
-      setMemberships(data || []);
-    } catch (error) {
-      console.error('Failed to fetch memberships:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!isAdmin) return;
-
-    if (!confirm('Are you sure you want to delete this membership?')) return;
-
-    try {
-      const { error } = await supabase
-        .from('memberships')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      setMemberships((prev) => prev.filter((m) => m.id !== id));
-    } catch (error) {
-      console.error('Failed to delete membership:', error);
-    }
-  };
 
   const formatDate = (date: string | null) => {
     if (!date) return 'N/A';
@@ -111,20 +67,14 @@ export default function MembershipsPage() {
 
   return (
     <div className="page-shell">
-
-      {/* HEADER */}
       <div className="page-header">
         <div>
           <h1 className="page-title">Memberships</h1>
           <p className="page-subtitle">
-            {isAdmin
-              ? 'Manage organization memberships'
-              : 'View organization memberships'}
+            {canWrite ? 'Manage organization memberships' : 'View organization memberships'}
           </p>
         </div>
-
-        {/* ✅ ADMIN ONLY */}
-        {isAdmin && (
+        {canWrite && (
           <Link href="/dashboard/memberships/new">
             <Button>
               <Plus className="w-4 h-4 mr-2" />
@@ -134,7 +84,6 @@ export default function MembershipsPage() {
         )}
       </div>
 
-      {/* SEARCH */}
       <Card className="surface-card p-4">
         <div className="flex gap-2 items-center">
           <Search className="w-5 h-5 text-muted-foreground" />
@@ -147,8 +96,7 @@ export default function MembershipsPage() {
         </div>
       </Card>
 
-      {/* CONTENT */}
-      {loading ? (
+      {isLoading ? (
         <div className="grid gap-4">
           {[...Array(3)].map((_, i) => (
             <Card key={i} className="surface-card p-6 animate-pulse">
@@ -156,27 +104,18 @@ export default function MembershipsPage() {
             </Card>
           ))}
         </div>
-
-      ) : filteredMemberships.length === 0 ? (
-
-        /* EMPTY */
+      ) : filtered.length === 0 ? (
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <Users />
             </EmptyMedia>
-
             <EmptyTitle>No memberships yet</EmptyTitle>
-
             <EmptyDescription>
-              {isAdmin
-                ? 'Create your first membership'
-                : 'No membership data available'}
+              {canWrite ? 'Create your first membership' : 'No membership data available'}
             </EmptyDescription>
           </EmptyHeader>
-
-          {/* ✅ ADMIN ONLY */}
-          {isAdmin && (
+          {canWrite && (
             <EmptyContent>
               <Link href="/dashboard/memberships/new">
                 <Button>Add Membership</Button>
@@ -184,71 +123,47 @@ export default function MembershipsPage() {
             </EmptyContent>
           )}
         </Empty>
-
       ) : (
-
-        /* LIST */
         <div className="grid gap-4">
-          {filteredMemberships.map((mem) => (
+          {filtered.map((mem: any) => (
             <Card key={mem.id} className="surface-card p-6">
-
               <div className="flex justify-between">
-
                 <div>
-                  <h3 className="text-lg font-semibold mb-2">
-                    {mem.organization_name}
-                  </h3>
-
-                  <p className="text-sm text-muted-foreground">
-                    Level: {mem.membership_level}
-                  </p>
-
+                  <h3 className="text-lg font-semibold mb-2">{mem.organization_name || 'Membership'}</h3>
+                  <p className="text-sm text-muted-foreground">Level: {memberLevel(mem) || '—'}</p>
                   <p className="text-sm text-muted-foreground mb-2">
-                    Member ID: {mem.membership_id}
+                    Member ID: {memberNumber(mem) || '—'}
                   </p>
-
                   <div className="flex gap-6 text-sm mt-2">
-                    <span>
-                      Joined: {formatDate(mem.join_date)}
-                    </span>
-                    <span>
-                      Expiry: {formatDate(mem.renewal_date)}
-                    </span>
+                    <span>Joined: {formatDate(mem.join_date)}</span>
+                    <span>Expiry: {formatDate(mem.renewal_date)}</span>
                   </div>
                 </div>
-
-                {/* ACTIONS */}
-                <div className="flex gap-2">
-
-                  {/* ✅ ADMIN ONLY */}
-                  {isAdmin && (
-                    <>
-                      <Link href={`/dashboard/memberships/${mem.id}`}>
-                        <Button variant="ghost" size="sm">
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                      </Link>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(mem.id)}
-                      >
-                        <Trash2 className="w-4 h-4 text-red-500" />
+                {canWrite && (
+                  <div className="flex gap-2">
+                    <Link href={`/dashboard/memberships/${mem.id}`}>
+                      <Button variant="ghost" size="sm">
+                        <Edit2 className="w-4 h-4" />
                       </Button>
-                    </>
-                  )}
-
-                </div>
-
+                    </Link>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (confirm('Are you sure you want to delete this membership?')) {
+                          deleteMut.mutate(mem.id);
+                        }
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </Button>
+                  </div>
+                )}
               </div>
-
             </Card>
           ))}
         </div>
-
       )}
-
     </div>
   );
 }

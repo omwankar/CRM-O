@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,17 +8,13 @@ import { Label } from '@/components/ui/label';
 import type { VendorQuote } from '@/types/quotations';
 import { QUOTATION_CURRENCIES } from '@/types/quotations';
 import { getVendors } from '@/lib/api/vendors';
-import { supabase } from '@/lib/auth';
+import { pickFiles, uploadCrmFile } from '@/lib/api/storage';
 import { Upload, FileText, X } from 'lucide-react';
 import { notifyQuotationError } from '@/lib/quotation-notify';
 
 type VendorLite = { id: string; vendor_name: string; contact_email?: string | null };
 
 const QUOTE_FILE_ACCEPT = '.pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp';
-
-function sanitizeFileName(name: string) {
-  return name.replace(/[^\w.\-]+/g, '_').slice(0, 120);
-}
 
 type Props = {
   mode: 'add' | 'edit';
@@ -48,7 +44,6 @@ export function VendorQuoteDetailSection({
   onClose,
   onSubmit,
 }: Props) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [vendors, setVendors] = useState<VendorLite[]>([]);
   const [vendorMode, setVendorMode] = useState<'select' | 'manual'>(
     initial?.vendor_id ? 'select' : initial?.vendor_name ? 'manual' : 'select',
@@ -94,40 +89,22 @@ export function VendorQuoteDetailSection({
     );
   };
 
-  const handleQuoteFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file || !quotationId) {
-      if (!quotationId) {
-        notifyQuotationError('Missing quotation id. Refresh the page and try again.');
-      }
+  const handleQuoteFileUpload = async () => {
+    if (!quotationId) {
+      notifyQuotationError('Missing quotation id. Refresh the page and try again.');
       return;
     }
-
-    if (file.size > 20 * 1024 * 1024) {
-      notifyQuotationError('File is too large (max 20 MB).');
-      return;
-    }
+    const [file] = await pickFiles({ accept: QUOTE_FILE_ACCEPT });
+    if (!file) return;
 
     setUploadingFile(true);
     try {
-      const ext = file.name.includes('.') ? file.name.split('.').pop() : 'pdf';
-      const path = `quotation-vendor-quotes/${quotationId}/${Date.now()}-${sanitizeFileName(file.name) || `quote.${ext}`}`;
-
-      const { error: uploadError } = await supabase.storage.from('documents').upload(path, file, {
-        upsert: false,
-        contentType: file.type || undefined,
-      });
-
-      if (uploadError) throw uploadError;
-
-      const { data: pub } = supabase.storage.from('documents').getPublicUrl(path);
-      const publicUrl = pub.publicUrl;
-      if (!publicUrl) throw new Error('No public URL returned');
-
-      setForm((s) => ({ ...s, quote_file_url: publicUrl }));
+      const uploaded = await uploadCrmFile(`quotation-vendor-quotes/${quotationId}`, file);
+      const fileUrl = uploaded.url || uploaded.path;
+      if (!fileUrl) throw new Error('No file URL returned');
+      setForm((s) => ({ ...s, quote_file_url: fileUrl }));
     } catch (err) {
-      notifyQuotationError(err, 'Upload failed. Check storage permissions or paste a public file URL instead.');
+      notifyQuotationError(err, 'Upload failed. Please try again or paste a public file URL instead.');
     } finally {
       setUploadingFile(false);
     }
@@ -291,21 +268,13 @@ export function VendorQuoteDetailSection({
           <p className="mt-1 text-xs text-muted-foreground">
             Upload to storage (PDF or image) or paste a public link below.
           </p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={QUOTE_FILE_ACCEPT}
-            className="sr-only"
-            disabled={uploadingFile || !quotationId}
-            onChange={handleQuoteFileUpload}
-          />
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
               disabled={uploadingFile || !quotationId}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => void handleQuoteFileUpload()}
             >
               <Upload className="mr-2 h-4 w-4" />
               {uploadingFile ? 'Uploading…' : 'Upload file'}

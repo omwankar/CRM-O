@@ -36,7 +36,7 @@ import {
 import { completeTask, createTask, deleteTask, getTasks, updateTask } from '@/lib/api/tasks';
 import { getUsers } from '@/lib/api/users';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { formatUkDate } from '@/lib/date';
+import { formatUkDate, formatUkIsoDate } from '@/lib/date';
 import {
   TASK_ENTITY_LABELS,
   TASK_PRIORITY_LABELS,
@@ -73,7 +73,7 @@ function emptyForm(assigneeId = ''): TaskForm {
     entity_label: '',
     assignee_id: assigneeId,
     supervisor_id: '',
-    due_date: new Date().toISOString().slice(0, 10),
+    due_date: formatUkIsoDate(new Date()),
     priority: 'medium',
   };
 }
@@ -114,7 +114,7 @@ export function TasksBoard({
   defaultView?: TaskView;
   lockView?: boolean;
 }) {
-  const { user, profile, role } = useCurrentUser();
+  const { user, profile, role, canEditTask } = useCurrentUser();
   const qc = useQueryClient();
   const isManager = role === 'manager' || role === 'super_admin';
 
@@ -388,7 +388,7 @@ export function TasksBoard({
                 <TableCell>{t.due_date ? formatUkDate(t.due_date) : '—'}</TableCell>
                 <TableCell>{t.created_at ? formatUkDate(t.created_at) : '—'}</TableCell>
                 <TableCell>
-                  {t.status !== 'completed' && t.status !== 'cancelled' ? (
+                  {canEditTask(t) && t.status !== 'completed' && t.status !== 'cancelled' ? (
                     <Select
                       value={t.status}
                       onValueChange={(v) => statusMut.mutate({ id: t.id, status: v as TaskStatus })}
@@ -424,11 +424,12 @@ export function TasksBoard({
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    {t.status !== 'completed' && t.status !== 'cancelled' ? (
+                    {canEditTask(t) && t.status !== 'completed' && t.status !== 'cancelled' ? (
                       <Button size="sm" variant="outline" onClick={() => setCompleteTarget(t)}>
                         Complete
                       </Button>
                     ) : null}
+                    {canEditTask(t) ? (
                     <Button
                       size="sm"
                       variant="ghost"
@@ -438,6 +439,7 @@ export function TasksBoard({
                     >
                       <Trash2 className="h-4 w-4 text-red-500" />
                     </Button>
+                    ) : null}
                   </div>
                 </TableCell>
               </TableRow>

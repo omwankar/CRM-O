@@ -48,6 +48,8 @@ function SheetContent({
   className,
   children,
   side = 'right',
+  onFocusOutside,
+  onInteractOutside,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: 'top' | 'right' | 'bottom' | 'left'
@@ -69,6 +71,15 @@ function SheetContent({
             'data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom inset-x-0 bottom-0 h-auto border-t',
           className,
         )}
+        onFocusOutside={(event) => {
+          event.preventDefault()
+          onFocusOutside?.(event)
+        }}
+        onInteractOutside={(event) => {
+          const target = event.target as HTMLElement | null
+          if (target?.closest?.('input[type="file"]')) event.preventDefault()
+          onInteractOutside?.(event)
+        }}
         {...props}
       >
         {children}

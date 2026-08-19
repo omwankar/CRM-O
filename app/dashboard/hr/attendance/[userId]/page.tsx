@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, CalendarDays, Loader2 } from 'lucide-react';
-import { formatUkTime, formatUkMonthYear } from '@/lib/date';
+import { formatUkTime, formatUkMonthYear, ukMonthKey } from '@/lib/date';
 
 const markerConfig: Record<
   string,
@@ -43,7 +43,7 @@ function HrIndividualAttendancePageInner() {
   const { userId } = useParams<{ userId: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialMonth = searchParams.get('month') || new Date().toISOString().slice(0, 7);
+  const initialMonth = searchParams.get('month') || ukMonthKey();
   const [month, setMonth] = useState(initialMonth);
 
   const { data, isLoading } = useQuery({

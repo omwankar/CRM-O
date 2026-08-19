@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/auth';
+import { getCertifications, deleteCertification } from '@/lib/api/certifications';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -25,6 +27,8 @@ interface Certification {
   expiry_date: string;
   status: 'active' | 'expired' | 'pending';
   certificate_file?: string;
+  document_url?: string;
+  certificate_number?: string;
 }
 
 export default function CertificationsPage() {
@@ -32,13 +36,11 @@ export default function CertificationsPage() {
   const [filteredCertifications, setFilteredCertifications] = useState<Certification[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-  const [role, setRole] = useState<string | null>(null);
-
-  const isAdmin = role !== 'user';
+  const { canWrite } = useCurrentUser();
+  const isAdmin = canWrite;
 
   useEffect(() => {
     fetchCertifications();
-    fetchRole();
   }, []);
 
   useEffect(() => {
@@ -51,36 +53,14 @@ export default function CertificationsPage() {
     setFilteredCertifications(filtered);
   }, [search, certifications]);
 
-  const fetchRole = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) return;
-
-    const { data } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    setRole(data?.role || null);
-  };
-
   const fetchCertifications = async () => {
     try {
       setLoading(true);
-
-      const { data, error } = await supabase
-        .from('certifications')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      setCertifications(data || []);
+      const result = await getCertifications({ limit: 100 });
+      setCertifications(result.data || []);
     } catch (error) {
       console.error('Failed to fetch certifications:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to load certifications');
     } finally {
       setLoading(false);
     }
@@ -88,20 +68,13 @@ export default function CertificationsPage() {
 
   const handleDelete = async (id: string) => {
     if (!isAdmin) return;
-
     if (!confirm('Are you sure you want to delete this certification?')) return;
-
     try {
-      const { error } = await supabase
-        .from('certifications')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await deleteCertification(id);
       setCertifications((prev) => prev.filter((c) => c.id !== id));
+      toast.success('Certification deleted');
     } catch (error) {
-      console.error('Failed to delete certification:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete certification');
     }
   };
 
@@ -235,9 +208,9 @@ export default function CertificationsPage() {
                 <div className="flex gap-2">
 
                   {/* ✅ Download (Everyone) */}
-                  {cert.certificate_file && (
+                  {(cert.certificate_file || cert.document_url) && (
                     <a
-                      href={cert.certificate_file}
+                      href={cert.certificate_file || cert.document_url}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
