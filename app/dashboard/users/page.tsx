@@ -13,25 +13,8 @@ import { DeactivateDialog } from '@/components/users/DeactivateDialog';
 import { Users, UserPlus, Search, Key, Power, Edit2, Shield, Building2, Phone } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { formatUkDate } from '@/lib/date';
+import { normalizeAppRole, ROLE_COLORS, ROLE_LABELS } from '@/lib/roles';
 
-const roleColors: Record<string, string> = {
-  super_admin: 'bg-purple-600 text-white',
-  manager: 'bg-blue-100 text-blue-700',
-  user: 'bg-teal-100 text-teal-700',
-  // Legacy fall-backs; rows are migrated by 018_simplify_roles.sql.
-  admin: 'bg-blue-100 text-blue-700',
-  operations: 'bg-teal-100 text-teal-700',
-  sales: 'bg-teal-100 text-teal-700',
-};
-
-const roleLabels: Record<string, string> = {
-  super_admin: 'Super Admin',
-  manager: 'Manager',
-  user: 'User',
-  admin: 'Manager',
-  operations: 'User',
-  sales: 'User',
-};
 
 function getInitials(name: string) {
   return name
@@ -293,7 +276,7 @@ export default function UsersPage() {
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${roleColors[user.role] || 'bg-gray-100'}`}>
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${ROLE_COLORS[normalizeAppRole(user.role)]}`}>
                           {getInitials(user.full_name || user.email)}
                         </div>
                         <div>
@@ -303,8 +286,8 @@ export default function UsersPage() {
                       </div>
                     </td>
                     <td className="p-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${roleColors[user.role] || 'bg-gray-100'}`}>
-                        {roleLabels[user.role] || user.role}
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${ROLE_COLORS[normalizeAppRole(user.role)]}`}>
+                        {ROLE_LABELS[normalizeAppRole(user.role)]}
                       </span>
                     </td>
                     <td className="p-4">

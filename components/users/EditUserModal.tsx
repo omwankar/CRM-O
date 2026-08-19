@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { updateUser } from '@/lib/api/users';
+import { normalizeAppRole } from '@/lib/roles';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -16,7 +17,7 @@ interface EditUserModalProps {
 export function EditUserModal({ user, onClose }: EditUserModalProps) {
   const queryClient = useQueryClient();
   const [fullName, setFullName] = useState(user.full_name || '');
-  const [role, setRole] = useState(user.role || 'manager');
+  const [role, setRole] = useState(normalizeAppRole(user.role));
   const [department, setDepartment] = useState(user.department || '');
   const [phone, setPhone] = useState(user.phone || '');
   const [error, setError] = useState('');
@@ -63,7 +64,7 @@ export function EditUserModal({ user, onClose }: EditUserModalProps) {
             <label className="text-sm font-medium mb-1 block">Role</label>
             <select
               className="w-full h-10 rounded-md border border-input bg-background px-3"
-              value={role === 'admin' ? 'manager' : role}
+              value={role}
               onChange={(e) => setRole(e.target.value)}
             >
               <option value="user">User · own tasks and self-service HR</option>

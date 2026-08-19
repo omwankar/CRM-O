@@ -3,8 +3,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { getCurrentUser } from '@/lib/api/users';
 import { supabase } from '@/lib/auth';
+import { normalizeAppRole, type AppRole } from '@/lib/roles';
 
-export type AppRole = 'super_admin' | 'manager' | 'user';
+export type { AppRole };
 
 const PROFILE_CACHE_KEY = 'crm.currentProfile';
 
@@ -72,13 +73,7 @@ export function useCurrentUser() {
   // Normalise legacy roles. Until profile loads, leave role undefined so menus
   // don't SSR as "user" then flip to super_admin on the client.
   const rawRole = profileData?.role as string | undefined;
-  const role: AppRole | undefined = !profileData
-    ? undefined
-    : rawRole === 'super_admin'
-      ? 'super_admin'
-      : rawRole === 'manager' || rawRole === 'admin'
-        ? 'manager'
-        : 'user';
+  const role: AppRole | undefined = !profileData ? undefined : normalizeAppRole(rawRole);
 
   const isSuperAdmin = role === 'super_admin';
   const isManager = role === 'manager';

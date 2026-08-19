@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { normalizeAppRole } from '@/lib/roles'
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -45,7 +46,7 @@ export async function middleware(request: NextRequest) {
         .maybeSingle()
 
       const role = profile?.role
-      if (role !== 'manager' && role !== 'super_admin' && role !== 'admin') {
+      if (normalizeAppRole(role) !== 'manager' && normalizeAppRole(role) !== 'super_admin') {
         return NextResponse.redirect(new URL('/dashboard?access=hr_denied', request.url))
       }
     }
@@ -70,7 +71,7 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (userRole?.role !== 'super_admin') {
+    if (userRole?.role && normalizeAppRole(userRole.role) !== 'super_admin') {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }
