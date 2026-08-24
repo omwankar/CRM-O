@@ -12,6 +12,7 @@ import { getMyLeaveRequests } from '@/lib/api/clock';
 import { decideLeave, getHrLeaves } from '@/lib/api/hr/leaves';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { formatUkTime, formatUkMonthYear, ukMonthKey } from '@/lib/date';
+import Link from 'next/link';
 
 function statusBadge(status: string) {
   if (status === 'approved') return 'bg-emerald-100 text-emerald-800';
@@ -117,7 +118,14 @@ export default function LeaveTrackerPage() {
           </h1>
           <p className="text-muted-foreground">Your paid-leave balance, requests, and attendance.</p>
         </div>
-        <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-44" />
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-44" />
+          {isSuperAdmin ? (
+            <Button asChild>
+              <Link href="/dashboard/mark-leave">Mark paid leave / LOP</Link>
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

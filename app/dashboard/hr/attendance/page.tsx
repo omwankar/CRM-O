@@ -11,6 +11,7 @@ import { ClipboardList, Loader2, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatUkMonthYear, ukMonthKey } from '@/lib/date';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import Link from 'next/link';
 
 const leaveTypeLabel: Record<string, string> = {
   paid: 'Paid',
@@ -55,7 +56,14 @@ export default function HrAttendancePage() {
             Team summary for the month — click an employee to view day-wise attendance with leaves, LOP, and holidays
           </p>
         </div>
-        <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-44" />
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-44" />
+          {isSuperAdmin ? (
+            <Button asChild>
+              <Link href="/dashboard/mark-leave">Mark paid leave / LOP</Link>
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       {isSuperAdmin && pending.length > 0 && (

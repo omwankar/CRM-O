@@ -7,6 +7,7 @@ export type LeaveRequest = {
   end_date: string;
   reason: string | null;
   leave_type: 'paid' | 'unpaid' | 'lop';
+  working_days?: number;
   status: 'pending' | 'approved' | 'rejected';
   reviewed_by: string | null;
   reviewed_at: string | null;
@@ -31,5 +32,19 @@ export async function decideLeave(id: string, status: 'approved' | 'rejected') {
   return apiRequest(`/hr/leaves/${id}`, {
     method: 'PATCH',
     body: JSON.stringify({ status }),
+  });
+}
+
+/** Super Admin: mark an employee as paid leave or LOP (approved immediately). */
+export async function assignEmployeeLeave(data: {
+  user_id: string;
+  start_date: string;
+  end_date: string;
+  leave_type: 'paid' | 'lop';
+  reason?: string;
+}) {
+  return apiRequest('/hr/leaves/assign', {
+    method: 'POST',
+    body: JSON.stringify(data),
   });
 }

@@ -43,7 +43,10 @@ function getMenuSections(role?: string, pendingCount?: number): MenuSection[] {
         { label: 'Holidays', href: '/dashboard/holidays' },
         { label: 'Calendar', href: '/dashboard/calendar' },
         ...(isSuperAdmin
-          ? [{ label: 'Punch Requests', href: '/dashboard/punch-requests', badge: pendingCount }]
+          ? [
+              { label: 'Punch Requests', href: '/dashboard/punch-requests', badge: pendingCount },
+              { label: 'Mark Leave', href: '/dashboard/mark-leave' },
+            ]
           : []),
         { label: 'Time Log', href: '/dashboard/timelog' },
       ],
