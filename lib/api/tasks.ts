@@ -11,6 +11,8 @@ export async function getTasks(filters: TaskFilters = {}): Promise<TasksListResp
   if (filters.entity_type) params.set('entity_type', filters.entity_type);
   if (filters.entity_id) params.set('entity_id', filters.entity_id);
   if (filters.assignee_id) params.set('assignee_id', filters.assignee_id);
+  if (filters.assigned_from) params.set('assigned_from', filters.assigned_from);
+  if (filters.assigned_to) params.set('assigned_to', filters.assigned_to);
   if (filters.page) params.set('page', String(filters.page));
   if (filters.limit) params.set('limit', String(filters.limit));
   const qs = params.toString();

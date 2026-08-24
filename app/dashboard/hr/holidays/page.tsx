@@ -34,6 +34,7 @@ export default function HrHolidaysPage() {
       setTitle('');
       setDescription('');
       queryClient.invalidateQueries({ queryKey: ['hr-holidays'] });
+      queryClient.invalidateQueries({ queryKey: ['company-holidays'] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -43,6 +44,7 @@ export default function HrHolidaysPage() {
     onSuccess: () => {
       toast.success('Holiday removed');
       queryClient.invalidateQueries({ queryKey: ['hr-holidays'] });
+      queryClient.invalidateQueries({ queryKey: ['company-holidays'] });
     },
     onError: (e: Error) => toast.error(e.message),
   });

@@ -1,13 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getCompanyHolidays } from '@/lib/api/leave';
-import { ChevronLeft, ChevronRight, PartyPopper, CalendarDays } from 'lucide-react';
+import { deleteHoliday } from '@/lib/api/hr/holidays';
+import { CanWrite } from '@/components/auth/Can';
+import { ChevronLeft, ChevronRight, PartyPopper, CalendarDays, Trash2, Loader2 } from 'lucide-react';
 import { formatUkLongDate } from '@/lib/date';
+import { toast } from 'sonner';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -24,10 +27,22 @@ function isPast(iso: string) {
 
 export default function HolidaysPage() {
   const [year, setYear] = useState(new Date().getFullYear());
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
     queryKey: ['company-holidays', year],
     queryFn: () => getCompanyHolidays(year),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteHoliday(id),
+    onSuccess: () => {
+      toast.success('Holiday removed');
+      queryClient.invalidateQueries({ queryKey: ['company-holidays'] });
+      queryClient.invalidateQueries({ queryKey: ['hr-holidays'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance-grid'] });
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const holidays = data?.data || [];
@@ -124,9 +139,29 @@ export default function HolidaysPage() {
                             ) : null}
                           </div>
                         </div>
-                        <Badge variant={h.holiday_pay_type === 'unpaid' ? 'outline' : 'secondary'}>
-                          {h.holiday_pay_type === 'unpaid' ? 'Unpaid' : 'Paid'}
-                        </Badge>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant={h.holiday_pay_type === 'unpaid' ? 'outline' : 'secondary'}>
+                            {h.holiday_pay_type === 'unpaid' ? 'Unpaid' : 'Paid'}
+                          </Badge>
+                          <CanWrite>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              disabled={deleteMutation.isPending}
+                              aria-label="Remove holiday"
+                              onClick={() => {
+                                if (!confirm(`Remove "${h.title}" from the holiday calendar?`)) return;
+                                deleteMutation.mutate(h.id);
+                              }}
+                            >
+                              {deleteMutation.isPending ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              )}
+                            </Button>
+                          </CanWrite>
+                        </div>
                       </Card>
                     );
                   })}

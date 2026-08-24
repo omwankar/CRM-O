@@ -75,6 +75,7 @@ export interface Task {
   assignee_id: string | null;
   assigned_person_id?: string | null;
   supervisor_id: string | null;
+  assigned_date?: string | null;
   due_date: string;
   priority: TaskPriority;
   status: TaskStatus;
@@ -113,6 +114,8 @@ export interface TaskFilters {
   entity_type?: TaskEntityType;
   entity_id?: string;
   assignee_id?: string;
+  assigned_from?: string;
+  assigned_to?: string;
   page?: number;
   limit?: number;
 }

@@ -122,6 +122,8 @@ export function TasksBoard({
   const [status, setStatus] = useState<string>('all');
   const [priority, setPriority] = useState<string>('all');
   const [overdueOnly, setOverdueOnly] = useState(false);
+  const [assignedFrom, setAssignedFrom] = useState('');
+  const [assignedTo, setAssignedTo] = useState('');
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search, 300);
   const [dialog, setDialog] = useState<'create' | 'edit' | null>(null);
@@ -134,7 +136,7 @@ export function TasksBoard({
   const formOpen = dialog !== null;
 
   const { data, isLoading } = useQuery({
-    queryKey: ['tasks', activeView, status, priority, overdueOnly, debouncedSearch],
+    queryKey: ['tasks', activeView, status, priority, overdueOnly, debouncedSearch, assignedFrom, assignedTo],
     queryFn: () =>
       getTasks({
         view: activeView,
@@ -142,6 +144,8 @@ export function TasksBoard({
         priority: priority as any,
         overdue: overdueOnly,
         search: debouncedSearch || undefined,
+        assigned_from: assignedFrom || undefined,
+        assigned_to: assignedTo || undefined,
         limit: 100,
       }),
   });
@@ -235,7 +239,15 @@ export function TasksBoard({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const rows = data?.data || data?.tasks || [];
+  const rows = useMemo(() => {
+    const list = [...(data?.data || data?.tasks || [])];
+    list.sort((a, b) => {
+      const da = a.created_at || a.assigned_date || '';
+      const db = b.created_at || b.assigned_date || '';
+      return String(db).localeCompare(String(da));
+    });
+    return list;
+  }, [data]);
 
   const viewTitle: Record<string, string> = {
     mine: 'Tasks',
@@ -342,6 +354,39 @@ export function TasksBoard({
         >
           Overdue only
         </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="text-xs text-muted-foreground whitespace-nowrap">Assigned from</label>
+          <Input
+            type="date"
+            className="w-[150px]"
+            value={assignedFrom}
+            onChange={(e) => {
+              const value = e.target.value;
+              setAssignedFrom(value);
+              if (assignedTo && value && assignedTo < value) setAssignedTo(value);
+            }}
+          />
+          <label className="text-xs text-muted-foreground">to</label>
+          <Input
+            type="date"
+            className="w-[150px]"
+            min={assignedFrom || undefined}
+            value={assignedTo}
+            onChange={(e) => setAssignedTo(e.target.value)}
+          />
+          {assignedFrom || assignedTo ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setAssignedFrom('');
+                setAssignedTo('');
+              }}
+            >
+              Clear dates
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       {isLoading ? (
@@ -356,7 +401,7 @@ export function TasksBoard({
               <TableHead>Assigned to</TableHead>
               <TableHead>Assigned by</TableHead>
               <TableHead>Due date</TableHead>
-              <TableHead>Created</TableHead>
+              <TableHead>Date assigned</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Priority</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -386,7 +431,9 @@ export function TasksBoard({
                 <TableCell>{personName(t, 'assignee')}</TableCell>
                 <TableCell>{personName(t, 'creator')}</TableCell>
                 <TableCell>{t.due_date ? formatUkDate(t.due_date) : '—'}</TableCell>
-                <TableCell>{t.created_at ? formatUkDate(t.created_at) : '—'}</TableCell>
+                <TableCell>
+                  {t.assigned_date || t.created_at ? formatUkDate(t.assigned_date || t.created_at) : '—'}
+                </TableCell>
                 <TableCell>
                   {canEditTask(t) && t.status !== 'completed' && t.status !== 'cancelled' ? (
                     <Select
