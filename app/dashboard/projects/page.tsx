@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ProjectCard } from '@/components/projects/ProjectCard';
@@ -19,7 +19,12 @@ export default function ProjectsPage() {
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState<Filters>({ page: 1, limit: 20 });
+  const [filters, setFilters] = useState<Filters>({
+    page: 1,
+    limit: 20,
+    sort_by: 'start_date',
+    sort_order: 'desc',
+  });
   const [viewMode, setViewMode] = useState<'table' | 'card'>('card');
   const [cardSection, setCardSection] = useState<'ongoing' | 'completed' | 'cancelled'>('ongoing');
   const [statusModalProject, setStatusModalProject] = useState<Project | null>(null);
@@ -60,11 +65,23 @@ export default function ProjectsPage() {
   const canChangeStatus = true;
   const showArchivedToggles = !filters.status || filters.status === ('all' as any);
 
+  const sortedProjects = useMemo(() => {
+    const by = filters.sort_by || 'start_date';
+    const dir = filters.sort_order === 'asc' ? 1 : -1;
+    const key = (p: Project) => {
+      if (by === 'project_name') return p.project_name || '';
+      if (by === 'estimated_end_date') return p.estimated_end_date || '';
+      if (by === 'created_at') return p.created_at || p.start_date || '';
+      return p.start_date || p.created_at || '';
+    };
+    return [...projects].sort((a, b) => dir * String(key(a)).localeCompare(String(key(b))));
+  }, [projects, filters.sort_by, filters.sort_order]);
+
   const ongoingProjects = showArchivedToggles
-    ? projects.filter((p) => p.status !== 'Closed' && p.status !== ('Cancelled' as any))
-    : projects;
-  const completedProjects = showArchivedToggles ? projects.filter((p) => p.status === 'Closed') : [];
-  const cancelledProjects = showArchivedToggles ? projects.filter((p) => p.status === ('Cancelled' as any)) : [];
+    ? sortedProjects.filter((p) => p.status !== 'Closed' && p.status !== ('Cancelled' as any))
+    : sortedProjects;
+  const completedProjects = showArchivedToggles ? sortedProjects.filter((p) => p.status === 'Closed') : [];
+  const cancelledProjects = showArchivedToggles ? sortedProjects.filter((p) => p.status === ('Cancelled' as any)) : [];
 
   const handleStatusChange = async (status: string, reason: string) => {
     if (!statusModalProject?.id) return;

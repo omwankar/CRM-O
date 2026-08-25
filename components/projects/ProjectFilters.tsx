@@ -29,21 +29,22 @@ export function ProjectFilters({ filters, onFiltersChange }: ProjectFiltersProps
   };
 
   const handleSortChange = (value: string) => {
-    if (value === 'none') {
-      onFiltersChange({ ...filters, sort_by: undefined, sort_order: undefined });
-    } else {
-      const [sort_by, sort_order] = value.split('-');
-      onFiltersChange({ ...filters, sort_by: sort_by as any, sort_order: sort_order as any });
-    }
+    const lastDash = value.lastIndexOf('-');
+    const sort_by = value.slice(0, lastDash);
+    const sort_order = value.slice(lastDash + 1);
+    onFiltersChange({ ...filters, sort_by: sort_by as any, sort_order: sort_order as any, page: 1 });
   };
 
   const handleClearFilters = () => {
-    onFiltersChange({ page: 1, limit: 20 });
+    onFiltersChange({ page: 1, limit: 20, sort_by: 'start_date', sort_order: 'desc' });
   };
 
-  const hasActiveFilters = filters.search || filters.status || filters.start_date || filters.end_date || filters.sort_by;
+  const hasActiveFilters =
+    Boolean(filters.search || filters.status || filters.start_date || filters.end_date) ||
+    (filters.sort_by && !(filters.sort_by === 'start_date' && filters.sort_order === 'desc'));
 
-  const sortValue = filters.sort_by && filters.sort_order ? `${filters.sort_by}-${filters.sort_order}` : 'none';
+  const sortValue =
+    filters.sort_by && filters.sort_order ? `${filters.sort_by}-${filters.sort_order}` : 'start_date-desc';
 
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-center">
@@ -82,11 +83,10 @@ export function ProjectFilters({ filters, onFiltersChange }: ProjectFiltersProps
           <SelectValue placeholder="Sort by..." />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="none">None</SelectItem>
-          <SelectItem value="created_at-desc">Date Created (Newest)</SelectItem>
-          <SelectItem value="created_at-asc">Date Created (Oldest)</SelectItem>
           <SelectItem value="start_date-desc">Start Date (Newest)</SelectItem>
           <SelectItem value="start_date-asc">Start Date (Oldest)</SelectItem>
+          <SelectItem value="created_at-desc">Date Created (Newest)</SelectItem>
+          <SelectItem value="created_at-asc">Date Created (Oldest)</SelectItem>
           <SelectItem value="estimated_end_date-desc">End Date (Newest)</SelectItem>
           <SelectItem value="estimated_end_date-asc">End Date (Oldest)</SelectItem>
           <SelectItem value="project_name-asc">Name (A-Z)</SelectItem>
