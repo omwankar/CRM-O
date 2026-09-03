@@ -291,6 +291,15 @@ export function TasksBoard({
       <div className="flex flex-wrap gap-2">
         {!lockView ? (
           <>
+            {isManager ? (
+              <Button
+                size="sm"
+                variant={activeView === 'team' ? 'default' : 'outline'}
+                onClick={() => setView('team')}
+              >
+                Team
+              </Button>
+            ) : null}
             {(['mine', 'sales', 'operations', 'finance'] as TaskView[]).map((v) => (
               <Button
                 key={v}
@@ -301,15 +310,6 @@ export function TasksBoard({
                 {viewTabLabel[v]}
               </Button>
             ))}
-            {isManager ? (
-              <Button
-                size="sm"
-                variant={activeView === 'team' ? 'default' : 'outline'}
-                onClick={() => setView('team')}
-              >
-                Team
-              </Button>
-            ) : null}
           </>
         ) : null}
       </div>

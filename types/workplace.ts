@@ -89,9 +89,18 @@ export interface CreateKbArticleInput {
   tags?: string[];
 }
 
+export interface TimeLogComment {
+  id: string;
+  body: string;
+  author_id?: string | null;
+  author_name?: string;
+  created_at: string;
+}
+
 export interface TimeLog {
   id: string;
   user_id: string;
+  user_name?: string;
   log_date: string;
   duration_minutes: number;
   description: string;
@@ -101,11 +110,12 @@ export interface TimeLog {
   task_id?: string | null;
   quotation_id?: string | null;
   created_at: string;
+  comments?: TimeLogComment[];
 }
 
 export interface CreateTimeLogInput {
   log_date: string;
-  duration_minutes: number;
+  duration_minutes?: number;
   description: string;
   project_id?: string | null;
   task_id?: string | null;

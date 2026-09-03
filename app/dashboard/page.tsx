@@ -5,55 +5,88 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { getDashboardStats } from '@/lib/api/dashboard';
 import { getPunchStats } from '@/lib/api/clock';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { ROLE_LABELS } from '@/lib/roles';
 import {
-  Award,
-  Users,
-  Shield,
-  Package,
-  ShoppingCart,
-  FileText,
-  TrendingUp,
-  TrendingDown,
-  Clock,
-  Calendar,
-  FolderKanban,
   AlertTriangle,
   ArrowRight,
+  FolderKanban,
+  CheckSquare,
+  FileText,
   FileSearch,
+  CreditCard,
 } from 'lucide-react';
 import { AnnouncementsWidget } from '@/components/announcements/AnnouncementsWidget';
+import { HomeCalendar } from '@/components/dashboard/HomeCalendar';
 import { useIsClient } from '@/hooks/useIsClient';
-import { formatUkDate, formatUkShortDayDate, getUkHour } from '@/lib/date';
+import { formatUkDate } from '@/lib/date';
 
-function getGreeting(date: Date) {
-  const hour = getUkHour(date);
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
+function taskStatusStyle(status?: string) {
+  const s = String(status || '').toLowerCase().replace(/\s+/g, '_');
+  if (s === 'in_progress' || s === 'inprogress') return 'bg-sky-100 text-sky-800';
+  if (s === 'completed' || s === 'closed') return 'bg-emerald-100 text-emerald-800';
+  return 'bg-rose-100 text-rose-700';
 }
 
-function getDateLabel(date: Date) {
-  return formatUkDate(date, {
-    weekday: 'long',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
+function taskStatusLabel(status?: string) {
+  const s = String(status || '').toLowerCase().replace(/\s+/g, '_');
+  if (s === 'in_progress' || s === 'inprogress') return 'In Progress';
+  if (s === 'completed' || s === 'closed') return 'Completed';
+  if (s === 'pending' || s === 'to_do' || s === 'todo') return 'To Do';
+  return status || 'To Do';
+}
+
+function friendlyAction(action?: string, tableName?: string) {
+  const raw = String(action || '').toLowerCase();
+  const table = String(tableName || '').replace(/_/g, ' ');
+  if (raw.startsWith('post_')) return `created a ${table || raw.slice(5)} record`;
+  if (raw.startsWith('put_') || raw.startsWith('patch_')) return `updated a ${table || 'record'}`;
+  if (raw.startsWith('delete_')) return `removed a ${table || 'record'}`;
+  return action || 'made a change';
+}
+
+function relativeTime(iso?: string) {
+  if (!iso) return '';
+  const diffMs = Date.now() - new Date(iso).getTime();
+  if (!Number.isFinite(diffMs)) return '';
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'Just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return 'Today';
+  if (diffHr < 48) return 'Yesterday';
+  const diffDay = Math.floor(diffHr / 24);
+  return `${diffDay}d ago`;
+}
+
+function initials(name?: string) {
+  if (!name) return 'U';
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 }
 
 export default function DashboardPage() {
   const router = useRouter();
   const isClient = useIsClient();
-  const { role, profile, user } = useCurrentUser();
-  const [headerCopy, setHeaderCopy] = useState<{ greeting: string; dateLabel: string } | null>(null);
+  const { role, profile, user, isSuperAdmin } = useCurrentUser();
+  const [mountedName, setMountedName] = useState('');
 
   useEffect(() => {
-    const now = new Date();
-    setHeaderCopy({ greeting: getGreeting(now), dateLabel: getDateLabel(now) });
-  }, []);
+    const name =
+      profile?.full_name?.trim() ||
+      user?.user_metadata?.full_name ||
+      profile?.email?.split('@')[0] ||
+      user?.email?.split('@')[0] ||
+      '';
+    setMountedName(name);
+  }, [profile, user]);
 
   const { data: dashboardData, isLoading } = useQuery({
     queryKey: ['dashboard-stats'],
@@ -69,367 +102,258 @@ export default function DashboardPage() {
 
   const stats = dashboardData?.stats || {
     projects: 0,
-    buyers: 0,
-    vendors: 0,
-    certifications: 0,
-    memberships: 0,
-    partnerships: 0,
-    insurance: 0,
-    documents: 0,
+    tasks: 0,
+    invoices: 0,
     quotations: 0,
+    payments: 0,
     alerts: 0,
-    hoursToday: 0,
   };
 
-  const pipelineOverview = dashboardData?.pipelineOverview || {};
   const recentActivity = dashboardData?.recentActivity || [];
-  const upcomingEvents = dashboardData?.upcomingEvents || [];
   const myTasks = dashboardData?.myTasks || [];
-  const myProjects = dashboardData?.myProjects || [];
-  const [myPanel, setMyPanel] = useState<'tasks' | 'projects'>('tasks');
+  const onLeaveToday = dashboardData?.onLeaveToday || [];
+  const displayName = isClient ? mountedName || 'there' : 'there';
+  const roleLabel = ROLE_LABELS[role] || profile?.designation || 'Team member';
 
-  const moduleCards = [
-    { name: 'Projects', count: stats.projects, icon: FolderKanban, href: '/dashboard/projects', color: 'text-blue-600', bg: 'bg-blue-500/10' },
-    { name: 'Buyers', count: stats.buyers, icon: ShoppingCart, href: '/dashboard/buyers', color: 'text-purple-600', bg: 'bg-purple-500/10' },
-    { name: 'Vendors', count: stats.vendors, icon: Package, href: '/dashboard/vendors', color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
-    { name: 'Certifications', count: stats.certifications, icon: Award, href: '/dashboard/certifications', color: 'text-amber-600', bg: 'bg-amber-500/10' },
-    { name: 'Memberships', count: stats.memberships, icon: Users, href: '/dashboard/memberships', color: 'text-cyan-600', bg: 'bg-cyan-500/10' },
-    { name: 'Partnerships', count: stats.partnerships, icon: Shield, href: '/dashboard/partnerships', color: 'text-rose-600', bg: 'bg-rose-500/10' },
-    { name: 'Insurance', count: stats.insurance, icon: Shield, href: '/dashboard/insurance', color: 'text-indigo-600', bg: 'bg-indigo-500/10' },
-    { name: 'Quotations', count: stats.quotations, icon: FileSearch, href: '/dashboard/quotations', color: 'text-teal-600', bg: 'bg-teal-500/10' },
-    { name: 'Documents', count: stats.documents, icon: FileText, href: '/dashboard/documents', color: 'text-gray-600', bg: 'bg-gray-500/10' },
+  const summary = [
+    {
+      label: 'Projects',
+      value: stats.projects,
+      icon: FolderKanban,
+      href: '/dashboard/projects',
+      card: 'border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 hover:border-blue-400',
+      iconWrap: 'bg-blue-500 text-white',
+      valueClass: 'text-blue-800',
+    },
+    {
+      label: 'Tasks',
+      value: stats.tasks ?? 0,
+      icon: CheckSquare,
+      href: '/dashboard/tasks',
+      card: 'border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50 hover:border-violet-400',
+      iconWrap: 'bg-violet-500 text-white',
+      valueClass: 'text-violet-800',
+    },
+    {
+      label: 'Invoices',
+      value: stats.invoices ?? 0,
+      icon: FileText,
+      href: '/dashboard/invoices',
+      card: 'border-teal-200 bg-gradient-to-br from-teal-50 to-cyan-50 hover:border-teal-400',
+      iconWrap: 'bg-teal-500 text-white',
+      valueClass: 'text-teal-800',
+    },
+    {
+      label: 'Estimates',
+      value: stats.quotations,
+      icon: FileSearch,
+      href: '/dashboard/quotations',
+      card: 'border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 hover:border-amber-400',
+      iconWrap: 'bg-amber-500 text-white',
+      valueClass: 'text-amber-800',
+    },
+    {
+      label: 'Payments',
+      value: stats.payments ?? 0,
+      icon: CreditCard,
+      href: '/dashboard/finance/credit-status',
+      card: 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-lime-50 hover:border-emerald-400',
+      iconWrap: 'bg-emerald-500 text-white',
+      valueClass: 'text-emerald-800',
+    },
   ];
 
-  const displayName =
-    profile?.full_name?.trim() ||
-    user?.user_metadata?.full_name ||
-    profile?.email?.split('@')[0] ||
-    user?.email?.split('@')[0] ||
-    'there';
-
-  const hashToHue = (input: string) => {
-    let hash = 0;
-    for (let i = 0; i < input.length; i++) hash = (hash * 31 + input.charCodeAt(i)) >>> 0;
-    return hash % 360;
-  };
-
-  const initialsFromName = (name: string) => {
-    const parts = name.trim().split(/\s+/).filter(Boolean);
-    const first = parts[0]?.[0] || 'U';
-    const second = parts.length > 1 ? parts[parts.length - 1]?.[0] : (parts[0]?.[1] || '');
-    return (first + (second || '')).toUpperCase().slice(0, 2);
-  };
-
-  const relativeTime = (iso?: string) => {
-    if (!iso) return '';
-    const diffMs = Date.now() - new Date(iso).getTime();
-    if (!Number.isFinite(diffMs)) return '';
-    const diffMin = Math.floor(diffMs / 60000);
-    if (diffMin < 1) return 'just now';
-    if (diffMin < 60) return `${diffMin}m ago`;
-    const diffHr = Math.floor(diffMin / 60);
-    if (diffHr < 24) return `${diffHr}h ago`;
-    const diffDay = Math.floor(diffHr / 24);
-    return `${diffDay}d ago`;
-  };
-
   return (
-    <div className="space-y-6 p-6">
-      {/* header */}
-      <div className="rounded-2xl border border-border bg-card p-5">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">
-              {isClient && headerCopy ? headerCopy.greeting : 'Welcome'},{' '}
-              <span>{displayName}</span>
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {isClient && headerCopy ? headerCopy.dateLabel : '\u00A0'}
-            </p>
-          </div>
-          <div className="w-full md:w-[360px]">
-            <input
-              placeholder="Search…"
-              className="h-10 w-full rounded-2xl border border-border bg-background px-4 text-sm outline-none focus:ring-0"
-            />
-          </div>
-        </div>
-      </div>
-
+    <div className="space-y-6">
       <AnnouncementsWidget />
 
-      {/* KPI bar */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-36 rounded-2xl bg-muted animate-pulse" />
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-24 animate-pulse rounded-2xl bg-muted" />
           ))}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-px bg-border md:grid-cols-4 rounded-2xl overflow-hidden border border-border">
-          {[
-            {
-              label: 'Total Active Projects',
-              value: stats.projects,
-              trendIcon: TrendingUp,
-              trendText: '+12% this month',
-              trendClass: 'text-emerald-600',
-            },
-            {
-              label: 'Total Buyers',
-              value: stats.buyers,
-              trendIcon: TrendingUp,
-              trendText: '+8% this month',
-              trendClass: 'text-emerald-600',
-            },
-            {
-              label: 'Pending Alerts',
-              value: stats.alerts,
-              trendIcon: TrendingDown,
-              trendText: '-3% this month',
-              trendClass: 'text-amber-600',
-            },
-            {
-              label: 'Hours Clocked Today',
-              value: stats.hoursToday.toFixed(1),
-              trendIcon: TrendingUp,
-              trendText: '+5% this week',
-              trendClass: 'text-emerald-600',
-            },
-          ].map((kpi) => {
-            const TrendIcon = kpi.trendIcon;
-            return (
-              <div key={kpi.label} className="bg-card p-6">
-                <p className="text-sm text-muted-foreground">{kpi.label}</p>
-                <p className="text-5xl font-semibold mt-2 tabular-nums">{kpi.value}</p>
-                <div className="flex items-center gap-1 mt-3">
-                  <TrendIcon className={`h-4 w-4 ${kpi.trendClass}`} />
-                  <span className={`text-xs ${kpi.trendClass}`}>{kpi.trendText}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      ) : null}
 
-      {/* Punch Request Alert */}
       {!isLoading && role === 'super_admin' && punchStats && punchStats.pending > 0 && (
-        <div className="rounded-2xl border-l-4 border-l-amber-500 border border-border bg-card p-4">
+        <div className="rounded-2xl border border-amber-200 border-l-4 border-l-amber-500 bg-amber-50 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" />
               <div>
                 <p className="text-sm font-medium">{punchStats.pending} punch requests need review</p>
                 <p className="text-xs text-muted-foreground">Employees waiting for approval</p>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/punch-requests')}>
-              Review <ArrowRight className="w-3 h-3 ml-1" />
+              Review <ArrowRight className="ml-1 h-3 w-3" />
             </Button>
           </div>
         </div>
       )}
 
-      {/* middle section */}
-      {!isLoading && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <div className="lg:col-span-5">
-            <Card className="rounded-2xl border border-border bg-card p-5 h-full">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-medium">Activity</h3>
-                <button className="text-xs text-primary hover:underline transition-all duration-150">View all</button>
-              </div>
-              <div className="space-y-2 max-h-72 overflow-y-auto">
-                {recentActivity.slice(0, 10).map((activity: any) => {
-                  const name = String(activity.users?.full_name || activity.users?.email || 'User');
-                  const initials = initialsFromName(name);
-                  const hue = hashToHue(name);
-                  return (
-                    <div
-                      key={activity.id}
-                      className="flex items-start gap-3 rounded-2xl p-2 hover:bg-muted/40 transition-all duration-150"
-                    >
-                      <div
-                        className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0"
-                        style={{ backgroundColor: `hsl(${hue} 70% 45%)` }}
-                      >
-                        {initials}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm">
-                          <span className="font-medium">{name}</span>{' '}
-                          <span className="text-muted-foreground">{activity.action}</span>
-                        </p>
-                        <p className="text-xs text-muted-foreground">{relativeTime(activity.created_at)}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-                {recentActivity.length === 0 && <p className="text-sm text-muted-foreground">No recent activity</p>}
-              </div>
-            </Card>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <div className="space-y-4 xl:col-span-5">
+          <div>
+            <p className="bg-gradient-to-r from-blue-700 via-violet-600 to-teal-600 bg-clip-text text-3xl font-semibold tracking-tight text-transparent">
+              Welcome {displayName} 👋
+            </p>
           </div>
 
-          <div className="lg:col-span-4">
-            <Card className="rounded-2xl border border-border bg-card p-5 h-full">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-medium">This Week</h3>
-                <button
-                  className="text-xs text-primary hover:underline transition-all duration-150"
-                  onClick={() => router.push('/dashboard/calendar')}
-                >
-                  Open calendar
-                </button>
+          <Card className="rounded-2xl border-blue-100 bg-gradient-to-r from-blue-500 via-indigo-500 to-teal-500 p-5 text-white shadow-md">
+            <div className="flex flex-wrap items-center gap-4">
+              <Avatar className="h-16 w-16 ring-2 ring-white/50">
+                <AvatarFallback className="bg-white/20 text-lg text-white">
+                  {initials(displayName === 'there' ? '' : displayName)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-lg font-semibold text-white">{displayName === 'there' ? '…' : displayName}</p>
+                <p className="text-sm text-white/80">{profile?.designation || roleLabel}</p>
               </div>
-              <div className="space-y-3 max-h-72 overflow-y-auto">
-                {upcomingEvents.slice(0, 10).map((event: any) => (
-                  <div key={event.id} className="flex items-start gap-3">
-                    <div className={`mt-1 h-2 w-2 rounded-full ${event.event_type === 'holiday' ? 'bg-gray-400' : 'bg-blue-500'}`} />
-                    <div>
-                      <p className="text-sm font-medium">{event.title}</p>
+              <Button className="bg-white text-emerald-700 hover:bg-emerald-50" onClick={() => router.push('/dashboard/tasks')}>
+                + Create
+              </Button>
+            </div>
+          </Card>
+
+          {!isLoading && (
+            <div className="grid grid-cols-3 gap-3">
+              {summary.slice(0, 3).map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => router.push(item.href)}
+                    className={`rounded-2xl border p-4 text-left shadow-sm transition ${item.card}`}
+                  >
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-xs font-medium text-slate-600">{item.label}</span>
+                      <span className={`rounded-lg p-1.5 ${item.iconWrap}`}>
+                        <Icon className="h-3.5 w-3.5" />
+                      </span>
+                    </div>
+                    <p className={`text-2xl font-semibold tabular-nums ${item.valueClass}`}>{item.value}</p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {!isLoading && (
+            <div className="grid grid-cols-2 gap-3">
+              {summary.slice(3).map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => router.push(item.href)}
+                    className={`rounded-2xl border p-4 text-left shadow-sm transition ${item.card}`}
+                  >
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-xs font-medium text-slate-600">{item.label}</span>
+                      <span className={`rounded-lg p-1.5 ${item.iconWrap}`}>
+                        <Icon className="h-3.5 w-3.5" />
+                      </span>
+                    </div>
+                    <p className={`text-2xl font-semibold tabular-nums ${item.valueClass}`}>{item.value}</p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <Card className="rounded-2xl border-violet-100 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-violet-800">{isSuperAdmin ? 'Tasks' : 'My Tasks'}</h2>
+              <button
+                className="text-xs font-medium text-violet-600 hover:underline"
+                onClick={() => router.push(isSuperAdmin ? '/dashboard/tasks?view=team' : '/dashboard/tasks')}
+              >
+                View all
+              </button>
+            </div>
+            <div className="space-y-2">
+              {myTasks.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No open tasks.</p>
+              ) : (
+                myTasks.slice(0, 8).map((task: any) => (
+                  <div
+                    key={task.id}
+                    className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-violet-100 bg-violet-50/40 px-3 py-2.5 hover:bg-violet-50"
+                    onClick={() => router.push('/dashboard/tasks')}
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{task.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {formatUkShortDayDate(event.date)}
-                        {event.start_time ? `, ${event.start_time}` : ''}
+                        {task.assignee_name ? `${task.assignee_name} · ` : ''}
+                        {task.due_date ? formatUkDate(task.due_date) : 'No due date'}
+                      </p>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${taskStatusStyle(task.status)}`}>
+                      {taskStatusLabel(task.status)}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
+
+          <Card className="rounded-2xl border-emerald-100 bg-white p-5 shadow-sm">
+            <h2 className="mb-4 text-base font-semibold text-emerald-800">My Activity</h2>
+            <p className="mb-3 text-xs text-muted-foreground">Only your own actions appear here.</p>
+            <div className="max-h-64 space-y-3 overflow-y-auto">
+              {recentActivity.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No activity yet.</p>
+              ) : (
+                recentActivity.map((activity: any) => (
+                  <div key={activity.id} className="flex items-start gap-3">
+                    <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+                    <div>
+                      <p className="text-sm">
+                        You {friendlyAction(activity.action, activity.table_name)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{relativeTime(activity.created_at)}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
+
+          <Card className="rounded-2xl border-amber-100 bg-white p-5 shadow-sm">
+            <h2 className="mb-3 text-base font-semibold text-amber-800">On Leave Today</h2>
+            {onLeaveToday.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No one is on leave today.</p>
+            ) : (
+              <div className="space-y-2">
+                {onLeaveToday.map((row: { id: string; name: string; start_date?: string; end_date?: string }) => (
+                  <div key={row.id} className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-amber-50 text-xs text-amber-800">
+                        {initials(row.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-medium">{row.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {row.start_date ? formatUkDate(row.start_date) : ''}
+                        {row.end_date ? ` – ${formatUkDate(row.end_date)}` : ''}
                       </p>
                     </div>
                   </div>
                 ))}
-                {upcomingEvents.length === 0 && <p className="text-sm text-muted-foreground">No upcoming events</p>}
               </div>
-            </Card>
-          </div>
-
-          <div className="lg:col-span-3">
-            <Card className="rounded-2xl border border-border bg-card p-5 h-full">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-medium">{myPanel === 'tasks' ? 'My Tasks' : 'My Projects'}</h3>
-                <button
-                  className="text-xs text-primary hover:underline transition-all duration-150"
-                  onClick={() => router.push(myPanel === 'tasks' ? '/dashboard/tasks' : '/dashboard/projects')}
-                >
-                  View all
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2 mb-4">
-                <button
-                  className={`text-xs px-3 py-1 rounded-full border border-border transition-all duration-150 ${myPanel === 'tasks' ? 'bg-muted' : 'hover:bg-muted/40'}`}
-                  onClick={() => setMyPanel('tasks')}
-                >
-                  Tasks
-                </button>
-                <button
-                  className={`text-xs px-3 py-1 rounded-full border border-border transition-all duration-150 ${myPanel === 'projects' ? 'bg-muted' : 'hover:bg-muted/40'}`}
-                  onClick={() => setMyPanel('projects')}
-                >
-                  Projects
-                </button>
-              </div>
-
-              <div className="space-y-2 max-h-72 overflow-y-auto">
-                {myPanel === 'tasks' ? (
-                  <>
-                    {myTasks.slice(0, 8).map((task: any) => (
-                      <div
-                        key={task.id}
-                        className="rounded-2xl border border-border p-3 cursor-pointer hover:bg-muted/40 transition-all duration-150"
-                        onClick={() => router.push('/dashboard/tasks')}
-                      >
-                        <p className="text-sm font-medium">{task.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {task.due_date ? formatUkDate(task.due_date) : 'No due date'}
-                        </p>
-                      </div>
-                    ))}
-                    {myTasks.length === 0 && <p className="text-sm text-muted-foreground">No tasks assigned</p>}
-                  </>
-                ) : (
-                  <>
-                    {myProjects.slice(0, 8).map((project: any) => (
-                      <div
-                        key={project.id}
-                        className="rounded-2xl border border-border p-3 cursor-pointer hover:bg-muted/40 transition-all duration-150"
-                        onClick={() => router.push(`/dashboard/projects/${project.id}`)}
-                      >
-                        <p className="text-sm font-medium">{project.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {project.end_date ? `End: ${formatUkDate(project.end_date)}` : 'No end date'}
-                        </p>
-                      </div>
-                    ))}
-                    {myProjects.length === 0 && <p className="text-sm text-muted-foreground">No projects assigned</p>}
-                  </>
-                )}
-              </div>
-            </Card>
-          </div>
+            )}
+          </Card>
         </div>
-      )}
 
-      {/* modules grid */}
-      {!isLoading && (
-        <div>
-          <h3 className="text-base font-medium mb-4">Modules</h3>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8">
-            {moduleCards.map((card) => {
-              const Icon = card.icon;
-              return (
-                <div
-                  key={card.name}
-                  onClick={() => router.push(card.href)}
-                  className="rounded-2xl border border-border bg-card p-4 cursor-pointer 
-                 hover:border-border/80 transition-all duration-150 
-                 flex flex-col items-center gap-2 text-center"
-                >
-                  <div className={`rounded-xl ${card.bg} p-2`}>
-                    <Icon className={`h-5 w-5 ${card.color}`} />
-                  </div>
-                  <p className="text-sm font-medium leading-tight">{card.name}</p>
-                  <p className="text-2xl font-bold tabular-nums">{card.count}</p>
-                </div>
-              );
-            })}
-          </div>
+        <div className="xl:col-span-7">
+          <HomeCalendar />
         </div>
-      )}
-
-      {/* pipeline */}
-      {!isLoading && (
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <h3 className="text-base font-medium mb-4">Buyer Pipeline</h3>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {Object.entries(pipelineOverview).map(([stage, data]: [string, any]) => (
-              <div key={stage} className="flex-shrink-0 flex flex-col items-center gap-1">
-                <div
-                  className="h-9 rounded-full px-4 flex items-center text-xs font-medium text-white whitespace-nowrap"
-                  style={{ backgroundColor: data.color }}
-                >
-                  {stage}
-                </div>
-                <span className="text-xs font-semibold tabular-nums">{data.count}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* alerts */}
-      {!isLoading && stats.alerts > 0 && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-4">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
-            <span className="text-sm font-medium text-amber-900 dark:text-amber-200">
-              {stats.alerts} pending alerts
-            </span>
-            <button
-              className="ml-auto text-xs text-amber-700 dark:text-amber-300 hover:underline transition-all duration-150"
-              onClick={() => router.push('/dashboard/alerts')}
-            >
-              View alerts
-            </button>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

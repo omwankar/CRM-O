@@ -9,7 +9,7 @@ export const DashboardSidebar = dynamic(
     ssr: false,
     loading: () => (
       <aside
-        className="hidden w-64 shrink-0 border-r border-white/10 bg-[#0f172a] md:block"
+        className="hidden w-64 shrink-0 border-r border-blue-100 bg-white md:block"
         aria-hidden
       />
     ),

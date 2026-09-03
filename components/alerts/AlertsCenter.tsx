@@ -9,6 +9,7 @@ import {
   CheckCircle,
   CalendarDays,
   Clock3,
+  ClipboardList,
   Info,
   Loader2,
   Megaphone,
@@ -39,6 +40,9 @@ function getNotificationIcon(type: string) {
     case 'missed_punch':
     case 'open_session_warning':
       return <Clock3 className="w-4 h-4 text-amber-500" />;
+    case 'timesheet':
+    case 'timesheet_comment':
+      return <ClipboardList className="w-4 h-4 text-teal-600" />;
     case 'announcement':
       return <Megaphone className="w-4 h-4 text-purple-500" />;
     default:
@@ -163,19 +167,9 @@ export function AlertsCenter({ tab, onTabChange, compact = false, onItemClick }:
                 message: string;
                 is_read: boolean;
                 created_at: string;
-              }) => (
-                <div
-                  key={n.id}
-                  className={cn(
-                    compact
-                      ? `p-3 hover:bg-muted/50 cursor-pointer ${!n.is_read ? 'bg-primary/5' : ''}`
-                      : `rounded-xl border border-border p-4 ${!n.is_read ? 'bg-primary/5' : 'bg-card'}`
-                  )}
-                  onClick={() => {
-                    if (!n.is_read) markReadMut.mutate(n.id);
-                    onItemClick?.();
-                  }}
-                >
+              }) => {
+                const timesheetNote = n.type === 'timesheet' || n.type === 'timesheet_comment';
+                const inner = (
                   <div className="flex items-start gap-3">
                     <div className="p-2 rounded-full bg-muted shrink-0">{getNotificationIcon(n.type)}</div>
                     <div className="flex-1 min-w-0">
@@ -189,8 +183,26 @@ export function AlertsCenter({ tab, onTabChange, compact = false, onItemClick }:
                       <p className="text-xs text-muted-foreground mt-0.5">{formatRelativeTime(n.created_at)}</p>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+                const className = cn(
+                  compact
+                    ? `p-3 hover:bg-muted/50 cursor-pointer ${!n.is_read ? 'bg-primary/5' : ''}`
+                    : `rounded-xl border border-border p-4 ${!n.is_read ? 'bg-primary/5' : 'bg-card'}`,
+                );
+                const onClick = () => {
+                  if (!n.is_read) markReadMut.mutate(n.id);
+                  onItemClick?.();
+                };
+                return timesheetNote ? (
+                  <Link key={n.id} href="/dashboard/timesheet" className={className} onClick={onClick}>
+                    {inner}
+                  </Link>
+                ) : (
+                  <div key={n.id} className={className} onClick={onClick}>
+                    {inner}
+                  </div>
+                );
+              })}
             </div>
           )
         ) : expiryLoading ? (

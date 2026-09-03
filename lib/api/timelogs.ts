@@ -1,5 +1,5 @@
 import { apiRequest } from '@/lib/api/client';
-import type { CreateTimeLogInput, TimeLog } from '@/types/workplace';
+import type { CreateTimeLogInput, TimeLog, TimeLogComment } from '@/types/workplace';
 
 export async function getTimeLogs(params?: { month?: string; user_id?: string }) {
   const q = new URLSearchParams();
@@ -19,4 +19,11 @@ export async function updateTimeLog(id: string, data: Partial<CreateTimeLogInput
 
 export async function deleteTimeLog(id: string) {
   return apiRequest(`/timelogs/${id}`, { method: 'DELETE' });
+}
+
+export async function commentOnTimeLog(id: string, body: string) {
+  return apiRequest(`/timelogs/${id}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ body }),
+  }) as Promise<TimeLogComment>;
 }

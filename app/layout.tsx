@@ -1,22 +1,15 @@
 import type { Metadata } from 'next'
-import { DM_Sans, DM_Serif_Display } from 'next/font/google'
+import { Plus_Jakarta_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from '@/components/ui/sonner'
 import { ThemeProvider } from '@/components/theme-provider'
 import { QueryProvider } from '@/lib/query-client'
 import './globals.css'
 
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  variable: '--font-sans',
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-jakarta',
   display: 'swap',
-})
-
-const dmSerifDisplay = DM_Serif_Display({
-  subsets: ["latin"],
-  variable: '--font-serif',
-  display: 'swap',
-  weight: ['400'],
 })
 
 export const metadata: Metadata = {
@@ -39,13 +32,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${dmSans.variable} ${dmSerifDisplay.variable} dark`} suppressHydrationWarning>
+    <html lang="en" className={`${plusJakarta.variable} light`} suppressHydrationWarning>
       <body className="font-sans antialiased bg-background text-foreground">
         <QueryProvider>
           <ThemeProvider
             attribute="class"
-            defaultTheme="dark"
-            forcedTheme="dark"
+            defaultTheme="light"
+            forcedTheme="light"
             enableSystem={false}
             disableTransitionOnChange
           >

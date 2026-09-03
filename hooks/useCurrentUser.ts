@@ -103,8 +103,9 @@ export function useCurrentUser() {
     );
   };
 
-  // Cached profile is enough to paint the sidebar; don't block the whole shell
-  const isLoading = userLoading && !userData && !profileData;
+  // Wait for the profile so Super Admins are not treated as plain users
+  // (role used to default to "user" before /users/me returned).
+  const isLoading = userLoading || (!!userData && !profileData);
 
   return {
     user: userData,

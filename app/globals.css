@@ -3,43 +3,49 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@font-face {
+  font-family: 'Olgan';
+  src: local('Cas Olgans'), local('CasOlgans'), local('CasOlgans-Regular'), local('Olgan'), local('Olgans');
+  font-display: swap;
+}
+
 :root {
-  /* Light Mode Colors */
-  --background: #FFFFFF;
-  --foreground: #334155;
+  /* Bright, colorful light theme */
+  --background: #EEF4FF;
+  --foreground: #0F172A;
   --card: #FFFFFF;
-  --card-foreground: #334155;
+  --card-foreground: #1E293B;
   --popover: #FFFFFF;
-  --popover-foreground: #334155;
-  --primary: #1B4FD8;
+  --popover-foreground: #1E293B;
+  --primary: #2563EB;
   --primary-foreground: #FFFFFF;
-  --secondary: #F8FAFC;
-  --secondary-foreground: #334155;
-  --muted: #F1F5F9;
+  --secondary: #E0F2FE;
+  --secondary-foreground: #075985;
+  --muted: #F1F5FF;
   --muted-foreground: #64748B;
-  --accent: #0EA472;
-  --accent-foreground: #FFFFFF;
-  --destructive: #DC2626;
+  --accent: #EEF2FF;
+  --accent-foreground: #3730A3;
+  --destructive: #E11D48;
   --destructive-foreground: #FFFFFF;
-  --warning: #D97706;
+  --warning: #F59E0B;
   --warning-foreground: #FFFFFF;
-  --border: rgba(15, 23, 42, 0.12);
-  --input: rgba(15, 23, 42, 0.12);
-  --ring: #1B4FD8;
-  --chart-1: #1B4FD8;
-  --chart-2: #0EA472;
-  --chart-3: #A855F7;
-  --chart-4: #EC4899;
+  --border: rgba(37, 99, 235, 0.14);
+  --input: rgba(37, 99, 235, 0.16);
+  --ring: #2563EB;
+  --chart-1: #2563EB;
+  --chart-2: #14B8A6;
+  --chart-3: #8B5CF6;
+  --chart-4: #F43F5E;
   --chart-5: #F59E0B;
-  --radius: 0.75rem;
+  --radius: 0.9rem;
   --sidebar: #FFFFFF;
   --sidebar-foreground: #334155;
-  --sidebar-primary: #1B4FD8;
+  --sidebar-primary: #2563EB;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F8FAFC;
-  --sidebar-accent-foreground: #1B4FD8;
-  --sidebar-border: rgba(15, 23, 42, 0.12);
-  --sidebar-ring: #1B4FD8;
+  --sidebar-accent: #EFF6FF;
+  --sidebar-accent-foreground: #1D4ED8;
+  --sidebar-border: rgba(37, 99, 235, 0.12);
+  --sidebar-ring: #2563EB;
 }
 
 .dark {
@@ -81,8 +87,8 @@
 }
 
 @theme inline {
-  --font-sans: 'DM Sans', 'Geist', 'Geist Fallback';
-  --font-serif: 'DM Serif Display', 'Geist', 'Geist Fallback';
+  --font-sans: 'Olgan', 'Cas Olgans', var(--font-jakarta), 'Plus Jakarta Sans', ui-sans-serif, sans-serif;
+  --font-serif: 'Olgan', 'Cas Olgans', var(--font-jakarta), 'Plus Jakarta Sans', ui-sans-serif, sans-serif;
   --font-mono: 'Geist Mono', 'Geist Mono Fallback';
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -127,8 +133,15 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground min-h-screen;
+    @apply text-foreground min-h-screen;
     font-family: var(--font-sans), sans-serif;
+    background-color: var(--background);
+    background-image:
+      radial-gradient(circle at 0% -10%, rgba(59, 130, 246, 0.22), transparent 42%),
+      radial-gradient(circle at 100% 0%, rgba(20, 184, 166, 0.16), transparent 38%),
+      radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.14), transparent 42%),
+      radial-gradient(circle at 0% 100%, rgba(244, 63, 94, 0.08), transparent 36%);
+    background-attachment: fixed;
   }
 
   button,
@@ -144,16 +157,16 @@
 
   /* Typography Scale */
   h1 {
-    @apply font-serif text-[32px] font-medium leading-tight text-foreground;
+    @apply font-sans text-[32px] font-medium leading-tight text-foreground;
   }
   h2 {
-    @apply font-serif text-[24px] font-medium leading-tight text-foreground;
+    @apply font-sans text-[24px] font-medium leading-tight text-foreground;
   }
   h3 {
-    @apply font-serif text-[18px] font-medium leading-tight text-foreground;
+    @apply font-sans text-[18px] font-medium leading-tight text-foreground;
   }
   h4 {
-    @apply font-serif text-[15px] font-medium leading-tight text-foreground;
+    @apply font-sans text-[15px] font-medium leading-tight text-foreground;
   }
   p {
     @apply text-[14px] leading-[1.7] text-foreground;
@@ -186,7 +199,7 @@
   }
 
   .page-title {
-    @apply font-serif text-[32px] font-medium leading-tight text-foreground;
+    @apply font-sans text-[32px] font-medium leading-tight text-foreground;
   }
 
   .page-subtitle {
@@ -195,7 +208,7 @@
 
   /* Cards */
   .surface-card {
-    @apply rounded-xl border-[0.5px] border-border bg-card p-5 transition-all duration-200 hover:border-border/60;
+    @apply rounded-xl border-[0.5px] border-border bg-card p-5 shadow-[0_8px_24px_rgba(37,99,235,0.06)] transition-all duration-200 hover:border-primary/30 hover:shadow-[0_12px_28px_rgba(37,99,235,0.10)];
   }
 
   /* Buttons */
@@ -213,19 +226,19 @@
   }
   
   .badge-success {
-    @apply bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400;
+    @apply bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400;
   }
   
   .badge-warning {
-    @apply bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400;
+    @apply bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400;
   }
   
   .badge-danger {
-    @apply bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400;
+    @apply bg-rose-100 text-rose-700 dark:bg-red-500/20 dark:text-red-400;
   }
   
   .badge-info {
-    @apply bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400;
+    @apply bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400;
   }
 
   /* Tables */

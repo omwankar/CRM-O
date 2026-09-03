@@ -20,6 +20,63 @@ type MenuItem = {
 type MenuSection = {
   label: string;
   items: MenuItem[];
+  tone?: {
+    label: string;
+    active: string;
+    dot: string;
+    hover: string;
+  };
+};
+
+const SECTION_TONES: Record<string, MenuSection['tone']> = {
+  Overview: {
+    label: 'text-blue-500',
+    active: 'bg-blue-50 text-blue-700 font-medium',
+    dot: 'bg-blue-500',
+    hover: 'hover:bg-blue-50/80 hover:text-blue-800',
+  },
+  Attendance: {
+    label: 'text-teal-500',
+    active: 'bg-teal-50 text-teal-700 font-medium',
+    dot: 'bg-teal-500',
+    hover: 'hover:bg-teal-50/80 hover:text-teal-800',
+  },
+  HR: {
+    label: 'text-fuchsia-500',
+    active: 'bg-fuchsia-50 text-fuchsia-700 font-medium',
+    dot: 'bg-fuchsia-500',
+    hover: 'hover:bg-fuchsia-50/80 hover:text-fuchsia-800',
+  },
+  Sales: {
+    label: 'text-violet-500',
+    active: 'bg-violet-50 text-violet-700 font-medium',
+    dot: 'bg-violet-500',
+    hover: 'hover:bg-violet-50/80 hover:text-violet-800',
+  },
+  Operations: {
+    label: 'text-amber-500',
+    active: 'bg-amber-50 text-amber-800 font-medium',
+    dot: 'bg-amber-500',
+    hover: 'hover:bg-amber-50/80 hover:text-amber-900',
+  },
+  Finance: {
+    label: 'text-emerald-500',
+    active: 'bg-emerald-50 text-emerald-700 font-medium',
+    dot: 'bg-emerald-500',
+    hover: 'hover:bg-emerald-50/80 hover:text-emerald-800',
+  },
+  Administration: {
+    label: 'text-indigo-500',
+    active: 'bg-indigo-50 text-indigo-700 font-medium',
+    dot: 'bg-indigo-500',
+    hover: 'hover:bg-indigo-50/80 hover:text-indigo-800',
+  },
+  Other: {
+    label: 'text-rose-500',
+    active: 'bg-rose-50 text-rose-700 font-medium',
+    dot: 'bg-rose-500',
+    hover: 'hover:bg-rose-50/80 hover:text-rose-800',
+  },
 };
 
 function getMenuSections(role?: string, pendingCount?: number): MenuSection[] {
@@ -31,6 +88,7 @@ function getMenuSections(role?: string, pendingCount?: number): MenuSection[] {
       label: 'Overview',
       items: [
         { label: 'Dashboard', href: '/dashboard' },
+        { label: 'Timesheet', href: '/dashboard/timesheet' },
         { label: 'Tasks', href: '/dashboard/tasks' },
         { label: 'Alerts & Notifications', href: '/dashboard/alerts' },
       ],
@@ -48,7 +106,6 @@ function getMenuSections(role?: string, pendingCount?: number): MenuSection[] {
               { label: 'Mark Leave', href: '/dashboard/mark-leave' },
             ]
           : []),
-        { label: 'Time Log', href: '/dashboard/timelog' },
       ],
     },
     {
@@ -185,24 +242,24 @@ export function Sidebar() {
 
   const renderNav = (isCollapsed: boolean) => (
     <>
-      <div className="h-16 flex items-center px-5 border-b border-white/10 shrink-0">
+      <div className="h-16 flex items-center px-5 border-b border-blue-100 shrink-0 bg-gradient-to-r from-blue-50 via-white to-teal-50">
         {!isCollapsed ? (
           <div className="flex items-center gap-3 min-w-0">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/10 overflow-hidden">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-blue-500 to-teal-400 overflow-hidden shadow-sm">
               <img
                 src="/cropped-clarusto-logitics-e1756811318321-85x85 .png"
                 alt="Logo"
-                className="h-full w-full object-contain"
+                className="h-full w-full object-contain bg-white"
               />
             </div>
-            <span className="font-semibold text-[15px] text-white tracking-wide truncate">CRM</span>
+            <span className="font-semibold text-[15px] bg-gradient-to-r from-blue-700 to-teal-600 bg-clip-text text-transparent tracking-wide truncate">CRM</span>
           </div>
         ) : (
-          <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-md bg-white/10 overflow-hidden">
+          <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-md bg-gradient-to-br from-blue-500 to-teal-400 overflow-hidden">
             <img
               src="/cropped-clarusto-logitics-e1756811318321-85x85 .png"
               alt="Logo"
-              className="h-full w-full object-contain"
+              className="h-full w-full object-contain bg-white"
             />
           </div>
         )}
@@ -212,11 +269,19 @@ export function Sidebar() {
         {menuSections.map((section) => (
           <div key={section.label}>
             {!isCollapsed && (
-              <p className="mb-2.5 px-2 text-[13px] font-bold text-white">{section.label}</p>
+              <p
+                className={cn(
+                  'mb-2.5 px-2 text-[11px] font-semibold uppercase tracking-wide',
+                  SECTION_TONES[section.label]?.label || 'text-slate-400',
+                )}
+              >
+                {section.label}
+              </p>
             )}
             <ul className="space-y-0.5">
               {section.items.map((item) => {
                 const active = isItemActive(pathname, item.href, search);
+                const tone = SECTION_TONES[section.label];
                 return (
                   <li key={item.href}>
                     <Link
@@ -226,8 +291,8 @@ export function Sidebar() {
                       className={cn(
                         'group flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors',
                         active
-                          ? 'bg-[#2563eb] text-white font-medium'
-                          : 'text-white/90 hover:bg-white/10 hover:text-white',
+                          ? tone?.active || 'bg-blue-50 text-blue-700 font-medium'
+                          : cn('text-slate-600', tone?.hover || 'hover:bg-slate-100 hover:text-slate-900'),
                         isCollapsed && 'justify-center px-0',
                       )}
                     >
@@ -235,7 +300,7 @@ export function Sidebar() {
                         <span
                           className={cn(
                             'h-1.5 w-1.5 shrink-0 rounded-full',
-                            active ? 'bg-white' : 'bg-white/80',
+                            active ? tone?.dot || 'bg-blue-600' : 'bg-slate-300',
                           )}
                         />
                       )}
@@ -262,11 +327,11 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="shrink-0 border-t border-white/10 p-3 space-y-2">
+      <div className="shrink-0 border-t border-slate-200 p-3 space-y-2">
         {!isCollapsed && (
           <div className="flex items-center gap-3 px-2 py-2">
             <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-white/15 text-white text-[12px] font-medium">
+              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-violet-500 text-white text-[12px] font-medium">
                 {profile?.full_name ? (
                   profile.full_name
                     .split(' ')
@@ -280,10 +345,10 @@ export function Sidebar() {
               </AvatarFallback>
             </Avatar>
             <div className="flex min-w-0 flex-1 flex-col">
-              <p className="truncate text-[13px] font-medium text-white">
+              <p className="truncate text-[13px] font-medium text-slate-800">
                 {isLoading ? 'Loading...' : profile?.full_name || profile?.email || 'User'}
               </p>
-              <p className="truncate text-[11px] text-white/55">
+              <p className="truncate text-[11px] text-slate-500">
                 {profile?.role ? `${profile.role}` : profile?.email || ''}
               </p>
             </div>
@@ -294,7 +359,7 @@ export function Sidebar() {
           variant="ghost"
           size={isCollapsed ? 'icon' : 'default'}
           className={cn(
-            'w-full justify-start gap-3 text-white/70 hover:bg-white/10 hover:text-white',
+            'w-full justify-start gap-3 text-slate-500 hover:bg-slate-100 hover:text-slate-900',
             isCollapsed && 'justify-center px-0',
           )}
           onClick={handleLogout}
@@ -306,7 +371,7 @@ export function Sidebar() {
         <Button
           variant="ghost"
           size="icon"
-          className="hidden md:flex w-full h-8 text-white/60 hover:bg-white/10 hover:text-white"
+          className="hidden md:flex w-full h-8 text-slate-400 hover:bg-slate-100 hover:text-slate-800"
           onClick={() => setCollapsed(!collapsed)}
         >
           {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
@@ -319,7 +384,7 @@ export function Sidebar() {
     <>
       <button
         onClick={() => setOpen(!open)}
-        className="fixed top-4 left-4 z-50 rounded-lg border border-white/20 bg-[#1a1f2e] p-2 text-white md:hidden"
+        className="fixed top-4 left-4 z-50 rounded-lg border border-blue-200 bg-white p-2 text-blue-700 shadow-sm md:hidden"
         aria-label="Toggle menu"
       >
         {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -327,7 +392,7 @@ export function Sidebar() {
 
       <aside
         className={cn(
-          'hidden md:flex h-full min-h-0 shrink-0 flex-col bg-[#1a1f2e] text-white transition-all duration-300 ease-in-out',
+          'hidden md:flex h-full min-h-0 shrink-0 flex-col border-r border-blue-100 bg-white/90 text-slate-700 shadow-[4px_0_24px_rgba(37,99,235,0.06)] transition-all duration-300 ease-in-out',
           collapsed ? 'w-16' : 'w-60',
         )}
       >
@@ -336,7 +401,7 @@ export function Sidebar() {
 
       <aside
         className={cn(
-          'fixed left-0 top-0 z-40 flex h-full max-h-svh w-64 flex-col bg-[#1a1f2e] text-white transition-transform duration-300 md:hidden',
+          'fixed left-0 top-0 z-40 flex h-full max-h-svh w-64 flex-col border-r border-blue-100 bg-white text-slate-700 transition-transform duration-300 md:hidden',
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >

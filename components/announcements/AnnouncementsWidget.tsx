@@ -17,9 +17,9 @@ export function AnnouncementsWidget() {
   if (items.length === 0) return null;
 
   return (
-    <Card className="p-5">
+    <Card className="border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50 p-5">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="font-semibold flex items-center gap-2">
+        <h2 className="font-semibold flex items-center gap-2 text-amber-800">
           <Megaphone className="w-4 h-4 text-amber-500" />
           Announcements
         </h2>
