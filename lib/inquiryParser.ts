@@ -270,13 +270,15 @@ function detectMode(text: string, explicit?: string): TransportMode {
   if (/courier|express/.test(ex)) return 'courier';
 
   const scores = { air: 0, sea: 0, road: 0, courier: 0 };
-  if (/air\s?freight|airfreight/i.test(text)) scores.air += 3;
+  if (/air\s?freight|airfreight|\ba\/f\b/i.test(text)) scores.air += 3;
   if (/\bair waybill\b|\bawb\b/i.test(text)) scores.air += 2;
   if (/\bairline\b|\bflight\b|airport/i.test(text)) scores.air += 2;
   if (/\b[A-Z]{3}\s*(?:→|->|–|-)\s*[A-Z]{3}\b/.test(text)) scores.air += 1;
   if (/sea\s?freight|ocean\s?freight/i.test(text)) scores.sea += 3;
   if (/\bfcl\b|\blcl\b|\bvessel\b|bill of lading|port of loading|\bteu\b/i.test(text)) scores.sea += 2;
   if (/\b(20|40)\s?(ft|')\s?(container|gp|hc)\b/i.test(text)) scores.sea += 2;
+  if (CONTAINER_RE.test(text)) scores.sea += 3; // e.g. 1x40'HQ
+  if (/\bport\b/i.test(text)) scores.sea += 1; // "…to Aqaba port" (does not match "airport")
   if (/road\s?freight|\bftl\b|\bltl\b|\btruck\b|trailer|haulage/i.test(text)) scores.road += 2;
   if (/\bcourier\b|door.to.door express|dhl|fedex|ups\b/i.test(text)) scores.courier += 2;
 
@@ -300,6 +302,12 @@ function titleCase(s: string): string {
 
 const DIMS_RE = /(\d+(?:[.,]\d+)?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)\s*(cm|mm|m|in|inch|inches)?/i;
 
+// Container spec, e.g. 1X40`HQ / 2 x 20' GP / 1×40HC
+const CONTAINER_RE = /(\d+)\s*[x×]\s*(20|40|45)\s*['`’′]?\s*(hq|hc|gp|dv|rf|ot|fr|reefer|std)\b/i;
+
+// Sign-off words that end an address block
+const STOP_WORDS_RE = /^(regards|kind regards|best regards|thanks|thank you|sincerely|dear\b|cheers)/i;
+
 /** Main entry point. */
 export function parseInquiry(raw: string): ParsedInquiry {
   const out: ParsedInquiry = { ...EMPTY, cargoLines: [] };
@@ -308,7 +316,8 @@ export function parseInquiry(raw: string): ParsedInquiry {
 
   const lines = text
     .split('\n')
-    .map((l) => l.replace(/^[\s•\-–—*·]+/, '').trim());
+    .map((l) => l.replace(/^[\s•\-–—*·]+/, '').trim())
+    .filter(Boolean); // emails often have blank lines between every row
 
   const fields: Partial<Record<FieldKey, string>> = {};
 
@@ -331,16 +340,35 @@ export function parseInquiry(raw: string): ParsedInquiry {
     if (key) setField(key, m[2], ln);
   }
 
-  // Pass 2 — table style: a line that IS a label, value on the next line
+  // Pass 2 — table style: a line that IS a label (optionally ending with ":"),
+  // value on the following line(s). e.g. "Pickup address:" then the address.
+  const isLabelLine = (l: string) => Boolean(LABEL_MAP[normLabel(l.replace(/\s*:{1,2}\s*$/, ''))]);
   for (let i = 0; i < lines.length - 1; i++) {
-    const ln = normLabel(lines[i]);
+    const bare = lines[i].replace(/\s*:{1,2}\s*$/, '');
+    const ln = normLabel(bare);
     const label = LABEL_MAP[ln];
     if (!label) continue;
-    if (lines[i].includes(':')) continue; // already handled
+    // Skip "Label: value" (inline value) — pass 1 already handled it
+    if (/:.*\S/.test(lines[i]) && !/:{1,2}\s*$/.test(lines[i])) continue;
     const next = lines[i + 1];
-    if (!next || LABEL_MAP[normLabel(next)]) continue;
+    if (!next || isLabelLine(next)) continue;
     if (/^(description|details|service|amount)$/i.test(next)) continue;
-    setField(label, next, ln);
+    if (STOP_WORDS_RE.test(next)) continue;
+
+    if (label === 'origin' || label === 'destination') {
+      // Addresses often span several short lines — join them
+      const parts: string[] = [];
+      for (let j = i + 1; j < lines.length && parts.length < 6; j++) {
+        const l = lines[j];
+        if (!l || isLabelLine(l) || STOP_WORDS_RE.test(l)) break;
+        if (l.includes(':') || l.includes('@') || l.length > 48) break;
+        if (DIMS_RE.test(l) || /\d\s*kg\b/i.test(l)) break;
+        parts.push(l);
+      }
+      if (parts.length) setField(label, parts.join(', '), ln);
+    } else {
+      setField(label, next, ln);
+    }
   }
 
   // Prose "from X to Y"
@@ -350,6 +378,19 @@ export function parseInquiry(raw: string): ParsedInquiry {
   if (prose) {
     if (!fields.origin) fields.origin = prose[1].trim().replace(/[,;]$/, '');
     if (!fields.destination) fields.destination = prose[2].trim().replace(/[,;]$/, '');
+  }
+
+  // "…shipment to Aqaba port" → destination
+  if (!fields.destination) {
+    const dp = text.match(/\b(?:to|To|TO|for|For)\s+([A-Z][a-z][A-Za-z-]*(?:\s+[A-Z][A-Za-z-]+){0,2})\s+(?:sea\s*)?[Pp]ort\b/);
+    if (dp) fields.destination = dp[1];
+  }
+
+  // Subject-line route, e.g. "EXW - UK TO AQABA - 1X40`HQ"
+  const route = text.match(/(?<!SUBJECT\s)\b([A-Z][A-Z .]{0,18}[A-Z]|[A-Z]{2})\s+TO\s+([A-Z][A-Z .]{0,18}[A-Z]|[A-Z]{2})\b/);
+  if (route && route[1] !== route[2] && !/^(DOOR|SUBJECT|UP|BACK)$/.test(route[1]) && !/^(DOOR|BOOK)$/.test(route[2])) {
+    if (!fields.origin) fields.origin = titleCase(route[1]);
+    if (!fields.destination) fields.destination = titleCase(route[2]);
   }
 
   out.origin = fields.origin || '';
@@ -376,6 +417,10 @@ export function parseInquiry(raw: string): ParsedInquiry {
   // Mode + load type
   out.mode = detectMode(text, fields.mode);
   out.loadType = detectLoadType(`${fields.loadType || ''} ${text}`);
+  const cont = text.match(CONTAINER_RE);
+  if (cont) {
+    out.loadType = `FCL – ${cont[1]} × ${cont[2]}'${cont[3].toUpperCase()}`;
+  }
 
   // Ready date
   out.readyDate = toIsoDate(fields.readyDate || '');
@@ -384,12 +429,17 @@ export function parseInquiry(raw: string): ParsedInquiry {
     if (rd) out.readyDate = toIsoDate(rd[1]);
   }
 
-  // Pieces
-  out.pieces = fields.pieces || '';
+  // Pieces — collect "boxes: 663" / "pallets: 21" style rows first
+  const pieceParts: string[] = [];
+  for (const line of lines) {
+    const pm = line.match(/^(boxes|pallets|cartons|packages|pieces|pcs|crates|drums|bags|units)\s*:{1,2}\s*([\d,]+)\s*$/i);
+    if (pm) pieceParts.push(`${pm[2]} ${pm[1].toLowerCase()}`);
+  }
+  out.pieces = pieceParts.length ? pieceParts.join(', ') : fields.pieces || '';
   if (!out.pieces) {
     const p =
       text.match(/total\s*:?\s*(\d+)\s*(pcs?|pieces|boxes|packages|pallets|cartons)/i) ||
-      text.match(/\b(\d+)\s*(boxes|packages|pallets|cartons|pcs)\b/i);
+      text.match(/\b(\d+)[ \t]*(boxes|packages|pallets|cartons|pcs)\b/i);
     if (p) out.pieces = `${p[1]} ${p[2]}`;
   }
 
@@ -458,13 +508,19 @@ export function parseInquiry(raw: string): ParsedInquiry {
     }
   }
 
-  // Sender — `"Name - Company" <email>` first, else labeled customer, else any email
-  const quoted = text.match(/"([^"\n]{2,80})"\s*<([^<>\s@]+@[^<>\s]+)>/);
-  if (quoted) {
-    out.senderEmail = quoted[2].trim();
-    const parts = quoted[1].split(/\s+[-–—]\s+/);
+  // Sender — `"Name - Company" <email>` first, then plain `Name <email>`,
+  // then labeled customer line, then any email in the text.
+  const applySender = (name: string, email: string) => {
+    out.senderEmail = email.trim();
+    const parts = name.split(/\s+[-–—]\s+/);
     out.senderName = parts[0].trim();
     if (parts.length > 1) out.senderCompany = parts.slice(1).join(' - ').trim();
+  };
+  const quoted = text.match(/"([^"\n]{2,80})"\s*<([^<>\s@]+@[^<>\s]+)>/);
+  if (quoted) applySender(quoted[1], quoted[2]);
+  if (!out.senderEmail) {
+    const plain = text.match(/(?:^|\n)\s*'?([A-Z][A-Za-z.' -]{2,50}?)'?\s*<([\w.+-]+@[\w-]+\.[\w.-]+)>/);
+    if (plain) applySender(plain[1], plain[2]);
   }
   if (!out.senderEmail && fields.customer) {
     const em = fields.customer.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
