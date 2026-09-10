@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Search, FileSearch, ArrowRightCircle, Trash2 } from 'lucide-react';
+import { Plus, Search, FileSearch, ArrowRightCircle, Trash2, Inbox } from 'lucide-react';
 import {
   convertEnquiryToQuotation,
   deleteEnquiry,
@@ -104,12 +104,20 @@ export default function EnquiriesPage() {
             Capture customer requirements before vendor pricing or a committed quote.
           </p>
         </div>
-        <Button asChild>
-          <Link href="/dashboard/enquiries/new">
-            <Plus className="w-4 h-4 mr-2" />
-            New enquiry
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/dashboard/enquiries/inbox">
+              <Inbox className="w-4 h-4 mr-2" />
+              Paste inquiry
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/dashboard/enquiries/new">
+              <Plus className="w-4 h-4 mr-2" />
+              New enquiry
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">

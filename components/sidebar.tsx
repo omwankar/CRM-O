@@ -111,6 +111,7 @@ function getMenuSections(role?: string, pendingCount?: number): MenuSection[] {
     {
       label: 'Sales',
       items: [
+        { label: 'Inquiry Inbox', href: '/dashboard/enquiries/inbox' },
         { label: 'Enquiries', href: '/dashboard/enquiries' },
         { label: 'Leads', href: '/dashboard/leads' },
         { label: 'Opportunities', href: '/dashboard/opportunities' },
