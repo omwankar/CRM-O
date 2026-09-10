@@ -30,7 +30,7 @@ export interface ParsedInquiry {
   senderCompany: string;
   senderEmail: string;
   senderPhone: string;
-  receivedThrough: 'email' | 'whatsapp' | 'other';
+  receivedThrough: 'email' | 'whatsapp' | 'phone' | 'other';
   priority: 'low' | 'medium' | 'high';
 }
 

@@ -65,6 +65,7 @@ export interface Enquiry {
   updated_at: string;
   owner?: { id: string; full_name: string; email?: string } | null;
   creator?: { id: string; full_name: string } | null;
+  updater?: { id: string; full_name: string } | null;
   buyer?: { id: string; buyer_name: string; contact_email?: string } | null;
   project?: { id: string; project_id?: string; project_name?: string } | null;
   quotations?: Array<{

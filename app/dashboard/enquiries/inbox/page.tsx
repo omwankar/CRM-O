@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { createEnquiry } from '@/lib/api/enquiries';
-import { ENQUIRY_CURRENCIES } from '@/types/enquiries';
 import {
   buildRequirement,
   parseInquiry,
@@ -97,7 +96,13 @@ export default function InquiryInboxPage() {
       if (req.length < 10) throw new Error('The requirement summary is too short');
       const prospect = [parsed.senderName, parsed.senderCompany].filter(Boolean).join(' — ');
       const receivedVia =
-        parsed.receivedThrough === 'whatsapp' ? 'WhatsApp' : parsed.receivedThrough === 'email' ? 'Email' : 'Other';
+        parsed.receivedThrough === 'whatsapp'
+          ? 'WhatsApp'
+          : parsed.receivedThrough === 'email'
+            ? 'Email'
+            : parsed.receivedThrough === 'phone'
+              ? 'Phone call'
+              : 'Other';
       return createEnquiry({
         title: parsed.headline || null,
         requirement: req,
@@ -291,36 +296,35 @@ export default function InquiryInboxPage() {
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Services requested</Label>
                   <Input value={parsed.services} onChange={(e) => set('services', e.target.value)} placeholder="Delivery, customs clearance…" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Target / quoted price</Label>
-                    <Input
-                      type="number"
-                      value={parsed.price ?? ''}
-                      onChange={(e) => set('price', e.target.value === '' ? null : Number(e.target.value))}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Currency</Label>
-                    <Select value={parsed.currency || 'none'} onValueChange={(v) => set('currency', v === 'none' ? '' : v)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="—" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">—</SelectItem>
-                        {ENQUIRY_CURRENCIES.map((c) => (
-                          <SelectItem key={c} value={c}>
-                            {c}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Target / quoted price</Label>
+                  <Input
+                    type="number"
+                    value={parsed.price ?? ''}
+                    onChange={(e) => set('price', e.target.value === '' ? null : Number(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Inquiry received via</Label>
+                  <Select
+                    value={parsed.receivedThrough}
+                    onValueChange={(v) => set('receivedThrough', v as ParsedInquiry['receivedThrough'])}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="email">Email</SelectItem>
+                      <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                      <SelectItem value="phone">Phone call</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

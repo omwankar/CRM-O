@@ -31,7 +31,7 @@ import {
   type EnquiryStage,
 } from '@/types/enquiries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { formatUkDate } from '@/lib/date';
+import { formatUkDate, formatUkDateTime } from '@/lib/date';
 
 export default function EnquiriesPage() {
   const router = useRouter();
@@ -182,6 +182,7 @@ export default function EnquiriesPage() {
                   <th className="px-4 py-3 font-medium">Stage</th>
                   <th className="px-4 py-3 font-medium">Priority</th>
                   <th className="px-4 py-3 font-medium">Deadline</th>
+                  <th className="px-4 py-3 font-medium">Last updated</th>
                   <th className="px-4 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
@@ -219,6 +220,14 @@ export default function EnquiriesPage() {
                     <td className="px-4 py-3 capitalize">{row.priority}</td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {row.deadline ? formatUkDate(row.deadline) : '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="line-clamp-1 text-xs font-medium">
+                        {row.updater?.full_name || row.creator?.full_name || '—'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {row.updated_at ? formatUkDateTime(row.updated_at) : ''}
+                      </p>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">
