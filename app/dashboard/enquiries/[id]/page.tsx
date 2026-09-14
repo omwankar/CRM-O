@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
+  AlarmClockCheck,
   ArrowLeft,
   ArrowRightCircle,
   Loader2,
@@ -13,6 +14,7 @@ import {
   Pencil,
   Save,
 } from 'lucide-react';
+import { FollowUpDialog } from '@/components/followups/FollowUpDialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -98,6 +100,7 @@ export default function EnquiryDetailPage() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Partial<EnquiryInput> | null>(null);
+  const [followUpOpen, setFollowUpOpen] = useState(false);
 
   const { data: enquiry, isLoading } = useQuery({
     queryKey: ['enquiry', id],
@@ -225,6 +228,14 @@ export default function EnquiryDetailPage() {
               </Button>
             </>
           )}
+          <Button
+            variant="outline"
+            className="border-orange-300 text-orange-700 hover:bg-orange-50"
+            onClick={() => setFollowUpOpen(true)}
+          >
+            <AlarmClockCheck className="w-4 h-4 mr-2" />
+            Set follow-up
+          </Button>
           <Button onClick={() => convertMut.mutate()} disabled={convertMut.isPending}>
             {convertMut.isPending ? (
               <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -556,6 +567,18 @@ export default function EnquiryDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <FollowUpDialog
+        open={followUpOpen}
+        onOpenChange={setFollowUpOpen}
+        preset={{
+          entity_type: 'enquiry',
+          entity_id: enquiry.id,
+          entity_label: `${enquiry.enquiry_number}${enquiry.title ? ` — ${enquiry.title}` : ''}`,
+          title: `Follow up: ${enquiry.title || enquiry.enquiry_number}`,
+          follow_up_type: 'email',
+        }}
+      />
     </div>
   );
 }

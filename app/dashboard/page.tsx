@@ -3,21 +3,31 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { getDashboardStats } from '@/lib/api/dashboard';
 import { getPunchStats } from '@/lib/api/clock';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { ROLE_LABELS } from '@/lib/roles';
 import {
+  AlarmClockCheck,
   AlertTriangle,
   ArrowRight,
-  FolderKanban,
+  ArrowUpRight,
+  ArrowDownRight,
+  Building2,
   CheckSquare,
-  FileText,
+  Contact2,
   FileSearch,
-  CreditCard,
+  Filter,
+  Inbox,
+  PieChart,
+  Plus,
+  Target,
+  TrendingUp,
+  UserPlus,
+  Users,
 } from 'lucide-react';
 import { AnnouncementsWidget } from '@/components/announcements/AnnouncementsWidget';
 import { HomeCalendar } from '@/components/dashboard/HomeCalendar';
@@ -56,7 +66,7 @@ function relativeTime(iso?: string) {
   if (diffMin < 1) return 'Just now';
   if (diffMin < 60) return `${diffMin}m ago`;
   const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return 'Today';
+  if (diffHr < 24) return `${diffHr}h ago`;
   if (diffHr < 48) return 'Yesterday';
   const diffDay = Math.floor(diffHr / 24);
   return `${diffDay}d ago`;
@@ -70,6 +80,56 @@ function initials(name?: string) {
     .join('')
     .toUpperCase()
     .slice(0, 2);
+}
+
+const LEAD_STATUS_META: Record<string, { label: string; bar: string; badge: string }> = {
+  new: { label: 'New Leads', bar: 'bg-blue-500', badge: 'bg-blue-100 text-blue-700' },
+  contacted: { label: 'Contacted', bar: 'bg-sky-500', badge: 'bg-sky-100 text-sky-700' },
+  qualified: { label: 'Qualified', bar: 'bg-teal-500', badge: 'bg-teal-100 text-teal-700' },
+  converted: { label: 'Converted', bar: 'bg-emerald-500', badge: 'bg-emerald-100 text-emerald-700' },
+  lost: { label: 'Lost', bar: 'bg-rose-400', badge: 'bg-rose-100 text-rose-700' },
+};
+
+const DONUT_COLORS = ['#2563EB', '#14B8A6', '#8B5CF6', '#F59E0B', '#F43F5E', '#64748B'];
+
+/** Simple SVG donut chart. */
+function Donut({ segments, total }: { segments: Array<{ value: number; color: string }>; total: number }) {
+  const R = 42;
+  const C = 2 * Math.PI * R;
+  let offset = 0;
+  return (
+    <svg viewBox="0 0 120 120" className="h-40 w-40">
+      <circle cx="60" cy="60" r={R} fill="none" stroke="#EEF2FF" strokeWidth="16" />
+      {total > 0 &&
+        segments.map((s, i) => {
+          const frac = s.value / total;
+          const dash = frac * C;
+          const el = (
+            <circle
+              key={i}
+              cx="60"
+              cy="60"
+              r={R}
+              fill="none"
+              stroke={s.color}
+              strokeWidth="16"
+              strokeDasharray={`${dash} ${C - dash}`}
+              strokeDashoffset={-offset}
+              transform="rotate(-90 60 60)"
+              strokeLinecap="butt"
+            />
+          );
+          offset += dash;
+          return el;
+        })}
+      <text x="60" y="57" textAnchor="middle" className="fill-slate-800" fontSize="18" fontWeight="700">
+        {total}
+      </text>
+      <text x="60" y="72" textAnchor="middle" className="fill-slate-500" fontSize="9">
+        Leads
+      </text>
+    </svg>
+  );
 }
 
 export default function DashboardPage() {
@@ -100,80 +160,136 @@ export default function DashboardPage() {
     enabled: role === 'super_admin',
   });
 
-  const stats = dashboardData?.stats || {
-    projects: 0,
-    tasks: 0,
-    invoices: 0,
-    quotations: 0,
-    payments: 0,
-    alerts: 0,
+  const crm = (dashboardData as any)?.crm || {
+    leads: { total: 0, change: 0 },
+    contacts: { total: 0, change: 0 },
+    companies: { total: 0, change: 0 },
+    opportunities: { total: 0, change: 0 },
+    leadsByStatus: {},
+    leadsBySource: {},
+    recentLeads: [],
+    followUps: { overdue: 0, due_today: 0, due_soon: 0, upcoming: 0, completed_this_month: 0 },
   };
+  const followUps = crm.followUps || {};
 
   const recentActivity = dashboardData?.recentActivity || [];
   const myTasks = dashboardData?.myTasks || [];
   const onLeaveToday = dashboardData?.onLeaveToday || [];
   const displayName = isClient ? mountedName || 'there' : 'there';
-  const roleLabel = ROLE_LABELS[role] || profile?.designation || 'Team member';
 
-  const summary = [
+  const statCards = [
     {
-      label: 'Projects',
-      value: stats.projects,
-      icon: FolderKanban,
-      href: '/dashboard/projects',
-      card: 'border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 hover:border-blue-400',
-      iconWrap: 'bg-blue-500 text-white',
-      valueClass: 'text-blue-800',
+      label: 'Total Leads',
+      value: crm.leads.total,
+      change: crm.leads.change,
+      icon: Users,
+      href: '/dashboard/leads',
+      iconWrap: 'bg-blue-100 text-blue-600',
+      card: 'border-blue-200 bg-gradient-to-br from-blue-50/80 to-white hover:border-blue-400',
     },
     {
-      label: 'Tasks',
-      value: stats.tasks ?? 0,
-      icon: CheckSquare,
-      href: '/dashboard/tasks',
-      card: 'border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50 hover:border-violet-400',
-      iconWrap: 'bg-violet-500 text-white',
-      valueClass: 'text-violet-800',
+      label: 'Total Contacts',
+      value: crm.contacts.total,
+      change: crm.contacts.change,
+      icon: Contact2,
+      href: '/dashboard/contacts',
+      iconWrap: 'bg-emerald-100 text-emerald-600',
+      card: 'border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-white hover:border-emerald-400',
     },
     {
-      label: 'Invoices',
-      value: stats.invoices ?? 0,
-      icon: FileText,
-      href: '/dashboard/invoices',
-      card: 'border-teal-200 bg-gradient-to-br from-teal-50 to-cyan-50 hover:border-teal-400',
-      iconWrap: 'bg-teal-500 text-white',
-      valueClass: 'text-teal-800',
+      label: 'Active Companies',
+      value: crm.companies.total,
+      change: crm.companies.change,
+      icon: Building2,
+      href: '/dashboard/companies',
+      iconWrap: 'bg-violet-100 text-violet-600',
+      card: 'border-violet-200 bg-gradient-to-br from-violet-50/80 to-white hover:border-violet-400',
     },
     {
-      label: 'Estimates',
-      value: stats.quotations,
-      icon: FileSearch,
-      href: '/dashboard/quotations',
-      card: 'border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 hover:border-amber-400',
-      iconWrap: 'bg-amber-500 text-white',
-      valueClass: 'text-amber-800',
+      label: 'Opportunities',
+      value: crm.opportunities.total,
+      change: crm.opportunities.change,
+      icon: Target,
+      href: '/dashboard/opportunities',
+      iconWrap: 'bg-amber-100 text-amber-600',
+      card: 'border-amber-200 bg-gradient-to-br from-amber-50/80 to-white hover:border-amber-400',
+    },
+  ];
+
+  const followUpCards = [
+    {
+      label: 'Overdue',
+      value: followUps.overdue ?? 0,
+      sub: 'Act now',
+      card: 'border-red-200 bg-red-50 hover:border-red-400',
+      number: 'text-red-600',
+      bucket: 'overdue',
     },
     {
-      label: 'Payments',
-      value: stats.payments ?? 0,
-      icon: CreditCard,
-      href: '/dashboard/finance/credit-status',
-      card: 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-lime-50 hover:border-emerald-400',
-      iconWrap: 'bg-emerald-500 text-white',
-      valueClass: 'text-emerald-800',
+      label: 'Due today',
+      value: followUps.due_today ?? 0,
+      sub: "Today's follow-ups",
+      card: 'border-orange-200 bg-orange-50 hover:border-orange-400',
+      number: 'text-orange-600',
+      bucket: 'today',
     },
+    {
+      label: 'Due soon',
+      value: followUps.due_soon ?? 0,
+      sub: 'Next 3 days',
+      card: 'border-yellow-200 bg-yellow-50 hover:border-yellow-400',
+      number: 'text-yellow-600',
+      bucket: 'soon',
+    },
+    {
+      label: 'Completed',
+      value: followUps.completed_this_month ?? 0,
+      sub: 'This month',
+      card: 'border-emerald-200 bg-emerald-50 hover:border-emerald-400',
+      number: 'text-emerald-600',
+      bucket: 'completed',
+    },
+  ];
+
+  const leadsByStatus: Record<string, number> = crm.leadsByStatus || {};
+  const pipelineTotal = Object.values(leadsByStatus).reduce((a: number, b) => a + Number(b || 0), 0);
+  const pipelineRows = ['new', 'contacted', 'qualified', 'converted', 'lost']
+    .filter((s) => leadsByStatus[s])
+    .map((s) => ({
+      key: s,
+      ...LEAD_STATUS_META[s],
+      count: leadsByStatus[s] || 0,
+      pct: pipelineTotal ? Math.round(((leadsByStatus[s] || 0) / pipelineTotal) * 100) : 0,
+    }));
+
+  const sourceEntries = Object.entries((crm.leadsBySource || {}) as Record<string, number>)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6);
+  const sourceTotal = sourceEntries.reduce((a, [, v]) => a + v, 0);
+
+  const quickActions = [
+    { label: 'Add Lead', icon: UserPlus, href: '/dashboard/leads' },
+    { label: 'Add Contact', icon: Contact2, href: '/dashboard/contacts' },
+    { label: 'Inquiry Inbox', icon: Inbox, href: '/dashboard/enquiries/inbox' },
+    { label: 'New Enquiry', icon: FileSearch, href: '/dashboard/enquiries/new' },
+    { label: 'Follow-ups', icon: AlarmClockCheck, href: '/dashboard/followups' },
+    { label: 'New Quote', icon: Plus, href: '/dashboard/quotations' },
   ];
 
   return (
     <div className="space-y-6">
       <AnnouncementsWidget />
 
-      {isLoading ? (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-24 animate-pulse rounded-2xl bg-muted" />
-          ))}
+      {/* Header */}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">CRM Dashboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Welcome {displayName} 👋 — manage your leads, relationships and business opportunities
+          </p>
         </div>
-      ) : null}
+        <p className="text-sm text-muted-foreground">{formatUkDate(new Date())}</p>
+      </div>
 
       {!isLoading && role === 'super_admin' && punchStats && punchStats.pending > 0 && (
         <div className="rounded-2xl border border-amber-200 border-l-4 border-l-amber-500 bg-amber-50 p-4">
@@ -192,129 +308,253 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Follow-up accountability strip */}
+      <Card className="rounded-2xl border-blue-100 p-5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-slate-800">
+            <AlarmClockCheck className="h-5 w-5 text-blue-600" />
+            {isSuperAdmin ? 'Team follow-ups' : 'My follow-ups'}
+          </h2>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/dashboard/followups">
+              Open follow-ups <ArrowRight className="ml-1 h-3 w-3" />
+            </Link>
+          </Button>
+        </div>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {followUpCards.map((c) => (
+            <button
+              key={c.label}
+              type="button"
+              onClick={() => router.push('/dashboard/followups')}
+              className={`rounded-xl border p-3 text-left transition ${c.card}`}
+            >
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{c.label}</p>
+              <p className={`text-2xl font-bold tabular-nums ${c.number}`}>{isLoading ? '—' : c.value}</p>
+              <p className="text-[11px] text-muted-foreground">{c.sub}</p>
+            </button>
+          ))}
+        </div>
+        {(followUps.overdue ?? 0) > 0 ? (
+          <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+            {followUps.overdue} follow-up{followUps.overdue === 1 ? '' : 's'} overdue — these stay visible until
+            completed, and escalate after 2 and 5 days.
+          </p>
+        ) : null}
+      </Card>
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        {statCards.map((item) => {
+          const Icon = item.icon;
+          const up = (item.change ?? 0) >= 0;
+          return (
+            <button
+              key={item.label}
+              type="button"
+              onClick={() => router.push(item.href)}
+              className={`rounded-2xl border p-4 text-left shadow-sm transition ${item.card}`}
+            >
+              <div className="flex items-start justify-between">
+                <span className={`rounded-xl p-2.5 ${item.iconWrap}`}>
+                  <Icon className="h-5 w-5" />
+                </span>
+              </div>
+              <p className="mt-3 text-xs font-medium text-muted-foreground">{item.label}</p>
+              <p className="text-3xl font-bold tabular-nums text-slate-900">{isLoading ? '—' : item.value.toLocaleString()}</p>
+              <p className={`mt-1 flex items-center gap-1 text-xs font-medium ${up ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {up ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                {Math.abs(item.change ?? 0)}% vs last month
+              </p>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-        <div className="space-y-4 xl:col-span-5">
-          <div>
-            <p className="bg-gradient-to-r from-blue-700 via-violet-600 to-teal-600 bg-clip-text text-3xl font-semibold tracking-tight text-transparent">
-              Welcome {displayName} 👋
-            </p>
+        {/* Main column */}
+        <div className="space-y-4 xl:col-span-8">
+          <div className="grid gap-4 lg:grid-cols-2">
+            {/* Pipeline overview */}
+            <Card className="rounded-2xl p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="flex items-center gap-2 text-base font-semibold text-slate-800">
+                  <Filter className="h-4 w-4 text-blue-600" />
+                  Pipeline Overview
+                </h2>
+                <Link href="/dashboard/leads" className="text-xs font-medium text-blue-600 hover:underline">
+                  View all
+                </Link>
+              </div>
+              {pipelineRows.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No leads yet — add your first lead to see the pipeline.</p>
+              ) : (
+                <div className="space-y-3">
+                  {pipelineRows.map((row) => (
+                    <div key={row.key}>
+                      <div className="mb-1 flex items-center justify-between text-xs">
+                        <span className="font-medium text-slate-700">{row.label}</span>
+                        <span className="text-muted-foreground">
+                          {row.count} · {row.pct}%
+                        </span>
+                      </div>
+                      <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className={`h-full rounded-full ${row.bar}`}
+                          style={{ width: `${Math.max(4, row.pct)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            {/* Leads by source donut */}
+            <Card className="rounded-2xl p-5">
+              <h2 className="mb-2 flex items-center gap-2 text-base font-semibold text-slate-800">
+                <PieChart className="h-4 w-4 text-violet-600" />
+                Leads by Source
+              </h2>
+              {sourceTotal === 0 ? (
+                <p className="text-sm text-muted-foreground">No lead source data yet.</p>
+              ) : (
+                <div className="flex flex-wrap items-center gap-4">
+                  <Donut
+                    segments={sourceEntries.map(([, v], i) => ({ value: v, color: DONUT_COLORS[i % DONUT_COLORS.length] }))}
+                    total={sourceTotal}
+                  />
+                  <ul className="min-w-[140px] flex-1 space-y-1.5">
+                    {sourceEntries.map(([src, v], i) => (
+                      <li key={src} className="flex items-center justify-between gap-2 text-sm">
+                        <span className="flex items-center gap-2 capitalize">
+                          <span
+                            className="inline-block h-2.5 w-2.5 rounded-full"
+                            style={{ backgroundColor: DONUT_COLORS[i % DONUT_COLORS.length] }}
+                          />
+                          {src.replace(/_/g, ' ')}
+                        </span>
+                        <span className="font-medium text-slate-700">
+                          {Math.round((v / sourceTotal) * 100)}%
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </Card>
           </div>
 
-          <Card className="rounded-2xl border-blue-100 bg-gradient-to-r from-blue-500 via-indigo-500 to-teal-500 p-5 text-white shadow-md">
-            <div className="flex flex-wrap items-center gap-4">
-              <Avatar className="h-16 w-16 ring-2 ring-white/50">
-                <AvatarFallback className="bg-white/20 text-lg text-white">
-                  {initials(displayName === 'there' ? '' : displayName)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-lg font-semibold text-white">{displayName === 'there' ? '…' : displayName}</p>
-                <p className="text-sm text-white/80">{profile?.designation || roleLabel}</p>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {/* Recent leads */}
+            <Card className="rounded-2xl p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="flex items-center gap-2 text-base font-semibold text-slate-800">
+                  <TrendingUp className="h-4 w-4 text-emerald-600" />
+                  Recent Leads
+                </h2>
+                <Link href="/dashboard/leads" className="text-xs font-medium text-blue-600 hover:underline">
+                  View all
+                </Link>
               </div>
-              <Button className="bg-white text-emerald-700 hover:bg-emerald-50" onClick={() => router.push('/dashboard/tasks')}>
-                + Create
-              </Button>
-            </div>
-          </Card>
+              {(crm.recentLeads || []).length === 0 ? (
+                <p className="text-sm text-muted-foreground">No leads yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {(crm.recentLeads || []).map((l: any) => {
+                    const meta = LEAD_STATUS_META[l.status] || LEAD_STATUS_META.new;
+                    return (
+                      <div
+                        key={l.id}
+                        className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2 hover:bg-slate-50"
+                        onClick={() => router.push('/dashboard/leads')}
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="bg-blue-50 text-xs text-blue-700">
+                              {initials(l.lead_name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">{l.lead_name}</p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {l.company_name || l.source || '—'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium capitalize ${meta.badge}`}>
+                            {l.status}
+                          </span>
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            {l.created_at ? formatUkDate(l.created_at) : ''}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
 
-          {!isLoading && (
-            <div className="grid grid-cols-3 gap-3">
-              {summary.slice(0, 3).map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => router.push(item.href)}
-                    className={`rounded-2xl border p-4 text-left shadow-sm transition ${item.card}`}
-                  >
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="text-xs font-medium text-slate-600">{item.label}</span>
-                      <span className={`rounded-lg p-1.5 ${item.iconWrap}`}>
-                        <Icon className="h-3.5 w-3.5" />
-                      </span>
-                    </div>
-                    <p className={`text-2xl font-semibold tabular-nums ${item.valueClass}`}>{item.value}</p>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {!isLoading && (
-            <div className="grid grid-cols-2 gap-3">
-              {summary.slice(3).map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => router.push(item.href)}
-                    className={`rounded-2xl border p-4 text-left shadow-sm transition ${item.card}`}
-                  >
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="text-xs font-medium text-slate-600">{item.label}</span>
-                      <span className={`rounded-lg p-1.5 ${item.iconWrap}`}>
-                        <Icon className="h-3.5 w-3.5" />
-                      </span>
-                    </div>
-                    <p className={`text-2xl font-semibold tabular-nums ${item.valueClass}`}>{item.value}</p>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          <Card className="rounded-2xl border-violet-100 bg-white p-5 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-violet-800">{isSuperAdmin ? 'Tasks' : 'My Tasks'}</h2>
-              <button
-                className="text-xs font-medium text-violet-600 hover:underline"
-                onClick={() => router.push(isSuperAdmin ? '/dashboard/tasks?view=team' : '/dashboard/tasks')}
-              >
-                View all
-              </button>
-            </div>
-            <div className="space-y-2">
+            {/* Upcoming tasks */}
+            <Card className="rounded-2xl p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="flex items-center gap-2 text-base font-semibold text-slate-800">
+                  <CheckSquare className="h-4 w-4 text-violet-600" />
+                  Upcoming Tasks
+                </h2>
+                <Link
+                  href={isSuperAdmin ? '/dashboard/tasks?view=team' : '/dashboard/tasks'}
+                  className="text-xs font-medium text-blue-600 hover:underline"
+                >
+                  View all
+                </Link>
+              </div>
               {myTasks.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No open tasks.</p>
               ) : (
-                myTasks.slice(0, 8).map((task: any) => (
-                  <div
-                    key={task.id}
-                    className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-violet-100 bg-violet-50/40 px-3 py-2.5 hover:bg-violet-50"
-                    onClick={() => router.push('/dashboard/tasks')}
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{task.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {task.assignee_name ? `${task.assignee_name} · ` : ''}
-                        {task.due_date ? formatUkDate(task.due_date) : 'No due date'}
-                      </p>
+                <div className="space-y-2">
+                  {myTasks.slice(0, 6).map((task: any) => (
+                    <div
+                      key={task.id}
+                      className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-violet-100 bg-violet-50/40 px-3 py-2 hover:bg-violet-50"
+                      onClick={() => router.push('/dashboard/tasks')}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{task.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {task.assignee_name ? `${task.assignee_name} · ` : ''}
+                          {task.due_date ? formatUkDate(task.due_date) : 'No due date'}
+                        </p>
+                      </div>
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${taskStatusStyle(task.status)}`}>
+                        {taskStatusLabel(task.status)}
+                      </span>
                     </div>
-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${taskStatusStyle(task.status)}`}>
-                      {taskStatusLabel(task.status)}
-                    </span>
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
-            </div>
-          </Card>
+            </Card>
+          </div>
 
-          <Card className="rounded-2xl border-emerald-100 bg-white p-5 shadow-sm">
-            <h2 className="mb-4 text-base font-semibold text-emerald-800">My Activity</h2>
+          <HomeCalendar />
+        </div>
+
+        {/* Right rail */}
+        <div className="space-y-4 xl:col-span-4">
+          <Card className="rounded-2xl p-5">
+            <h2 className="mb-3 text-base font-semibold text-slate-800">Recent Activities</h2>
             <p className="mb-3 text-xs text-muted-foreground">Only your own actions appear here.</p>
-            <div className="max-h-64 space-y-3 overflow-y-auto">
+            <div className="max-h-72 space-y-3 overflow-y-auto">
               {recentActivity.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No activity yet.</p>
               ) : (
                 recentActivity.map((activity: any) => (
                   <div key={activity.id} className="flex items-start gap-3">
-                    <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+                    <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
                     <div>
-                      <p className="text-sm">
-                        You {friendlyAction(activity.action, activity.table_name)}
-                      </p>
+                      <p className="text-sm">You {friendlyAction(activity.action, activity.table_name)}</p>
                       <p className="text-xs text-muted-foreground">{relativeTime(activity.created_at)}</p>
                     </div>
                   </div>
@@ -323,7 +563,27 @@ export default function DashboardPage() {
             </div>
           </Card>
 
-          <Card className="rounded-2xl border-amber-100 bg-white p-5 shadow-sm">
+          <Card className="rounded-2xl p-5">
+            <h2 className="mb-3 text-base font-semibold text-slate-800">⚡ Quick Actions</h2>
+            <div className="grid grid-cols-2 gap-2">
+              {quickActions.map((a) => {
+                const Icon = a.icon;
+                return (
+                  <button
+                    key={a.label}
+                    type="button"
+                    onClick={() => router.push(a.href)}
+                    className="flex flex-col items-center gap-1.5 rounded-xl border border-blue-100 bg-blue-50/40 px-2 py-3 text-center transition hover:border-blue-300 hover:bg-blue-50"
+                  >
+                    <Icon className="h-4 w-4 text-blue-600" />
+                    <span className="text-xs font-medium text-slate-700">{a.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </Card>
+
+          <Card className="rounded-2xl border-amber-100 p-5">
             <h2 className="mb-3 text-base font-semibold text-amber-800">On Leave Today</h2>
             {onLeaveToday.length === 0 ? (
               <p className="text-sm text-muted-foreground">No one is on leave today.</p>
@@ -348,10 +608,6 @@ export default function DashboardPage() {
               </div>
             )}
           </Card>
-        </div>
-
-        <div className="xl:col-span-7">
-          <HomeCalendar />
         </div>
       </div>
     </div>

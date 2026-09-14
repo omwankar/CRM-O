@@ -43,6 +43,8 @@ function getNotificationIcon(type: string) {
     case 'timesheet':
     case 'timesheet_comment':
       return <ClipboardList className="w-4 h-4 text-teal-600" />;
+    case 'followup':
+      return <Clock3 className="w-4 h-4 text-orange-500" />;
     case 'announcement':
       return <Megaphone className="w-4 h-4 text-purple-500" />;
     default:
@@ -169,6 +171,7 @@ export function AlertsCenter({ tab, onTabChange, compact = false, onItemClick }:
                 created_at: string;
               }) => {
                 const timesheetNote = n.type === 'timesheet' || n.type === 'timesheet_comment';
+                const followupNote = n.type === 'followup';
                 const inner = (
                   <div className="flex items-start gap-3">
                     <div className="p-2 rounded-full bg-muted shrink-0">{getNotificationIcon(n.type)}</div>
@@ -193,8 +196,13 @@ export function AlertsCenter({ tab, onTabChange, compact = false, onItemClick }:
                   if (!n.is_read) markReadMut.mutate(n.id);
                   onItemClick?.();
                 };
-                return timesheetNote ? (
-                  <Link key={n.id} href="/dashboard/timesheet" className={className} onClick={onClick}>
+                return timesheetNote || followupNote ? (
+                  <Link
+                    key={n.id}
+                    href={followupNote ? '/dashboard/followups' : '/dashboard/timesheet'}
+                    className={className}
+                    onClick={onClick}
+                  >
                     {inner}
                   </Link>
                 ) : (

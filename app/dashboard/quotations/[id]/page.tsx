@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import {
+  AlarmClockCheck,
   ArrowLeft,
   FileText,
   Mail,
@@ -15,6 +16,7 @@ import {
   Receipt,
   Search,
 } from 'lucide-react';
+import { FollowUpDialog } from '@/components/followups/FollowUpDialog';
 import {
   addVendorQuote,
   updateVendorQuote,
@@ -68,6 +70,7 @@ export default function QuotationDetailPage() {
   const [closureOpen, setClosureOpen] = useState(false);
   const [pendingClosureStage, setPendingClosureStage] = useState<EnquiryStage | null>(null);
   const [sendQuoteOpen, setSendQuoteOpen] = useState(false);
+  const [followUpOpen, setFollowUpOpen] = useState(false);
 
   const { data: q, isLoading, error } = useQuotation(id || '');
 
@@ -295,6 +298,16 @@ export default function QuotationDetailPage() {
                     <Receipt className="h-4 w-4 mr-2" />
                     Create invoice
                   </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-orange-300 text-orange-700 hover:bg-orange-50"
+                    onClick={() => setFollowUpOpen(true)}
+                  >
+                    <AlarmClockCheck className="h-4 w-4 mr-2" />
+                    Set follow-up
+                  </Button>
                 </div>
               </CanWrite>
             </div>
@@ -389,6 +402,20 @@ export default function QuotationDetailPage() {
         <Card className="p-5">
           <EntityTaskList entityType="quotation" entityId={id} />
         </Card>
+      ) : null}
+
+      {quotation ? (
+        <FollowUpDialog
+          open={followUpOpen}
+          onOpenChange={setFollowUpOpen}
+          preset={{
+            entity_type: 'quotation',
+            entity_id: quotation.id,
+            entity_label: quotation.quotation_number,
+            title: `Follow up on quotation ${quotation.quotation_number}`,
+            follow_up_type: 'email',
+          }}
+        />
       ) : null}
 
       {quotation ? (

@@ -34,7 +34,9 @@ import {
   Target,
   RotateCcw,
   Archive,
+  AlarmClockCheck,
 } from 'lucide-react';
+import { FollowUpDialog } from '@/components/followups/FollowUpDialog';
 import {
   type Lead,
   type LeadInput,
@@ -92,6 +94,7 @@ export default function LeadsPage() {
   const [editing, setEditing] = useState<Lead | null>(null);
   const [form, setForm] = useState<LeadInput>(emptyForm);
   const [sortCold, setSortCold] = useState(false);
+  const [followUpLead, setFollowUpLead] = useState<Lead | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['leads', statusFilter, debouncedSearch, showTrash],
@@ -402,6 +405,15 @@ export default function LeadsPage() {
                           Re-convert buyer
                         </Button>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-orange-700"
+                        onClick={() => setFollowUpLead(lead)}
+                        title="Set follow-up"
+                      >
+                        <AlarmClockCheck className="w-4 h-4" />
+                      </Button>
                       <Button variant="ghost" size="sm" onClick={() => openEdit(lead)}>
                         <Pencil className="w-4 h-4" />
                       </Button>
@@ -553,6 +565,24 @@ export default function LeadsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <FollowUpDialog
+        open={!!followUpLead}
+        onOpenChange={(o) => !o && setFollowUpLead(null)}
+        preset={
+          followUpLead
+            ? {
+                entity_type: 'lead',
+                entity_id: followUpLead.id,
+                entity_label: followUpLead.company_name
+                  ? `${followUpLead.lead_name} — ${followUpLead.company_name}`
+                  : followUpLead.lead_name,
+                title: `Follow up: ${followUpLead.lead_name}`,
+                follow_up_type: 'call',
+              }
+            : undefined
+        }
+      />
     </div>
   );
 }
