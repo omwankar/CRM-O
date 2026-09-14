@@ -26,13 +26,12 @@ import {
   Plus,
   Target,
   TrendingUp,
-  UserPlus,
-  Users,
 } from 'lucide-react';
 import { AnnouncementsWidget } from '@/components/announcements/AnnouncementsWidget';
 import { HomeCalendar } from '@/components/dashboard/HomeCalendar';
 import { useIsClient } from '@/hooks/useIsClient';
 import { formatUkDate } from '@/lib/date';
+import { ENQUIRY_STAGE_LABELS, ENQUIRY_STAGES_ORDER, type EnquiryStage } from '@/types/enquiries';
 
 function taskStatusStyle(status?: string) {
   const s = String(status || '').toLowerCase().replace(/\s+/g, '_');
@@ -82,18 +81,26 @@ function initials(name?: string) {
     .slice(0, 2);
 }
 
-const LEAD_STATUS_META: Record<string, { label: string; bar: string; badge: string }> = {
-  new: { label: 'New Leads', bar: 'bg-blue-500', badge: 'bg-blue-100 text-blue-700' },
-  contacted: { label: 'Contacted', bar: 'bg-sky-500', badge: 'bg-sky-100 text-sky-700' },
-  qualified: { label: 'Qualified', bar: 'bg-teal-500', badge: 'bg-teal-100 text-teal-700' },
-  converted: { label: 'Converted', bar: 'bg-emerald-500', badge: 'bg-emerald-100 text-emerald-700' },
-  lost: { label: 'Lost', bar: 'bg-rose-400', badge: 'bg-rose-100 text-rose-700' },
+const ENQUIRY_STAGE_META: Record<EnquiryStage, { label: string; bar: string; badge: string }> = {
+  new_enquiry: { label: ENQUIRY_STAGE_LABELS.new_enquiry, bar: 'bg-blue-500', badge: 'bg-blue-100 text-blue-700' },
+  under_review: { label: ENQUIRY_STAGE_LABELS.under_review, bar: 'bg-amber-500', badge: 'bg-amber-100 text-amber-800' },
+  preparing: { label: ENQUIRY_STAGE_LABELS.preparing, bar: 'bg-violet-500', badge: 'bg-violet-100 text-violet-800' },
+  quote_sent: { label: ENQUIRY_STAGE_LABELS.quote_sent, bar: 'bg-sky-500', badge: 'bg-sky-100 text-sky-800' },
+  follow_up: { label: ENQUIRY_STAGE_LABELS.follow_up, bar: 'bg-slate-500', badge: 'bg-slate-100 text-slate-700' },
+  won_closed: { label: ENQUIRY_STAGE_LABELS.won_closed, bar: 'bg-emerald-500', badge: 'bg-emerald-100 text-emerald-800' },
+  lost_closed: { label: ENQUIRY_STAGE_LABELS.lost_closed, bar: 'bg-rose-400', badge: 'bg-rose-100 text-rose-700' },
+};
+
+const PRIORITY_LABELS: Record<string, string> = {
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
 };
 
 const DONUT_COLORS = ['#2563EB', '#14B8A6', '#8B5CF6', '#F59E0B', '#F43F5E', '#64748B'];
 
 /** Simple SVG donut chart. */
-function Donut({ segments, total }: { segments: Array<{ value: number; color: string }>; total: number }) {
+function Donut({ segments, total, centerLabel }: { segments: Array<{ value: number; color: string }>; total: number; centerLabel: string }) {
   const R = 42;
   const C = 2 * Math.PI * R;
   let offset = 0;
@@ -125,8 +132,8 @@ function Donut({ segments, total }: { segments: Array<{ value: number; color: st
       <text x="60" y="57" textAnchor="middle" className="fill-slate-800" fontSize="18" fontWeight="700">
         {total}
       </text>
-      <text x="60" y="72" textAnchor="middle" className="fill-slate-500" fontSize="9">
-        Leads
+      <text x="60" y="72" textAnchor="middle" className="fill-slate-500" fontSize="8">
+        {centerLabel}
       </text>
     </svg>
   );
@@ -161,13 +168,13 @@ export default function DashboardPage() {
   });
 
   const crm = (dashboardData as any)?.crm || {
-    leads: { total: 0, change: 0 },
+    enquiries: { total: 0, change: 0 },
     contacts: { total: 0, change: 0 },
     companies: { total: 0, change: 0 },
     opportunities: { total: 0, change: 0 },
-    leadsByStatus: {},
-    leadsBySource: {},
-    recentLeads: [],
+    enquiriesByStage: {},
+    enquiriesByPriority: {},
+    recentEnquiries: [],
     followUps: { overdue: 0, due_today: 0, due_soon: 0, upcoming: 0, completed_this_month: 0 },
   };
   const followUps = crm.followUps || {};
@@ -179,11 +186,11 @@ export default function DashboardPage() {
 
   const statCards = [
     {
-      label: 'Total Leads',
-      value: crm.leads.total,
-      change: crm.leads.change,
-      icon: Users,
-      href: '/dashboard/leads',
+      label: 'Total Enquiries',
+      value: crm.enquiries?.total ?? 0,
+      change: crm.enquiries?.change ?? 0,
+      icon: FileSearch,
+      href: '/dashboard/enquiries',
       iconWrap: 'bg-blue-100 text-blue-600',
       card: 'border-blue-200 bg-gradient-to-br from-blue-50/80 to-white hover:border-blue-400',
     },
@@ -251,29 +258,28 @@ export default function DashboardPage() {
     },
   ];
 
-  const leadsByStatus: Record<string, number> = crm.leadsByStatus || {};
-  const pipelineTotal = Object.values(leadsByStatus).reduce((a: number, b) => a + Number(b || 0), 0);
-  const pipelineRows = ['new', 'contacted', 'qualified', 'converted', 'lost']
-    .filter((s) => leadsByStatus[s])
+  const enquiriesByStage: Record<string, number> = crm.enquiriesByStage || {};
+  const pipelineTotal = Object.values(enquiriesByStage).reduce((a: number, b) => a + Number(b || 0), 0);
+  const pipelineRows = ENQUIRY_STAGES_ORDER
+    .filter((s) => enquiriesByStage[s])
     .map((s) => ({
       key: s,
-      ...LEAD_STATUS_META[s],
-      count: leadsByStatus[s] || 0,
-      pct: pipelineTotal ? Math.round(((leadsByStatus[s] || 0) / pipelineTotal) * 100) : 0,
+      ...ENQUIRY_STAGE_META[s],
+      count: enquiriesByStage[s] || 0,
+      pct: pipelineTotal ? Math.round(((enquiriesByStage[s] || 0) / pipelineTotal) * 100) : 0,
     }));
 
-  const sourceEntries = Object.entries((crm.leadsBySource || {}) as Record<string, number>)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6);
-  const sourceTotal = sourceEntries.reduce((a, [, v]) => a + v, 0);
+  const priorityEntries = Object.entries((crm.enquiriesByPriority || {}) as Record<string, number>)
+    .sort((a, b) => b[1] - a[1]);
+  const sourceTotal = priorityEntries.reduce((a, [, v]) => a + v, 0);
 
   const quickActions = [
-    { label: 'Add Lead', icon: UserPlus, href: '/dashboard/leads' },
-    { label: 'Add Contact', icon: Contact2, href: '/dashboard/contacts' },
     { label: 'Inquiry Inbox', icon: Inbox, href: '/dashboard/enquiries/inbox' },
     { label: 'New Enquiry', icon: FileSearch, href: '/dashboard/enquiries/new' },
+    { label: 'Add Contact', icon: Contact2, href: '/dashboard/contacts' },
     { label: 'Follow-ups', icon: AlarmClockCheck, href: '/dashboard/followups' },
     { label: 'New Quote', icon: Plus, href: '/dashboard/quotations' },
+    { label: 'Opportunities', icon: Target, href: '/dashboard/opportunities' },
   ];
 
   return (
@@ -285,7 +291,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">CRM Dashboard</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Welcome {displayName} 👋 — manage your leads, relationships and business opportunities
+            Welcome {displayName} 👋 — manage your enquiries, relationships and business opportunities
           </p>
         </div>
         <p className="text-sm text-muted-foreground">{formatUkDate(new Date())}</p>
@@ -382,12 +388,12 @@ export default function DashboardPage() {
                   <Filter className="h-4 w-4 text-blue-600" />
                   Pipeline Overview
                 </h2>
-                <Link href="/dashboard/leads" className="text-xs font-medium text-blue-600 hover:underline">
+                <Link href="/dashboard/enquiries" className="text-xs font-medium text-blue-600 hover:underline">
                   View all
                 </Link>
               </div>
               {pipelineRows.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No leads yet — add your first lead to see the pipeline.</p>
+                <p className="text-sm text-muted-foreground">No enquiries yet — add your first enquiry to see the pipeline.</p>
               ) : (
                 <div className="space-y-3">
                   {pipelineRows.map((row) => (
@@ -410,29 +416,30 @@ export default function DashboardPage() {
               )}
             </Card>
 
-            {/* Leads by source donut */}
+            {/* Enquiries by priority donut */}
             <Card className="rounded-2xl p-5">
               <h2 className="mb-2 flex items-center gap-2 text-base font-semibold text-slate-800">
                 <PieChart className="h-4 w-4 text-violet-600" />
-                Leads by Source
+                Enquiries by Priority
               </h2>
               {sourceTotal === 0 ? (
-                <p className="text-sm text-muted-foreground">No lead source data yet.</p>
+                <p className="text-sm text-muted-foreground">No enquiry data yet.</p>
               ) : (
                 <div className="flex flex-wrap items-center gap-4">
                   <Donut
-                    segments={sourceEntries.map(([, v], i) => ({ value: v, color: DONUT_COLORS[i % DONUT_COLORS.length] }))}
+                    centerLabel="Enquiries"
+                    segments={priorityEntries.map(([, v], i) => ({ value: v, color: DONUT_COLORS[i % DONUT_COLORS.length] }))}
                     total={sourceTotal}
                   />
                   <ul className="min-w-[140px] flex-1 space-y-1.5">
-                    {sourceEntries.map(([src, v], i) => (
+                    {priorityEntries.map(([src, v], i) => (
                       <li key={src} className="flex items-center justify-between gap-2 text-sm">
                         <span className="flex items-center gap-2 capitalize">
                           <span
                             className="inline-block h-2.5 w-2.5 rounded-full"
                             style={{ backgroundColor: DONUT_COLORS[i % DONUT_COLORS.length] }}
                           />
-                          {src.replace(/_/g, ' ')}
+                          {PRIORITY_LABELS[src] || src}
                         </span>
                         <span className="font-medium text-slate-700">
                           {Math.round((v / sourceTotal) * 100)}%
@@ -446,48 +453,51 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            {/* Recent leads */}
+            {/* Recent enquiries */}
             <Card className="rounded-2xl p-5">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-base font-semibold text-slate-800">
                   <TrendingUp className="h-4 w-4 text-emerald-600" />
-                  Recent Leads
+                  Recent Enquiries
                 </h2>
-                <Link href="/dashboard/leads" className="text-xs font-medium text-blue-600 hover:underline">
+                <Link href="/dashboard/enquiries" className="text-xs font-medium text-blue-600 hover:underline">
                   View all
                 </Link>
               </div>
-              {(crm.recentLeads || []).length === 0 ? (
-                <p className="text-sm text-muted-foreground">No leads yet.</p>
+              {(crm.recentEnquiries || []).length === 0 ? (
+                <p className="text-sm text-muted-foreground">No enquiries yet.</p>
               ) : (
                 <div className="space-y-2">
-                  {(crm.recentLeads || []).map((l: any) => {
-                    const meta = LEAD_STATUS_META[l.status] || LEAD_STATUS_META.new;
+                  {(crm.recentEnquiries || []).map((e: any) => {
+                    const stage = (e.stage || 'new_enquiry') as EnquiryStage;
+                    const meta = ENQUIRY_STAGE_META[stage] || ENQUIRY_STAGE_META.new_enquiry;
+                    const title = e.title || e.requirement || e.enquiry_number;
                     return (
                       <div
-                        key={l.id}
+                        key={e.id}
                         className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2 hover:bg-slate-50"
-                        onClick={() => router.push('/dashboard/leads')}
+                        onClick={() => router.push(`/dashboard/enquiries/${e.id}`)}
                       >
                         <div className="flex min-w-0 items-center gap-3">
                           <Avatar className="h-8 w-8">
                             <AvatarFallback className="bg-blue-50 text-xs text-blue-700">
-                              {initials(l.lead_name)}
+                              {initials(e.prospect_name || title)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-medium">{l.lead_name}</p>
+                            <p className="truncate text-sm font-medium">{title}</p>
                             <p className="truncate text-xs text-muted-foreground">
-                              {l.company_name || l.source || '—'}
+                              {e.enquiry_number}
+                              {e.prospect_name ? ` · ${e.prospect_name}` : ''}
                             </p>
                           </div>
                         </div>
                         <div className="shrink-0 text-right">
-                          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium capitalize ${meta.badge}`}>
-                            {l.status}
+                          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${meta.badge}`}>
+                            {meta.label}
                           </span>
                           <p className="mt-0.5 text-[11px] text-muted-foreground">
-                            {l.created_at ? formatUkDate(l.created_at) : ''}
+                            {e.created_at ? formatUkDate(e.created_at) : ''}
                           </p>
                         </div>
                       </div>
