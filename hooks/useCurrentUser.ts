@@ -91,13 +91,19 @@ export function useCurrentUser() {
    */
   const canEditTask = (task?: {
     assigned_person_id?: string | null;
+    assignee_ids?: string[] | null;
+    assignees?: Array<{ id?: string } | null> | null;
     supervisor_id?: string | null;
     created_by?: string | null;
   }) => {
     if (canWrite) return true;
     if (!task || !userData?.id) return false;
+    const extra =
+      task.assignee_ids?.includes(userData.id) ||
+      task.assignees?.some((a) => a?.id === userData.id);
     return (
       task.assigned_person_id === userData.id ||
+      extra ||
       task.supervisor_id === userData.id ||
       task.created_by === userData.id
     );

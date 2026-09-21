@@ -73,6 +73,7 @@ export interface Task {
   entity_id: string | null;
   project_id?: string | null;
   assignee_id: string | null;
+  assignee_ids?: string[];
   assigned_person_id?: string | null;
   supervisor_id: string | null;
   assigned_date?: string | null;
@@ -87,6 +88,7 @@ export interface Task {
   updated_at: string;
   overdue?: boolean;
   assignee?: TaskPerson | null;
+  assignees?: TaskPerson[];
   assigned_person?: TaskPerson | null;
   supervisor?: TaskPerson | null;
   creator?: TaskPerson | null;
@@ -98,7 +100,8 @@ export interface TaskInput {
   description?: string | null;
   entity_type?: TaskEntityType | null;
   entity_id?: string | null;
-  assignee_id: string;
+  assignee_id?: string;
+  assignee_ids?: string[];
   supervisor_id?: string | null;
   due_date: string;
   priority?: TaskPriority;

@@ -49,6 +49,7 @@ import {
 } from '@/types/tasks';
 import { EntityRecordPicker } from '@/components/tasks/EntityRecordPicker';
 import { TaskFilesComments } from '@/components/tasks/TaskFilesComments';
+import { TaskAssigneePicker } from '@/components/tasks/TaskAssigneePicker';
 
 export { EntityTaskList } from '@/components/tasks/EntityTaskList';
 
@@ -58,7 +59,7 @@ type TaskForm = {
   entity_type: '' | TaskEntityType;
   entity_id: string;
   entity_label: string;
-  assignee_id: string;
+  assignee_ids: string[];
   supervisor_id: string;
   due_date: string;
   priority: TaskPriority;
@@ -71,7 +72,7 @@ function emptyForm(assigneeId = ''): TaskForm {
     entity_type: '',
     entity_id: '',
     entity_label: '',
-    assignee_id: assigneeId,
+    assignee_ids: assigneeId ? [assigneeId] : [],
     supervisor_id: '',
     due_date: formatUkIsoDate(new Date()),
     priority: 'medium',
@@ -85,7 +86,11 @@ function formFromTask(t: Task): TaskForm {
     entity_type: (t.entity_type || '') as '' | TaskEntityType,
     entity_id: t.entity_id || '',
     entity_label: t.project?.project_name || '',
-    assignee_id: t.assignee_id || t.assigned_person_id || '',
+    assignee_ids: t.assignee_ids?.length
+      ? t.assignee_ids
+      : t.assignee_id || t.assigned_person_id
+        ? [t.assignee_id || t.assigned_person_id!]
+        : [],
     supervisor_id: t.supervisor_id || '',
     due_date: (t.due_date || '').slice(0, 10),
     priority: t.priority || 'medium',
@@ -93,7 +98,11 @@ function formFromTask(t: Task): TaskForm {
 }
 
 function personName(t: Task, who: 'assignee' | 'creator' | 'supervisor') {
-  if (who === 'assignee') return t.assignee?.name || t.assigned_person?.name || 'Unassigned';
+  if (who === 'assignee') {
+    const names = (t.assignees || []).map((a) => a.name).filter(Boolean);
+    if (names.length) return names.join(', ');
+    return t.assignee?.name || t.assigned_person?.name || 'Unassigned';
+  }
   if (who === 'creator') return t.creator?.name || '—';
   return t.supervisor?.name || '—';
 }
@@ -176,7 +185,7 @@ export function TasksBoard({
         description: form.description.trim() || null,
         entity_type: form.entity_type || null,
         entity_id: form.entity_type && form.entity_id ? form.entity_id : null,
-        assignee_id: form.assignee_id || user?.id || '',
+        assignee_ids: form.assignee_ids.length ? form.assignee_ids : user?.id ? [user.id] : [],
         supervisor_id: form.supervisor_id || null,
         due_date: form.due_date,
         priority: form.priority,
@@ -194,7 +203,7 @@ export function TasksBoard({
       updateTask(editingTask!.id, {
         title: form.title.trim(),
         description: form.description.trim() || null,
-        assignee_id: form.assignee_id,
+        assignee_ids: form.assignee_ids,
         supervisor_id: form.supervisor_id || null,
         due_date: form.due_date,
         priority: form.priority,
@@ -523,24 +532,11 @@ export function TasksBoard({
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
               />
             </div>
-            <div className="grid gap-1.5">
-              <Label>Assigned to *</Label>
-              <Select
-                value={form.assignee_id || undefined}
-                onValueChange={(v) => setForm((f) => ({ ...f, assignee_id: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select user" />
-                </SelectTrigger>
-                <SelectContent>
-                  {userList.map((u: any) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.full_name || u.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <TaskAssigneePicker
+              users={userList}
+              selected={form.assignee_ids}
+              onChange={(ids) => setForm((f) => ({ ...f, assignee_ids: ids }))}
+            />
             <div className="grid gap-1.5">
               <Label>Supervisor (optional)</Label>
               <Select
@@ -657,7 +653,7 @@ export function TasksBoard({
               Cancel
             </Button>
             <Button
-              disabled={!form.title.trim() || !form.assignee_id || !form.due_date || saving}
+              disabled={!form.title.trim() || form.assignee_ids.length === 0 || !form.due_date || saving}
               onClick={() => (dialog === 'edit' ? updateMut.mutate() : createMut.mutate())}
             >
               {dialog === 'edit' ? 'Save changes' : 'Create'}

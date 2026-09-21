@@ -29,6 +29,7 @@ import { getUsers } from '@/lib/api/users';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { formatUkDate } from '@/lib/date';
 import { TaskFilesComments } from '@/components/tasks/TaskFilesComments';
+import { TaskAssigneePicker } from '@/components/tasks/TaskAssigneePicker';
 import {
   TASK_ENTITY_LABELS,
   TASK_PRIORITY_LABELS,
@@ -65,7 +66,7 @@ export function EntityTaskList({
   const [form, setForm] = useState({
     title: '',
     description: '',
-    assignee_id: '',
+    assignee_ids: [] as string[],
     due_date: new Date().toISOString().slice(0, 10),
     priority: 'medium' as TaskPriority,
   });
@@ -103,7 +104,7 @@ export function EntityTaskList({
         description: form.description.trim() || null,
         entity_type: entityType,
         entity_id: entityId,
-        assignee_id: form.assignee_id || user?.id || '',
+        assignee_ids: form.assignee_ids.length ? form.assignee_ids : user?.id ? [user.id] : [],
         due_date: form.due_date,
         priority: form.priority,
       }),
@@ -113,7 +114,7 @@ export function EntityTaskList({
       setForm({
         title: '',
         description: '',
-        assignee_id: user?.id || '',
+        assignee_ids: user?.id ? [user.id] : [],
         due_date: new Date().toISOString().slice(0, 10),
         priority: 'medium',
       });
@@ -158,7 +159,7 @@ export function EntityTaskList({
           size="sm"
           variant="outline"
           onClick={() => {
-            setForm((f) => ({ ...f, assignee_id: user?.id || '' }));
+            setForm((f) => ({ ...f, assignee_ids: user?.id ? [user.id] : [] }));
             setOpen(true);
           }}
         >
@@ -186,9 +187,11 @@ export function EntityTaskList({
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Due {t.due_date ? formatUkDate(t.due_date) : '—'}
-                    {t.assignee?.name || t.assigned_person?.name
-                      ? ` · ${t.assignee?.name || t.assigned_person?.name}`
-                      : ''}
+                    {(t.assignees || []).length
+                      ? ` · ${(t.assignees || []).map((a) => a.name).join(', ')}`
+                      : t.assignee?.name || t.assigned_person?.name
+                        ? ` · ${t.assignee?.name || t.assigned_person?.name}`
+                        : ''}
                     {t.priority ? ` · ${TASK_PRIORITY_LABELS[t.priority]}` : ''}
                   </p>
                 </div>
@@ -237,24 +240,11 @@ export function EntityTaskList({
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
               />
             </div>
-            <div className="grid gap-1.5">
-              <Label>Assignee *</Label>
-              <Select
-                value={form.assignee_id || undefined}
-                onValueChange={(v) => setForm((f) => ({ ...f, assignee_id: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select user" />
-                </SelectTrigger>
-                <SelectContent>
-                  {userList.map((u: any) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.full_name || u.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <TaskAssigneePicker
+              users={userList}
+              selected={form.assignee_ids}
+              onChange={(ids) => setForm((f) => ({ ...f, assignee_ids: ids }))}
+            />
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1.5">
                 <Label>Due date *</Label>
@@ -297,7 +287,7 @@ export function EntityTaskList({
               Cancel
             </Button>
             <Button
-              disabled={!form.title.trim() || !form.assignee_id || !form.due_date || createMut.isPending}
+              disabled={!form.title.trim() || form.assignee_ids.length === 0 || !form.due_date || createMut.isPending}
               onClick={() => createMut.mutate()}
             >
               {createMut.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
