@@ -11,7 +11,6 @@ import { getDashboardStats } from '@/lib/api/dashboard';
 import { getPunchStats } from '@/lib/api/clock';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import {
-  AlarmClockCheck,
   AlertTriangle,
   ArrowRight,
   ArrowUpRight,
@@ -240,7 +239,7 @@ export default function DashboardPage() {
     { label: 'Inquiry Inbox', icon: Inbox, href: '/dashboard/enquiries/inbox' },
     { label: 'New Enquiry', icon: FileSearch, href: '/dashboard/enquiries/new' },
     { label: 'Add Contact', icon: Contact2, href: '/dashboard/contacts' },
-    { label: 'Follow-ups', icon: AlarmClockCheck, href: '/dashboard/followups' },
+    { label: 'Tasks', icon: CheckSquare, href: '/dashboard/tasks' },
     { label: 'New Quote', icon: Plus, href: '/dashboard/quotations' },
     { label: 'Opportunities', icon: Target, href: '/dashboard/opportunities' },
   ];
