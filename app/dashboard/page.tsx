@@ -175,9 +175,7 @@ export default function DashboardPage() {
     enquiriesByStage: {},
     enquiriesByPriority: {},
     recentEnquiries: [],
-    followUps: { overdue: 0, due_today: 0, due_soon: 0, upcoming: 0, completed_this_month: 0 },
   };
-  const followUps = crm.followUps || {};
 
   const recentActivity = dashboardData?.recentActivity || [];
   const myTasks = dashboardData?.myTasks || [];
@@ -220,41 +218,6 @@ export default function DashboardPage() {
       href: '/dashboard/opportunities',
       iconWrap: 'bg-amber-100 text-amber-600',
       card: 'border-amber-200 bg-gradient-to-br from-amber-50/80 to-white hover:border-amber-400',
-    },
-  ];
-
-  const followUpCards = [
-    {
-      label: 'Overdue',
-      value: followUps.overdue ?? 0,
-      sub: 'Act now',
-      card: 'border-red-200 bg-red-50 hover:border-red-400',
-      number: 'text-red-600',
-      bucket: 'overdue',
-    },
-    {
-      label: 'Due today',
-      value: followUps.due_today ?? 0,
-      sub: "Today's follow-ups",
-      card: 'border-orange-200 bg-orange-50 hover:border-orange-400',
-      number: 'text-orange-600',
-      bucket: 'today',
-    },
-    {
-      label: 'Due soon',
-      value: followUps.due_soon ?? 0,
-      sub: 'Next 3 days',
-      card: 'border-yellow-200 bg-yellow-50 hover:border-yellow-400',
-      number: 'text-yellow-600',
-      bucket: 'soon',
-    },
-    {
-      label: 'Completed',
-      value: followUps.completed_this_month ?? 0,
-      sub: 'This month',
-      card: 'border-emerald-200 bg-emerald-50 hover:border-emerald-400',
-      number: 'text-emerald-600',
-      bucket: 'completed',
     },
   ];
 
@@ -313,41 +276,6 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-
-      {/* Follow-up accountability strip */}
-      <Card className="rounded-2xl border-blue-100 p-5">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="flex items-center gap-2 text-base font-semibold text-slate-800">
-            <AlarmClockCheck className="h-5 w-5 text-blue-600" />
-            {isSuperAdmin ? 'Team follow-ups' : 'My follow-ups'}
-          </h2>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/dashboard/followups">
-              Open follow-ups <ArrowRight className="ml-1 h-3 w-3" />
-            </Link>
-          </Button>
-        </div>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {followUpCards.map((c) => (
-            <button
-              key={c.label}
-              type="button"
-              onClick={() => router.push('/dashboard/followups')}
-              className={`rounded-xl border p-3 text-left transition ${c.card}`}
-            >
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{c.label}</p>
-              <p className={`text-2xl font-bold tabular-nums ${c.number}`}>{isLoading ? '—' : c.value}</p>
-              <p className="text-[11px] text-muted-foreground">{c.sub}</p>
-            </button>
-          ))}
-        </div>
-        {(followUps.overdue ?? 0) > 0 ? (
-          <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
-            {followUps.overdue} follow-up{followUps.overdue === 1 ? '' : 's'} overdue — these stay visible until
-            completed, and escalate after 2 and 5 days.
-          </p>
-        ) : null}
-      </Card>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
