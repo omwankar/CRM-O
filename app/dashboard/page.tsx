@@ -141,7 +141,7 @@ function Donut({ segments, total, centerLabel }: { segments: Array<{ value: numb
 export default function DashboardPage() {
   const router = useRouter();
   const isClient = useIsClient();
-  const { role, profile, user, isSuperAdmin } = useCurrentUser();
+  const { role, profile, user, isSuperAdmin, inOperations } = useCurrentUser();
   const [mountedName, setMountedName] = useState('');
 
   useEffect(() => {
@@ -236,7 +236,7 @@ export default function DashboardPage() {
   const sourceTotal = priorityEntries.reduce((a, [, v]) => a + v, 0);
 
   const quickActions = [
-    { label: 'Inquiry Inbox', icon: Inbox, href: '/dashboard/enquiries/inbox' },
+    { label: isSuperAdmin || inOperations ? 'Operations pipeline' : 'Enquiries', icon: Inbox, href: isSuperAdmin || inOperations ? '/dashboard/operations' : '/dashboard/enquiries' },
     { label: 'New Enquiry', icon: FileSearch, href: '/dashboard/enquiries/new' },
     { label: 'Add Contact', icon: Contact2, href: '/dashboard/contacts' },
     { label: 'Tasks', icon: CheckSquare, href: '/dashboard/tasks' },

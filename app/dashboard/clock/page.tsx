@@ -53,12 +53,34 @@ function formatSessionDate(iso: string) {
   return formatUkDate(iso);
 }
 
+/** Interpret a calendar date + HH:MM as Europe/London and return UTC ISO. */
+function ukDateTimeToIso(date: string, time: string) {
+  const [year, month, day] = date.split('-').map(Number);
+  const [hour, minute] = time.split(':').map(Number);
+  const utcGuess = Date.UTC(year, month - 1, day, hour, minute, 0);
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/London',
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(new Date(utcGuess));
+  const read = (type: string) => Number(parts.find((part) => part.type === type)?.value);
+  const londonAsUtc = Date.UTC(read('year'), read('month') - 1, read('day'), read('hour'), read('minute'), read('second'));
+  return new Date(utcGuess - (londonAsUtc - utcGuess)).toISOString();
+}
+
 export default function ClockPage() {
   const queryClient = useQueryClient();
   const [monthKey, setMonthKey] = useState(() => formatMonthKeyFromDate(new Date()));
   const [ukNowLabel, setUkNowLabel] = useState('');
 
-  const [missedType, setMissedType] = useState<'clock_in' | 'clock_out'>('clock_in');
+  const [punchDate, setPunchDate] = useState('');
+  const [punchIn, setPunchIn] = useState('');
+  const [punchOut, setPunchOut] = useState('');
   const [missedReason, setMissedReason] = useState('');
   const [leaveStart, setLeaveStart] = useState('');
   const [leaveEnd, setLeaveEnd] = useState('');
@@ -95,10 +117,13 @@ export default function ClockPage() {
   });
 
   const missedPunchMutation = useMutation({
-    mutationFn: (data: { type: 'clock_in' | 'clock_out'; requested_at: string; reason?: string }) => createMissedPunchRequest(data),
+    mutationFn: (data: { clock_in: string; clock_out: string; reason?: string }) => createMissedPunchRequest(data),
     onSuccess: () => {
       toast.success('Missed punch request submitted');
       queryClient.invalidateQueries({ queryKey: ['clock-sessions'] });
+      setPunchDate('');
+      setPunchIn('');
+      setPunchOut('');
       setMissedReason('');
     },
     onError: (e: Error) => toast.error(e.message || 'Failed to submit request'),
@@ -152,9 +177,19 @@ export default function ClockPage() {
 
   const submitMissedPunch = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!punchDate || !punchIn || !punchOut) {
+      toast.error('Clock in and clock out are required');
+      return;
+    }
+    const clockInIso = ukDateTimeToIso(punchDate, punchIn);
+    const clockOutIso = ukDateTimeToIso(punchDate, punchOut);
+    if (new Date(clockOutIso).getTime() <= new Date(clockInIso).getTime()) {
+      toast.error('Clock out must be after clock in');
+      return;
+    }
     missedPunchMutation.mutate({
-      type: missedType,
-      requested_at: new Date().toISOString(),
+      clock_in: clockInIso,
+      clock_out: clockOutIso,
       reason: missedReason || undefined,
     });
   };
@@ -173,7 +208,7 @@ export default function ClockPage() {
         <div>
           <h1 className="text-3xl font-bold">Clock In/Out</h1>
           <p className="text-muted-foreground">
-            Track time, work days, and missed punch requests. All times are UK (Europe/London).
+            Clock in and clock out are required each working day. All times are UK (Europe/London).
           </p>
         </div>
         <Card className="px-4 py-2">
@@ -230,9 +265,14 @@ export default function ClockPage() {
           {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
         </div>
 
-        <div className="mb-4 rounded-lg border border-border/60 bg-muted/20 p-3 max-w-xl">
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50/60 p-3 max-w-xl">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-medium">Today Action</p>
+            <div>
+              <p className="text-sm font-medium">Today <span className="text-amber-700">· required</span></p>
+              <p className="text-xs text-muted-foreground">
+                {openSession ? 'Clock out before you finish.' : 'Clock in to start the day.'}
+              </p>
+            </div>
             {!openSession ? (
               <Button
                 onClick={() => clockInMutation.mutate(undefined)}
@@ -402,39 +442,36 @@ export default function ClockPage() {
         </Card>
       </div>
 
-      <Card className="p-5">
-        <h2 className="text-lg font-semibold mb-3">Missed Punch Request</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          If your clock-in/out time exceeded the allowed window, submit a missed punch request to Super Admin.
-          Max 5 requests per month.
-        </p>
-        <p className="text-xs text-muted-foreground mb-4">
-          Open sessions are auto clocked out at 18:00 UK time. You can clock in the next day without waiting for approval.
+      <Card className="p-4">
+        <h2 className="text-base font-semibold">Missed punch</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Clock in and clock out are both required. Times are UK. Max 5 requests a month.
         </p>
 
-        <form onSubmit={submitMissedPunch} className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="md:col-span-1">
-            <label className="text-sm font-medium mb-1 block">Request Type</label>
-            <select
-              className="h-10 rounded-lg border border-border/70 bg-background px-3 w-full"
-              value={missedType}
-              onChange={(e) => setMissedType(e.target.value as any)}
-            >
-              <option value="clock_in">Clock In</option>
-              <option value="clock_out">Clock Out</option>
-            </select>
+        <form onSubmit={submitMissedPunch} className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <div>
+            <label className="mb-1 block text-xs font-medium">Date <span className="text-rose-600">*</span></label>
+            <Input type="date" value={punchDate} onChange={(e) => setPunchDate(e.target.value)} required />
           </div>
-          <div className="md:col-span-1">
-            <label className="text-sm font-medium mb-1 block">Reason (optional)</label>
+          <div>
+            <label className="mb-1 block text-xs font-medium">Clock in <span className="text-rose-600">*</span></label>
+            <Input type="time" value={punchIn} onChange={(e) => setPunchIn(e.target.value)} required />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium">Clock out <span className="text-rose-600">*</span></label>
+            <Input type="time" value={punchOut} onChange={(e) => setPunchOut(e.target.value)} required />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium">Reason</label>
             <Input
               value={missedReason}
               onChange={(e) => setMissedReason(e.target.value)}
-              placeholder="e.g. traveled late due to..."
+              placeholder="Optional"
             />
           </div>
-          <div className="md:col-span-1 flex items-end">
+          <div className="flex items-end">
             <Button type="submit" className="w-full" disabled={missedPunchMutation.isPending}>
-              {missedPunchMutation.isPending ? 'Submitting...' : 'Submit Request'}
+              {missedPunchMutation.isPending ? 'Submitting...' : 'Submit'}
             </Button>
           </div>
         </form>

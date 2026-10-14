@@ -79,7 +79,7 @@ const SECTION_TONES: Record<string, MenuSection['tone']> = {
   },
 };
 
-function getMenuSections(role?: string, pendingCount?: number): MenuSection[] {
+function getMenuSections(role?: string, pendingCount?: number, showPipeline?: boolean): MenuSection[] {
   const isSuperAdmin = role === 'super_admin';
   const canAccessHr = role === 'manager' || role === 'super_admin' || role === 'admin';
 
@@ -111,7 +111,6 @@ function getMenuSections(role?: string, pendingCount?: number): MenuSection[] {
     {
       label: 'Sales',
       items: [
-        { label: 'Inquiry Inbox', href: '/dashboard/enquiries/inbox' },
         { label: 'Enquiries', href: '/dashboard/enquiries' },
         { label: 'Leads', href: '/dashboard/leads' },
         { label: 'Opportunities', href: '/dashboard/opportunities' },
@@ -127,6 +126,7 @@ function getMenuSections(role?: string, pendingCount?: number): MenuSection[] {
     {
       label: 'Operations',
       items: [
+        ...(showPipeline ? [{ label: 'Pipeline', href: '/dashboard/operations' }] : []),
         { label: 'Jobs / Shipments', href: '/dashboard/jobs' },
         { label: 'Projects', href: '/dashboard/projects' },
         { label: 'Vendors', href: '/dashboard/vendors' },
@@ -200,7 +200,7 @@ export function Sidebar() {
   // Defer role-based menu items until after mount so SSR HTML matches first client paint
   // (otherwise Punch Requests / HR appear only on client and cause hydration mismatch).
   const [menuReady, setMenuReady] = useState(false);
-  const { role, profile, isLoading } = useCurrentUser();
+  const { role, profile, isLoading, inOperations } = useCurrentUser();
 
   useEffect(() => {
     setMenuReady(true);
@@ -221,6 +221,7 @@ export function Sidebar() {
   const menuSections = getMenuSections(
     menuReady && !isLoading ? role : undefined,
     pendingCount,
+    menuReady && !isLoading && (role === 'super_admin' || inOperations),
   );
 
   const handleLogout = async () => {

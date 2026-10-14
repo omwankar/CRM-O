@@ -252,9 +252,10 @@ function NewEnquiryPageInner() {
         </div>
 
         <div className="space-y-2">
-          <Label>Notes</Label>
+          <Label>Extra information</Label>
           <Textarea
             rows={3}
+            placeholder="Anything that is not shipment detail or a quote — handling notes, contacts, internal remarks."
             value={form.notes || ''}
             onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
           />

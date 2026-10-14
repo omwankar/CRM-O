@@ -68,15 +68,40 @@ export interface Enquiry {
   updater?: { id: string; full_name: string } | null;
   buyer?: { id: string; buyer_name: string; contact_email?: string } | null;
   project?: { id: string; project_id?: string; project_name?: string } | null;
-  quotations?: Array<{
-    id: string;
-    quotation_number: string;
-    status: string;
-    quote_sent_at?: string | null;
-    created_at: string;
-    clarusto_final_price?: number | null;
-    revised_price?: number | null;
-  }>;
+  quotations?: EnquiryQuotationSummary[];
+}
+
+export interface EnquiryVendorQuote {
+  id: string;
+  quotation_id: string;
+  vendor_name?: string | null;
+  quoted_price?: number | null;
+  currency?: string | null;
+  quote_received_at?: string | null;
+  is_chosen?: boolean;
+  vendor_quote_number?: string | null;
+  notes?: string | null;
+  logged_by?: string | null;
+  logged_by_name?: string | null;
+}
+
+export interface EnquiryQuotationSummary {
+  id: string;
+  quotation_number: string;
+  status: string;
+  quote_sent_at?: string | null;
+  quote_sent_to_email?: string | null;
+  created_at: string;
+  chosen_quote_id?: string | null;
+  clarusto_final_price?: number | null;
+  clarusto_final_currency?: string | null;
+  clarusto_final_notes?: string | null;
+  clarusto_quote_sent_at?: string | null;
+  revised_price?: number | null;
+  revised_currency?: string | null;
+  revised_notes?: string | null;
+  revised_at?: string | null;
+  quotation_vendor_quotes?: EnquiryVendorQuote[];
 }
 
 export interface EnquiryInput {

@@ -29,7 +29,11 @@ export async function clockOut() {
   return sameOriginJson('/api/clock/clock-out', { method: 'POST' });
 }
 
-export async function createMissedPunchRequest(data: { type: 'clock_in' | 'clock_out'; requested_at: string; reason?: string }) {
+export async function createMissedPunchRequest(data: {
+  clock_in: string;
+  clock_out: string;
+  reason?: string;
+}) {
   return sameOriginJson('/api/clock/missed-punch', { method: 'POST', body: JSON.stringify(data) });
 }
 

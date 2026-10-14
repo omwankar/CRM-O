@@ -7,6 +7,8 @@ type MissedPunchBody = {
   type?: 'clock_in' | 'clock_out';
   reason?: string;
   requested_at?: string; // ISO
+  clock_in?: string;
+  clock_out?: string;
 };
 
 function parseMonthRange(month: string) {
@@ -47,13 +49,19 @@ export async function POST(request: NextRequest) {
   }
 
   const body = (await request.json().catch(() => ({}))) as MissedPunchBody;
-  const type = body.type ?? 'clock_in';
   const reason = body.reason?.trim();
-  const requestedAt = body.requested_at ? new Date(body.requested_at) : new Date();
+  const clockIn = body.clock_in ? new Date(body.clock_in) : null;
+  const clockOut = body.clock_out ? new Date(body.clock_out) : null;
 
-  if (!['clock_in', 'clock_out'].includes(type)) {
-    return NextResponse.json({ error: 'Invalid missed punch type' }, { status: 400 });
+  if (!clockIn || Number.isNaN(clockIn.getTime()) || !clockOut || Number.isNaN(clockOut.getTime())) {
+    return NextResponse.json({ error: 'Clock in and clock out are required.' }, { status: 400 });
   }
+  if (clockOut.getTime() <= clockIn.getTime()) {
+    return NextResponse.json({ error: 'Clock out must be after clock in.' }, { status: 400 });
+  }
+
+  const requestedAt = clockIn;
+  const durationMinutes = Math.round((clockOut.getTime() - clockIn.getTime()) / 60000);
 
   const month = `${requestedAt.getUTCFullYear()}-${String(requestedAt.getUTCMonth() + 1).padStart(2, '0')}`;
   const { start, endExclusive } = parseMonthRange(month);
@@ -81,8 +89,11 @@ export async function POST(request: NextRequest) {
     .from('missed_punch_requests')
     .insert({
       user_id: user.id,
-      type,
+      type: 'clock_in',
       requested_at: requestedAt.toISOString(),
+      requested_clock_in: clockIn.toISOString(),
+      requested_clock_out: clockOut.toISOString(),
+      actual_duration_minutes: durationMinutes,
       reason: reason || null,
       status: 'pending',
     })
@@ -117,7 +128,7 @@ export async function POST(request: NextRequest) {
         user_id: h.id,
         type: 'punch_request',
         title: 'Punch request',
-        message: `${who} submitted a ${type === 'clock_in' ? 'clock-in' : 'clock-out'} punch request.`,
+        message: `${who} submitted a punch request with clock in and clock out.`,
       }))
     );
   }

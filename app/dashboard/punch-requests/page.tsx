@@ -1,27 +1,13 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { getPunchRequests, getPunchStats, approvePunchRequest, rejectPunchRequest } from '@/lib/api/clock';
 import { AccessDenied } from '@/components/AccessDenied';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { Clock, CheckCircle, XCircle, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
-import { formatUkLongDate, formatUkTimeLabeled } from '@/lib/date';
-
-function formatRelativeTime(date: string) {
-  const diff = Date.now() - new Date(date).getTime();
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-  if (hours < 1) return 'Just now';
-  if (hours < 24) return `${hours}h ago`;
-  return `${days}d ago`;
-}
-
-function formatDate(dateStr: string) {
-  return formatUkLongDate(dateStr);
-}
+import { CheckCircle, XCircle, Loader2, RefreshCw } from 'lucide-react';
+import { formatUkDateTime, formatUkTimeLabeled } from '@/lib/date';
 
 function formatTime(dateStr: string | null) {
   if (!dateStr) return '-';
@@ -84,62 +70,29 @@ export default function PunchRequestsPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Punch Requests</h1>
-          <p className="text-muted-foreground">Review employee time correction requests</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Punch requests</h1>
+          <p className="text-sm text-muted-foreground">Approve or reject time corrections.</p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <RefreshCw className="w-4 h-4" />
-          Auto-refresh every 60s
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="rounded-full bg-amber-50 px-2 py-1 text-amber-800">{stats.pending} pending</span>
+          <span className="rounded-full bg-emerald-50 px-2 py-1 text-emerald-800">{stats.approved_today} approved today</span>
+          <span className="rounded-full bg-rose-50 px-2 py-1 text-rose-800">{stats.rejected_today} rejected today</span>
+          <span className="inline-flex items-center gap-1">
+            <RefreshCw className="h-3 w-3" />
+            60s
+          </span>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card className="p-4 border-l-4 border-l-amber-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-3xl font-bold">{stats.pending}</p>
-              <p className="text-sm text-muted-foreground">Pending Requests</p>
-            </div>
-            {stats.pending > 0 && (
-              <div className="relative">
-                <Clock className="w-8 h-8 text-amber-500" />
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-              </div>
-            )}
-          </div>
-        </Card>
-        <Card className="p-4 border-l-4 border-l-green-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-3xl font-bold">{stats.approved_today}</p>
-              <p className="text-sm text-muted-foreground">Approved Today</p>
-            </div>
-            <CheckCircle className="w-8 h-8 text-green-500" />
-          </div>
-        </Card>
-        <Card className="p-4 border-l-4 border-l-red-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-3xl font-bold">{stats.rejected_today}</p>
-              <p className="text-sm text-muted-foreground">Rejected Today</p>
-            </div>
-            <XCircle className="w-8 h-8 text-red-500" />
-          </div>
-        </Card>
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="flex gap-2 border-b">
+      <div className="flex gap-1 border-b">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setStatusFilter(tab.id)}
-            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
               statusFilter === tab.id
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -147,7 +100,7 @@ export default function PunchRequestsPage() {
           >
             {tab.label}
             {tab.count !== undefined && tab.count > 0 && (
-              <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs">
+              <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[11px] text-amber-700">
                 {tab.count}
               </span>
             )}
@@ -165,168 +118,103 @@ export default function PunchRequestsPage() {
           <p className="text-muted-foreground">No pending punch requests at this time.</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {requests.map((request: any) => (
-            <Card
-              key={request.id}
-              className={`p-6 transition-all ${
-                request.status === 'pending'
-                  ? 'border-l-4 border-l-amber-500'
-                  : request.status === 'approved'
-                  ? 'border-l-4 border-l-green-500 opacity-75'
-                  : 'border-l-4 border-l-red-500 opacity-75'
-              }`}
-            >
-              <div className="flex items-start justify-between mb-4">
+        <div className="divide-y overflow-hidden rounded-lg border bg-white">
+          {requests.map((request: any) => {
+            const clockIn = request.requested_clock_in || (request.type === 'clock_in' ? request.requested_at : null);
+            const clockOut = request.requested_clock_out || (request.type === 'clock_out' ? request.requested_at : null);
+            const duration = request.actual_duration_minutes
+              ? `${Math.floor(request.actual_duration_minutes / 60)}h ${request.actual_duration_minutes % 60}m`
+              : null;
+            const note = request.reason || request.notes;
+            return (
+              <div key={request.id} className="px-3 py-2.5">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-semibold text-slate-700">
                     {request.user?.full_name?.[0] || '?'}
                   </div>
-                  <div>
-                    <p className="font-medium">{request.user?.full_name || 'Unknown'}</p>
-                    <p className="text-sm text-muted-foreground">{request.user?.email}</p>
-                  </div>
-                </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    request.status === 'pending'
-                      ? 'bg-amber-100 text-amber-700'
-                      : request.status === 'approved'
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-red-100 text-red-700'
-                  }`}
-                >
-                  {request.status.toUpperCase()}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Submitted</p>
-                  <p>{formatRelativeTime(request.created_at)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Type</p>
-                  <p className="capitalize">{request.type?.replace(/_/g, ' ')}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Requested In</p>
-                  <p>{formatTime(request.requested_clock_in)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Requested Out</p>
-                  <p>{formatTime(request.requested_clock_out)}</p>
-                </div>
-                {request.actual_duration_minutes && (
-                  <div>
-                    <p className="text-muted-foreground">Duration</p>
-                    <p>{Math.floor(request.actual_duration_minutes / 60)}h {request.actual_duration_minutes % 60}m</p>
-                  </div>
-                )}
-              </div>
-
-              {request.reason && (
-                <div className="mb-4 p-3 bg-muted rounded-lg">
-                  <p className="text-sm text-muted-foreground">Reason / employee:</p>
-                  <p className="text-sm">{request.reason}</p>
-                </div>
-              )}
-              {request.notes && (
-                <div className="mb-4 p-3 bg-muted rounded-lg">
-                  <p className="text-sm text-muted-foreground">Notes from employee:</p>
-                  <p className="text-sm">{request.notes}</p>
-                </div>
-              )}
-
-              {request.status === 'pending' ? (
-                <div className="space-y-3">
-                  {approvingId === request.id ? (
-                    <div className="p-3 bg-green-50 rounded-lg">
-                      <p className="text-sm text-green-700 mb-2">
-                        {request.requested_clock_out
-                          ? `This will clock ${request.user?.full_name || 'the employee'} out at ${formatTime(request.requested_clock_out)} and unlock clock in/out.`
-                          : 'This will apply the punch and unlock clock in/out for the employee.'}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                      <p className="truncate text-sm font-medium">{request.user?.full_name || 'Unknown'}</p>
+                      <p className="text-xs text-muted-foreground">
+                        In {formatTime(clockIn)} · Out {formatTime(clockOut)}
+                        {duration ? ` · ${duration}` : ''}
                       </p>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => approveMutation.mutate({ id: request.id })}
-                          disabled={approveMutation.isPending}
-                        >
-                          {approveMutation.isPending ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                          )}
-                          Confirm Approval
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => setApprovingId(null)}>
-                          Cancel
-                        </Button>
-                      </div>
                     </div>
-                  ) : rejectingId === request.id ? (
-                    <div className="p-3 bg-red-50 rounded-lg">
-                      <p className="text-sm text-red-700 mb-2">Rejection reason (required):</p>
-                      <textarea
-                        className="w-full p-2 border rounded-md text-sm mb-2"
-                        rows={2}
-                        placeholder="e.g. Insufficient justification..."
-                        value={rejectionReason}
-                        onChange={(e) => setRejectionReason(e.target.value)}
-                      />
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          disabled={rejectMutation.isPending || rejectionReason.length < 5}
-                          onClick={() => rejectMutation.mutate({ id: request.id, reason: rejectionReason })}
-                        >
-                          {rejectMutation.isPending ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <XCircle className="w-4 h-4 mr-2" />
-                          )}
-                          Confirm Rejection
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => { setRejectingId(null); setRejectionReason(''); }}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <Button onClick={() => setApprovingId(request.id)}>
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Approve
-                      </Button>
-                      <Button variant="outline" onClick={() => setRejectingId(request.id)}>
-                        <XCircle className="w-4 h-4 mr-2" />
-                        Reject
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-sm">
-                  {request.status === 'approved' ? (
-                    <p className="text-green-600">
-                      Approved by {request.reviewer?.full_name || 'Unknown'} at {formatRelativeTime(request.reviewed_at)}
+                    <p className="truncate text-xs text-muted-foreground">
+                      Submitted {formatUkDateTime(request.created_at)}
+                      {note ? ` · ${note}` : ''}
                     </p>
-                  ) : (
-                    <div>
-                      <p className="text-red-600">
-                        Rejected by {request.reviewer?.full_name || 'Unknown'}
-                      </p>
-                      {request.rejection_reason && (
-                        <p className="text-muted-foreground mt-1">Reason: {request.rejection_reason}</p>
-                      )}
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase ${
+                      request.status === 'pending'
+                        ? 'bg-amber-100 text-amber-700'
+                        : request.status === 'approved'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-red-100 text-red-700'
+                    }`}
+                  >
+                    {request.status}
+                  </span>
+                  {request.status === 'pending' && approvingId !== request.id && rejectingId !== request.id ? (
+                    <div className="flex shrink-0 gap-1">
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setApprovingId(request.id)} aria-label="Approve">
+                        <CheckCircle className="h-4 w-4 text-emerald-600" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setRejectingId(request.id)} aria-label="Reject">
+                        <XCircle className="h-4 w-4 text-rose-600" />
+                      </Button>
                     </div>
-                  )}
+                  ) : null}
                 </div>
-              )}
-            </Card>
-          ))}
+
+                {request.status === 'pending' && approvingId === request.id ? (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 pl-10 text-xs text-emerald-800">
+                    <span>Apply this punch and unlock clock in/out.</span>
+                    <Button size="sm" className="h-7" onClick={() => approveMutation.mutate({ id: request.id })} disabled={approveMutation.isPending}>
+                      {approveMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Confirm'}
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7" onClick={() => setApprovingId(null)}>Cancel</Button>
+                  </div>
+                ) : null}
+
+                {request.status === 'pending' && rejectingId === request.id ? (
+                  <div className="mt-2 space-y-2 pl-10">
+                    <textarea
+                      className="w-full rounded-md border p-2 text-sm"
+                      rows={2}
+                      placeholder="Rejection reason"
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="h-7"
+                        variant="destructive"
+                        disabled={rejectMutation.isPending || rejectionReason.length < 5}
+                        onClick={() => rejectMutation.mutate({ id: request.id, reason: rejectionReason })}
+                      >
+                        {rejectMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Reject'}
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7" onClick={() => { setRejectingId(null); setRejectionReason(''); }}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {request.status !== 'pending' ? (
+                  <p className="mt-1 pl-10 text-xs text-muted-foreground">
+                    {request.status === 'approved' ? 'Approved' : 'Rejected'}
+                    {request.reviewer?.full_name ? ` by ${request.reviewer.full_name}` : ''}
+                    {request.reviewed_at ? ` on ${formatUkDateTime(request.reviewed_at)}` : ''}
+                    {request.rejection_reason ? ` · ${request.rejection_reason}` : ''}
+                  </p>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

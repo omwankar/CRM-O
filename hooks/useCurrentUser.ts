@@ -111,6 +111,7 @@ export function useCurrentUser() {
 
   // Wait for the profile so Super Admins are not treated as plain users
   // (role used to default to "user" before /users/me returned).
+  const inOperations = Boolean((profileData as { in_operations?: boolean } | undefined)?.in_operations);
   const isLoading = userLoading || (!!userData && !profileData);
 
   return {
@@ -120,6 +121,7 @@ export function useCurrentUser() {
     isSuperAdmin,
     isManager,
     isUser,
+    inOperations,
     canWrite,
     canManageUsers,
     canEditTask,

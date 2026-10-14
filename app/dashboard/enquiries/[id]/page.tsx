@@ -39,7 +39,9 @@ import {
   ENQUIRY_STAGE_LABELS,
   ENQUIRY_STAGES_ORDER,
   type EnquiryInput,
+  type EnquiryQuotationSummary,
   type EnquiryStage,
+  type EnquiryVendorQuote,
 } from '@/types/enquiries';
 import { ActivityTimeline } from '@/components/activities/ActivityTimeline';
 import { EntityTaskList } from '@/components/tasks/EntityTaskList';
@@ -83,6 +85,52 @@ function parseNotes(notes: string | null) {
   return { receivedVia, senderPhone, original, plain };
 }
 
+const QUOTE_LABEL = /quote|price|rate|total/i;
+
+function money(amount?: number | null, currency?: string | null) {
+  if (amount == null || Number.isNaN(Number(amount))) return null;
+  const code = (currency || '').trim();
+  const formatted = Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return code ? `${code} ${formatted}` : formatted;
+}
+
+function splitExtraNotes(text: string) {
+  const extra: string[] = [];
+  const quotes: string[] = [];
+  for (const line of text.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const looksLikeQuote = /\d/.test(trimmed) && /quote|quoted|rate|price|£|\$|€|₹|\b(usd|gbp|inr|aed|eur)\b/i.test(trimmed);
+    if (looksLikeQuote) quotes.push(trimmed);
+    else extra.push(trimmed);
+  }
+  return { extra: extra.join('\n'), quotes };
+}
+
+function submittedQuote(q: EnquiryQuotationSummary) {
+  if (q.revised_price != null && !Number.isNaN(Number(q.revised_price))) {
+    return {
+      amount: money(q.revised_price, q.revised_currency),
+      when: q.revised_at || q.quote_sent_at,
+      notes: q.revised_notes,
+      label: 'Revised quote sent',
+    };
+  }
+  if (q.clarusto_final_price != null && !Number.isNaN(Number(q.clarusto_final_price))) {
+    return {
+      amount: money(q.clarusto_final_price, q.clarusto_final_currency),
+      when: q.clarusto_quote_sent_at || q.quote_sent_at,
+      notes: q.clarusto_final_notes,
+      label: 'Final quote submitted',
+    };
+  }
+  return null;
+}
+
+function vendorLabel(quote: EnquiryVendorQuote) {
+  return quote.vendor_name || 'Company';
+}
+
 function FieldBox({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-blue-100 bg-blue-50/30 px-3 py-2">
@@ -113,6 +161,20 @@ export default function EnquiryDetailPage() {
 
   const parsedReq = useMemo(() => parseRequirement(enquiry?.requirement || ''), [enquiry?.requirement]);
   const parsedNotes = useMemo(() => parseNotes(enquiry?.notes || null), [enquiry?.notes]);
+  const shipmentPairs = useMemo(
+    () => parsedReq.pairs.filter((pair) => !QUOTE_LABEL.test(pair.label)),
+    [parsedReq.pairs],
+  );
+  const quotePairs = useMemo(
+    () => parsedReq.pairs.filter((pair) => QUOTE_LABEL.test(pair.label)),
+    [parsedReq.pairs],
+  );
+  const extraNotes = useMemo(() => splitExtraNotes(parsedNotes.plain), [parsedNotes.plain]);
+  const freeSplit = useMemo(() => splitExtraNotes(parsedReq.freeText.join('\n')), [parsedReq.freeText]);
+  const mentionedQuotes = useMemo(
+    () => [...quotePairs.map((pair) => `${pair.label}: ${pair.value}`), ...extraNotes.quotes, ...freeSplit.quotes],
+    [quotePairs, extraNotes.quotes, freeSplit.quotes],
+  );
 
   const startEdit = () => {
     if (!enquiry) return;
@@ -266,9 +328,10 @@ export default function EnquiryDetailPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Notes</Label>
+                  <Label>Extra information</Label>
                   <Textarea
                     rows={4}
+                    placeholder="Handling notes, contacts, internal remarks. Keep quotes on the Quotations tab."
                     value={form.notes || ''}
                     onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
                   />
@@ -408,13 +471,13 @@ export default function EnquiryDetailPage() {
                 </p>
               ) : null}
 
-              <Card className="p-5">
-                <h2 className="mb-3 font-semibold">Shipment details</h2>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {parsedReq.pairs.map((p) => (
+              <Card className="p-4">
+                <h2 className="mb-3 text-sm font-semibold">Shipment details</h2>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {shipmentPairs.map((p) => (
                     <FieldBox key={p.label + p.value} label={p.label} value={p.value} />
                   ))}
-                  {parsedReq.pairs.length === 0 ? (
+                  {shipmentPairs.length === 0 && parsedReq.pairs.length === 0 ? (
                     <p className="col-span-full whitespace-pre-wrap text-sm leading-relaxed">
                       {enquiry.requirement}
                     </p>
@@ -432,11 +495,9 @@ export default function EnquiryDetailPage() {
                     </ul>
                   </div>
                 )}
-                {parsedReq.freeText.length > 0 && (
-                  <p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">
-                    {parsedReq.freeText.join('\n')}
-                  </p>
-                )}
+                {freeSplit.extra ? (
+                  <p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">{freeSplit.extra}</p>
+                ) : null}
               </Card>
 
               <Card className="p-5">
@@ -460,14 +521,6 @@ export default function EnquiryDetailPage() {
                   ) : null}
                   <FieldBox label="Owner" value={enquiry.owner?.full_name || '—'} />
                   <FieldBox
-                    label="Budget / target"
-                    value={
-                      enquiry.client_budget != null
-                        ? `${enquiry.client_currency || ''} ${Number(enquiry.client_budget).toLocaleString()}`
-                        : '—'
-                    }
-                  />
-                  <FieldBox
                     label="Deadline / ready date"
                     value={enquiry.deadline ? formatUkDate(enquiry.deadline) : '—'}
                   />
@@ -475,12 +528,12 @@ export default function EnquiryDetailPage() {
                   <FieldBox label="Last updated" value={formatUkDateTime(enquiry.updated_at)} />
                   {enquiry.outcome ? <FieldBox label="Outcome" value={enquiry.outcome} /> : null}
                 </div>
-                {parsedNotes.plain ? (
+                {extraNotes.extra ? (
                   <div className="mt-3 rounded-lg border border-amber-100 bg-amber-50/40 px-3 py-2">
                     <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                      Notes
+                      Extra information
                     </p>
-                    <p className="mt-1 whitespace-pre-wrap text-sm">{parsedNotes.plain}</p>
+                    <p className="mt-1 whitespace-pre-wrap text-sm">{extraNotes.extra}</p>
                   </div>
                 ) : null}
               </Card>
@@ -500,7 +553,7 @@ export default function EnquiryDetailPage() {
               <p className="whitespace-pre-wrap text-sm">{enquiry.notes}</p>
             ) : (
               <p className="text-sm text-muted-foreground">
-                No original message stored. Enquiries created through the Inquiry Inbox keep the
+                No original message stored. Enquiries created from the operations pipeline keep the
                 pasted email or WhatsApp text here.
               </p>
             )}
@@ -508,42 +561,102 @@ export default function EnquiryDetailPage() {
         </TabsContent>
 
         {/* ---------------- Quotations ---------------- */}
-        <TabsContent value="quotations" className="mt-4">
-          <Card className="p-5">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="font-semibold">Linked quotations</h2>
-              <p className="text-xs text-muted-foreground">
-                One enquiry can have multiple quotations (e.g. revised scope).
+        <TabsContent value="quotations" className="mt-4 space-y-3">
+          {enquiry.client_budget != null ? (
+            <Card className="flex items-center justify-between gap-3 px-4 py-3">
+              <p className="text-sm text-muted-foreground">Customer target</p>
+              <p className="text-sm font-semibold tabular-nums">
+                {enquiry.client_currency || ''} {Number(enquiry.client_budget).toLocaleString()}
               </p>
-            </div>
-            {quotationCount === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No quotations yet. Use <strong>Create Quotation</strong> when you are ready to price.
-              </p>
-            ) : (
-              <ul className="divide-y">
-                {enquiry.quotations!.map((q) => (
-                  <li key={q.id} className="flex items-center justify-between gap-3 py-3">
-                    <div>
-                      <Link
-                        href={`/dashboard/quotations/${q.id}`}
-                        className="font-mono text-sm text-blue-600 hover:underline"
-                      >
-                        {q.quotation_number}
-                      </Link>
-                      <p className="text-xs capitalize text-muted-foreground">
-                        {q.status.replace(/_/g, ' ')}
-                        {q.quote_sent_at ? ` · sent ${formatUkDateTime(q.quote_sent_at)}` : ''}
-                      </p>
-                    </div>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={`/dashboard/quotations/${q.id}`}>Open</Link>
-                    </Button>
-                  </li>
+            </Card>
+          ) : null}
+
+          {mentionedQuotes.length > 0 ? (
+            <Card className="p-4">
+              <h2 className="text-sm font-semibold">Mentioned on the inquiry</h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">Prices found in the message. Formal quotes sit below.</p>
+              <ul className="mt-2 space-y-1 text-sm">
+                {mentionedQuotes.map((line) => (
+                  <li key={line}>{line}</li>
                 ))}
               </ul>
-            )}
-          </Card>
+            </Card>
+          ) : null}
+
+          {quotationCount === 0 ? (
+            <Card className="p-4">
+              <p className="text-sm text-muted-foreground">
+                No quotation record yet. Create one to store the quotes you received and the final quote you send.
+              </p>
+            </Card>
+          ) : (
+            enquiry.quotations!.map((q) => {
+              const received = q.quotation_vendor_quotes || [];
+              const submitted = submittedQuote(q);
+              return (
+                <Card key={q.id} className="overflow-hidden p-0">
+                  <div className="flex items-center justify-between gap-3 border-b px-4 py-2.5">
+                    <div className="min-w-0">
+                      <Link href={`/dashboard/quotations/${q.id}`} className="font-mono text-sm text-blue-600 hover:underline">
+                        {q.quotation_number}
+                      </Link>
+                      <p className="text-xs capitalize text-muted-foreground">{q.status.replace(/_/g, ' ')}</p>
+                    </div>
+                    <Button variant="outline" size="sm" className="h-8" asChild>
+                      <Link href={`/dashboard/quotations/${q.id}`}>Open</Link>
+                    </Button>
+                  </div>
+                  <div className="grid gap-0 md:grid-cols-2 md:divide-x">
+                    <div className="p-4">
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Quotes received</p>
+                      {received.length === 0 ? (
+                        <p className="mt-2 text-sm text-muted-foreground">No company quotes recorded yet.</p>
+                      ) : (
+                        <ul className="mt-2 divide-y">
+                          {received.map((quote) => (
+                            <li key={quote.id} className="flex items-start justify-between gap-3 py-2 text-sm">
+                              <div className="min-w-0">
+                                <p className="truncate font-medium">
+                                  {vendorLabel(quote)}
+                                  {quote.is_chosen || quote.id === q.chosen_quote_id ? (
+                                    <span className="ml-2 text-[10px] font-semibold uppercase text-emerald-700">Chosen</span>
+                                  ) : null}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {quote.vendor_quote_number || 'No quote no.'}
+                                  {quote.quote_received_at ? ` · ${formatUkDate(quote.quote_received_at)}` : ''}
+                                  {quote.logged_by_name ? ` · ${quote.logged_by_name}` : ''}
+                                </p>
+                              </div>
+                              <p className="shrink-0 font-medium tabular-nums">{money(quote.quoted_price, quote.currency) || '—'}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    <div className="border-t p-4 md:border-t-0">
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Final quote submitted</p>
+                      {submitted ? (
+                        <div className="mt-2">
+                          <p className="text-lg font-semibold tabular-nums">{submitted.amount}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {submitted.label}
+                            {submitted.when ? ` · ${formatUkDateTime(submitted.when)}` : ''}
+                            {q.quote_sent_to_email ? ` · ${q.quote_sent_to_email}` : ''}
+                          </p>
+                          {submitted.notes ? <p className="mt-2 text-sm text-slate-700">{submitted.notes}</p> : null}
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          Not submitted yet. Finalize the quotation, then send it to the customer.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              );
+            })
+          )}
         </TabsContent>
 
         {/* ---------------- Activity & tasks ---------------- */}
