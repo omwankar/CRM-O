@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 export function DashboardMain({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   if (path.startsWith('/dashboard/operations')) {
-    return <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[#0b1220]">{children}</main>;
+    return <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[#f4f7fb]">{children}</main>;
   }
 
   return (

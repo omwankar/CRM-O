@@ -98,6 +98,13 @@ export async function joinOperationsEnquiry(id: string) {
   return apiRequest(`/operations/enquiries/${id}/join`, { method: 'POST' });
 }
 
+export async function assignOperationsPeople(id: string, user_ids: string[]) {
+  return apiRequest(`/operations/enquiries/${id}/assignees`, {
+    method: 'PUT',
+    body: JSON.stringify({ user_ids }),
+  });
+}
+
 export async function addOperationsAgent(
   id: string,
   input: { agent_name?: string; contact_name?: string | null; contact_email?: string | null; saved_agent_ids?: string[] },

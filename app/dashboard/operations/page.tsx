@@ -20,7 +20,14 @@ import { formatUkDate, formatUkDateTime } from '@/lib/date';
 
 type Tab = 'inquiries' | 'activity' | 'register' | 'agents';
 
-const field = 'h-9 rounded-md border border-slate-600 bg-[#0b1220] px-3 text-sm text-slate-100 outline-none placeholder:text-slate-500';
+const field = 'h-9 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400';
+
+const COLUMN_TONE: Record<string, string> = {
+  to_send: 'border-sky-200 bg-sky-50/70',
+  waiting: 'border-amber-200 bg-amber-50/70',
+  choose_best: 'border-violet-200 bg-violet-50/70',
+  best_selected: 'border-emerald-200 bg-emerald-50/70',
+};
 
 export default function OperationsPipelinePage() {
   const qc = useQueryClient();
@@ -87,6 +94,8 @@ export default function OperationsPipelinePage() {
     <InquiryPanel
       inquiry={selected}
       userId={user?.id}
+      isSuperAdmin={isSuperAdmin}
+      team={data?.workload || []}
       agents={data?.agents || []}
       onChanged={refresh}
       onDismiss={() => setSelectedId(null)}
@@ -98,12 +107,12 @@ export default function OperationsPipelinePage() {
   ) : null;
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[#0b1220] text-slate-100">
-      <header className="shrink-0 border-b border-slate-800 px-5 py-3">
+    <div className="flex h-full min-h-0 flex-col bg-[#f4f7fb] text-slate-900">
+      <header className="shrink-0 border-b border-slate-200 bg-white px-5 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-lg font-semibold tracking-tight">Operations pipeline</h1>
-            <p className="text-xs text-slate-400">Oldest open inquiries come first. Click a person to see only their work.</p>
+            <p className="text-xs text-slate-500">Oldest open inquiries come first. A super admin chooses who works each one.</p>
           </div>
           <button
             type="button"
@@ -111,7 +120,7 @@ export default function OperationsPipelinePage() {
               setTab('inquiries');
               setCreating((value) => !value);
             }}
-            className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium hover:bg-blue-500"
+            className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500"
           >
             <Plus className="h-4 w-4" />
             New inquiry
@@ -130,7 +139,7 @@ export default function OperationsPipelinePage() {
               key={id}
               type="button"
               onClick={() => setTab(id)}
-              className={`rounded-md px-3 py-1.5 text-sm ${tab === id ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'}`}
+              className={`rounded-md px-3 py-1.5 text-sm ${tab === id ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
             >
               {label}
             </button>
@@ -149,7 +158,7 @@ export default function OperationsPipelinePage() {
       ) : tab === 'inquiries' ? (
         <div className="space-y-4">
           {creating ? (
-            <div className="rounded-xl border border-slate-700 bg-[#111827] p-3">
+            <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
               <InquiryIntake dark onCreated={() => { setCreating(false); refresh(); }} />
             </div>
           ) : null}
@@ -157,7 +166,7 @@ export default function OperationsPipelinePage() {
             <button
               type="button"
               onClick={() => setPersonId(null)}
-              className={`shrink-0 rounded-xl border px-4 py-3 text-left text-sm ${personId ? 'border-slate-700 bg-[#151c2c] text-slate-300' : 'border-slate-200 bg-slate-100 text-slate-900'}`}
+              className={`shrink-0 rounded-xl border px-4 py-3 text-left text-sm shadow-sm ${personId ? 'border-slate-200 bg-white text-slate-600' : 'border-blue-600 bg-blue-600 text-white'}`}
             >
               Everyone
             </button>
@@ -166,14 +175,14 @@ export default function OperationsPipelinePage() {
                 key={member.user_id}
                 type="button"
                 onClick={() => setPersonId((current) => (current === member.user_id ? null : member.user_id))}
-                className={`flex w-[230px] shrink-0 items-center gap-3 rounded-xl border px-3 py-3 text-left ${personId === member.user_id ? 'border-blue-400 bg-blue-500/15' : 'border-slate-700 bg-[#151c2c]'}`}
+                className={`flex w-[230px] shrink-0 items-center gap-3 rounded-xl border px-3 py-3 text-left shadow-sm ${personId === member.user_id ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white'}`}
               >
                 <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${personColor(member.full_name)}`}>
                   {initial(member.full_name)}
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium">{member.full_name}</span>
-                  <span className="block text-xs text-slate-400">
+                  <span className="block text-xs text-slate-500">
                     {member.open_count} working · {member.rates_awaited} awaiting a rate
                   </span>
                 </span>
@@ -187,7 +196,7 @@ export default function OperationsPipelinePage() {
               <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
               <input className={`${field} w-full pl-8`} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search ID, customer, route, agent" />
             </label>
-            <label className="flex items-center gap-2 text-xs text-slate-300">
+            <label className="flex items-center gap-2 text-xs text-slate-600">
               <input type="checkbox" checked={showClosed} onChange={(event) => setShowClosed(event.target.checked)} />
               Show closed
             </label>
@@ -198,10 +207,10 @@ export default function OperationsPipelinePage() {
             {COLUMNS.map((column) => {
               const inColumn = visible.filter((inquiry) => inquiry.column === column.id);
               return (
-                <section key={column.id} className="flex w-[280px] shrink-0 flex-col rounded-xl border border-slate-800 bg-[#101828]">
+                <section key={column.id} className={`flex w-[280px] shrink-0 flex-col rounded-xl border shadow-sm ${COLUMN_TONE[column.id] || 'border-slate-200 bg-white'}`}>
                   <header className="flex items-center justify-between px-3 py-2.5 text-sm">
-                    <span className="font-medium">{column.label}</span>
-                    <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">{inColumn.length}</span>
+                    <span className="font-medium text-slate-800">{column.label}</span>
+                    <span className="rounded-full bg-white px-2 py-0.5 text-xs text-slate-600">{inColumn.length}</span>
                   </header>
                   <div className="space-y-2 px-2 pb-3">
                     {inColumn.map((inquiry) => (
@@ -232,7 +241,7 @@ export default function OperationsPipelinePage() {
       )}
         </div>
         {panel ? (
-          <aside className="flex h-[70vh] min-h-0 w-full shrink-0 flex-col overflow-hidden border-t border-slate-800 bg-[#0f172a] lg:h-auto lg:w-[420px] lg:border-l lg:border-t-0">
+          <aside className="flex h-[70vh] min-h-0 w-full shrink-0 flex-col overflow-hidden border-t border-slate-200 bg-white shadow-sm lg:h-auto lg:w-[420px] lg:border-l lg:border-t-0">
             {panel}
           </aside>
         ) : null}
@@ -245,7 +254,7 @@ function InquiryCard({ inquiry, active, onOpen }: { inquiry: PipelineInquiry; ac
   const age = ageParts(inquiry.created_at);
   const best = inquiry.sends.find((send) => send.is_best);
   return (
-    <button type="button" onClick={onOpen} className={`w-full rounded-lg border p-3 text-left ${active ? 'border-blue-400 bg-blue-500/10' : 'border-slate-700 bg-[#151c2c] hover:border-slate-500'}`}>
+    <button type="button" onClick={onOpen} className={`w-full rounded-lg border bg-white p-3 text-left shadow-sm ${active ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200 hover:border-blue-300'}`}>
       <div className="flex items-center gap-2">
         {inquiry.priority_rank ? <span className="text-xs font-semibold text-slate-400">#{inquiry.priority_rank}</span> : null}
         <span className="font-mono text-sm text-blue-300">{inquiry.enquiry_number}</span>
@@ -276,8 +285,8 @@ function InquiryCard({ inquiry, active, onOpen }: { inquiry: PipelineInquiry; ac
 function ClosedRow({ inquiries, onOpen }: { inquiries: PipelineInquiry[]; onOpen: (id: string) => void }) {
   if (!inquiries.length) return null;
   return (
-    <section className="rounded-xl border border-slate-800 p-3">
-      <h3 className="text-sm font-medium text-slate-300">Closed</h3>
+    <section className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <h3 className="text-sm font-medium text-slate-700">Closed</h3>
       <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
         {inquiries.map((inquiry) => (
           <InquiryCard key={inquiry.id} inquiry={inquiry} onOpen={() => onOpen(inquiry.id)} />
@@ -306,7 +315,7 @@ function ActivityFeed({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">Activity</h2>
-          <p className="text-sm text-slate-400">Everything the team does, newest first.</p>
+          <p className="text-sm text-slate-500">Everything the team does, newest first.</p>
         </div>
         <div className="flex flex-wrap gap-1">
           <FilterChip active={!personId} onClick={() => onPerson(null)}>Everyone</FilterChip>
@@ -317,7 +326,7 @@ function ActivityFeed({
           ))}
         </div>
       </div>
-      <div className="mt-4 divide-y divide-slate-800 rounded-xl border border-slate-700 bg-[#151c2c]">
+      <div className="mt-4 divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white shadow-sm">
         {rows.length === 0 ? <p className="px-4 py-8 text-sm text-slate-500">No activity yet.</p> : null}
         {rows.map((item) => (
           <div key={item.id} className="flex items-start gap-3 px-4 py-3 text-sm">
@@ -340,7 +349,7 @@ function ActivityFeed({
 
 function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return (
-    <button type="button" onClick={onClick} className={`rounded-full px-3 py-1 text-xs ${active ? 'bg-slate-100 text-slate-900' : 'bg-slate-800 text-slate-300'}`}>
+    <button type="button" onClick={onClick} className={`rounded-full px-3 py-1 text-xs ${active ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200'}`}>
       {children}
     </button>
   );
@@ -351,10 +360,10 @@ function Register({ inquiries, onOpen }: { inquiries: PipelineInquiry[]; onOpen:
   return (
     <div className="pt-4">
       <h2 className="text-lg font-semibold">Inquiry register</h2>
-      <p className="text-sm text-slate-400">One row per inquiry ID, with the best quote selected.</p>
-      <div className="mt-4 overflow-x-auto rounded-xl border border-slate-700">
+      <p className="text-sm text-slate-500">One row per inquiry ID, with the best quote selected.</p>
+      <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
         <table className="min-w-[980px] w-full text-left text-sm">
-          <thead className="bg-[#111827] text-[11px] uppercase tracking-wide text-slate-400">
+          <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
             <tr>
               {['Priority', 'Inquiry ID', 'Customer', 'Route', 'Received', 'Age', 'Assigned', 'Rates', 'Best quote', 'Agent', 'Chosen by', 'Status', 'CRM'].map((heading) => (
                 <th key={heading} className="px-3 py-2 font-medium">{heading}</th>
@@ -366,7 +375,7 @@ function Register({ inquiries, onOpen }: { inquiries: PipelineInquiry[]; onOpen:
               const best = inquiry.sends.find((send) => send.is_best);
               const age = ageParts(inquiry.created_at);
               return (
-                <tr key={inquiry.id} className="border-t border-slate-800 bg-[#151c2c]">
+                <tr key={inquiry.id} className="border-t border-slate-100">
                   <td className="px-3 py-2 text-slate-400">{inquiry.priority_rank ? `#${inquiry.priority_rank}` : '—'}</td>
                   <td className="px-3 py-2">
                     <button type="button" className="font-mono text-blue-300 hover:underline" onClick={() => onOpen(inquiry.id)}>
@@ -430,7 +439,7 @@ function AgentDirectory({ agents, onChanged }: { agents: DirectoryAgent[]; onCha
   return (
     <div className="pt-4">
       <h2 className="text-lg font-semibold">Agents</h2>
-      <p className="text-sm text-slate-400">Shared directory of agent companies. Agents added on an inquiry are saved here.</p>
+      <p className="text-sm text-slate-500">Shared directory of agent companies. Agents added on an inquiry are saved here.</p>
       <form
         className="mt-4 grid gap-2 md:grid-cols-[1fr_1fr_1fr_auto]"
         onSubmit={(event) => {
@@ -442,13 +451,13 @@ function AgentDirectory({ agents, onChanged }: { agents: DirectoryAgent[]; onCha
         <input className={field} value={company} onChange={(event) => setCompany(event.target.value)} placeholder="Agent company" />
         <input className={field} value={contact} onChange={(event) => setContact(event.target.value)} placeholder="Contact person" />
         <input className={field} value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Email" />
-        <button type="submit" disabled={saveMut.isPending || company.trim().length < 2} className="h-9 rounded-md bg-blue-600 px-4 text-sm font-medium disabled:opacity-50">
+        <button type="submit" disabled={saveMut.isPending || company.trim().length < 2} className="h-9 rounded-md bg-blue-600 px-4 text-sm font-medium text-white disabled:opacity-50">
           {editing ? 'Update agent' : 'Save agent'}
         </button>
       </form>
-      <div className="mt-4 overflow-x-auto rounded-xl border border-slate-700">
+      <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
         <table className="min-w-[760px] w-full text-left text-sm">
-          <thead className="bg-[#111827] text-[11px] uppercase tracking-wide text-slate-400">
+          <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
             <tr>
               {['Company', 'Contact person', 'Email', 'Requests', 'Rates', 'Chosen best', ''].map((heading) => (
                 <th key={heading || 'actions'} className="px-3 py-2 font-medium">{heading}</th>
@@ -460,7 +469,7 @@ function AgentDirectory({ agents, onChanged }: { agents: DirectoryAgent[]; onCha
               <tr><td colSpan={7} className="px-3 py-8 text-center text-slate-500">No saved agents yet.</td></tr>
             ) : null}
             {agents.map((agent) => (
-              <tr key={agent.id} className="border-t border-slate-800 bg-[#151c2c]">
+              <tr key={agent.id} className="border-t border-slate-100">
                 <td className="px-3 py-2">{agent.company_name}</td>
                 <td className="px-3 py-2 text-slate-300">{agent.contact_name || '—'}</td>
                 <td className="px-3 py-2 text-slate-300">{agent.email || '—'}</td>

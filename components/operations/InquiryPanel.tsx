@@ -11,6 +11,7 @@ import {
   chooseOperationsBest,
   closeOperationsEnquiry,
   deleteOperationsEnquiry,
+  assignOperationsPeople,
   joinOperationsEnquiry,
   postInquiryUpdate,
   saveOperationsRate,
@@ -20,11 +21,13 @@ import {
 import { ageParts, money, personColor, initial } from '@/components/operations/opsVisual';
 import { formatUkDate, formatUkDateTime } from '@/lib/date';
 
-const field = 'h-9 w-full rounded-md border border-slate-600 bg-[#0b1220] px-3 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-blue-500';
+const field = 'h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-500';
 
 export function InquiryPanel({
   inquiry,
   userId,
+  isSuperAdmin,
+  team,
   agents,
   onChanged,
   onClosed,
@@ -32,6 +35,8 @@ export function InquiryPanel({
 }: {
   inquiry: PipelineInquiry;
   userId?: string;
+  isSuperAdmin?: boolean;
+  team: Array<{ user_id: string; full_name: string }>;
   agents: DirectoryAgent[];
   onChanged: () => void;
   onClosed: () => void;
@@ -55,6 +60,7 @@ export function InquiryPanel({
   const [agentEmail, setAgentEmail] = useState('');
   const [picked, setPicked] = useState<string[]>([]);
   const [update, setUpdate] = useState('');
+  const [assignedIds, setAssignedIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (!enquiry) return;
@@ -67,7 +73,11 @@ export function InquiryPanel({
     setNotes(enquiry.notes || '');
   }, [enquiry]);
 
-  const working = inquiry.operators.some((operator) => operator.user_id === userId);
+  useEffect(() => {
+    setAssignedIds(inquiry.operators.map((operator) => operator.user_id));
+  }, [inquiry.id, inquiry.operators]);
+
+  const working = inquiry.operators.some((operator) => operator.user_id === userId) || Boolean(isSuperAdmin);
   const bests = inquiry.sends.filter((send) => send.is_best && send.quoted_price != null);
   const age = ageParts(inquiry.created_at);
   const customerName = inquiry.prospect_name || inquiry.title || 'Inquiry';
@@ -92,6 +102,15 @@ export function InquiryPanel({
       toast.success('Inquiry saved');
       setEditing(false);
       refreshEnquiry();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const assignMut = useMutation({
+    mutationFn: () => assignOperationsPeople(inquiry.id, assignedIds),
+    onSuccess: () => {
+      toast.success('People on this inquiry updated');
+      onChanged();
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -164,18 +183,18 @@ export function InquiryPanel({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col bg-[#0f172a] text-slate-100">
-      <div className="border-b border-slate-700 px-5 py-4">
+    <div className="flex h-full min-h-0 flex-1 flex-col bg-white text-slate-900">
+      <div className="border-b border-slate-200 px-5 py-4">
         <div className="flex items-start justify-between gap-3">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Inquiry ID</p>
           {onDismiss ? (
-            <button type="button" onClick={onDismiss} className="text-xs text-slate-400 hover:text-white">
+            <button type="button" onClick={onDismiss} className="text-xs font-medium text-slate-500 hover:text-slate-900">
               Close
             </button>
           ) : null}
         </div>
         <h2 className="mt-1 font-mono text-2xl font-semibold">{inquiry.enquiry_number}</h2>
-        <p className="mt-1 text-sm text-slate-200">{customerName}</p>
+        <p className="mt-1 text-sm font-medium text-slate-800">{customerName}</p>
         <p className="mt-1 text-sm text-slate-400">{inquiry.route}</p>
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
           <span className="text-slate-400">Received {formatUkDate(inquiry.created_at)}</span>
@@ -228,14 +247,48 @@ export function InquiryPanel({
             </select>
             <textarea className={`${field} min-h-20 py-2`} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Extra information" />
             <div className="flex gap-2">
-              <button type="submit" disabled={saveMut.isPending} className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium hover:bg-blue-500">
+              <button type="submit" disabled={saveMut.isPending} className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500">
                 Save inquiry
               </button>
-              <button type="button" className="rounded-md px-3 py-1.5 text-sm text-slate-300" onClick={() => setEditing(false)}>
+              <button type="button" className="rounded-md px-3 py-1.5 text-sm text-slate-600" onClick={() => setEditing(false)}>
                 Cancel
               </button>
             </div>
           </form>
+        ) : null}
+
+        {isSuperAdmin ? (
+          <section className="space-y-2 rounded-xl border border-blue-100 bg-blue-50/60 p-3">
+            <h3 className="text-sm font-semibold text-slate-900">Who works this inquiry</h3>
+            <p className="text-xs text-slate-500">Select one or more people. You can change this any time.</p>
+            <div className="flex flex-wrap gap-2">
+              {team.map((person) => {
+                const on = assignedIds.includes(person.user_id);
+                return (
+                  <button
+                    key={person.user_id}
+                    type="button"
+                    onClick={() =>
+                      setAssignedIds((current) =>
+                        on ? current.filter((id) => id !== person.user_id) : [...current, person.user_id],
+                      )
+                    }
+                    className={`rounded-full border px-3 py-1 text-xs font-medium ${on ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 bg-white text-slate-700'}`}
+                  >
+                    {person.full_name}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              disabled={assignMut.isPending}
+              onClick={() => assignMut.mutate()}
+              className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+            >
+              Save people
+            </button>
+          </section>
         ) : null}
 
         <section className="space-y-3">
@@ -248,7 +301,7 @@ export function InquiryPanel({
               type="button"
               disabled={joinMut.isPending}
               onClick={() => joinMut.mutate()}
-              className="rounded-md border border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-800"
+              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50"
             >
               Work on this
             </button>
@@ -262,7 +315,7 @@ export function InquiryPanel({
                   type="button"
                   disabled={agentMut.isPending || company.trim().length < 2}
                   onClick={() => agentMut.mutate('typed')}
-                  className="h-9 rounded-md bg-blue-600 px-3 text-sm font-medium hover:bg-blue-500 disabled:opacity-50"
+                  className="h-9 rounded-md bg-blue-600 px-3 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
                 >
                   Add agent
                 </button>
@@ -278,7 +331,7 @@ export function InquiryPanel({
                           key={agent.id}
                           type="button"
                           onClick={() => setPicked((current) => (on ? current.filter((id) => id !== agent.id) : [...current, agent.id]))}
-                          className={`rounded-full border px-2.5 py-1 text-xs ${on ? 'border-blue-400 bg-blue-500/20 text-blue-100' : 'border-slate-600 text-slate-300'}`}
+                          className={`rounded-full border px-2.5 py-1 text-xs ${on ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-slate-300 bg-white text-slate-600'}`}
                         >
                           {agent.company_name}
                           {agent.contact_name ? ` · ${agent.contact_name}` : ''}
@@ -290,7 +343,7 @@ export function InquiryPanel({
                     type="button"
                     disabled={!picked.length || agentMut.isPending}
                     onClick={() => agentMut.mutate('saved')}
-                    className="mt-2 rounded-md border border-slate-600 px-3 py-1.5 text-xs disabled:opacity-40"
+                    className="mt-2 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs disabled:opacity-40"
                   >
                     Add selected
                   </button>
@@ -302,7 +355,7 @@ export function InquiryPanel({
           {inquiry.sends.length === 0 ? (
             <p className="text-sm text-slate-400">No agents contacted yet.</p>
           ) : (
-            <div className="divide-y divide-slate-700 rounded-lg border border-slate-700">
+            <div className="divide-y divide-slate-200 rounded-lg border border-slate-200">
               {inquiry.sends.map((send) => (
                 <SendRow key={send.id} send={send} mine={send.user_id === userId} onChanged={onChanged} />
               ))}
@@ -321,7 +374,7 @@ export function InquiryPanel({
             }}
           >
             <input className={field} value={update} onChange={(event) => setUpdate(event.target.value)} placeholder={`Post an update on ${inquiry.enquiry_number}`} />
-            <button type="submit" disabled={updateMut.isPending || !update.trim()} className="h-9 rounded-md bg-blue-600 px-3 text-sm font-medium disabled:opacity-50">
+            <button type="submit" disabled={updateMut.isPending || !update.trim()} className="h-9 rounded-md bg-blue-600 px-3 text-sm font-medium text-white disabled:opacity-50">
               Post
             </button>
           </form>
@@ -340,12 +393,12 @@ export function InquiryPanel({
         </section>
       </div>
 
-      <div className="flex items-center justify-between border-t border-slate-700 px-5 py-3">
+      <div className="flex items-center justify-between border-t border-slate-200 px-5 py-3">
         <div className="flex gap-2">
-          <button type="button" onClick={() => setEditing((value) => !value)} className="rounded-md border border-slate-600 px-3 py-1.5 text-sm">
+          <button type="button" onClick={() => setEditing((value) => !value)} className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm">
             Edit details
           </button>
-          <button type="button" disabled={closeMut.isPending || inquiry.stage === 'lost_closed' || inquiry.stage === 'won_closed'} onClick={() => closeMut.mutate()} className="rounded-md border border-slate-600 px-3 py-1.5 text-sm">
+          <button type="button" disabled={closeMut.isPending || inquiry.stage === 'lost_closed' || inquiry.stage === 'won_closed'} onClick={() => closeMut.mutate()} className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm">
             Mark closed
           </button>
         </div>
@@ -408,11 +461,11 @@ function SendRow({
       </div>
       {mine ? (
         <>
-          <input className="h-8 w-24 rounded-md border border-slate-600 bg-[#0b1220] px-2 text-sm" type="number" min="0" value={price} placeholder="Rate" onChange={(event) => setPrice(event.target.value)} />
-          <button type="button" className="h-8 rounded-md border border-slate-600 px-2 text-xs" disabled={rateMut.isPending || !price} onClick={() => rateMut.mutate()}>
+          <input className="h-8 w-24 rounded-md border border-slate-300 bg-white px-2 text-sm" type="number" min="0" value={price} placeholder="Rate" onChange={(event) => setPrice(event.target.value)} />
+          <button type="button" className="h-8 rounded-md border border-slate-300 bg-white px-2 text-xs" disabled={rateMut.isPending || !price} onClick={() => rateMut.mutate()}>
             Save rate
           </button>
-          <button type="button" className="inline-flex h-8 items-center rounded-md bg-blue-600 px-2 text-xs" disabled={bestMut.isPending || !price} onClick={() => bestMut.mutate()}>
+          <button type="button" className="inline-flex h-8 items-center rounded-md bg-blue-600 px-2 text-xs text-white" disabled={bestMut.isPending || !price} onClick={() => bestMut.mutate()}>
             {bestMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Star className="mr-1 h-3.5 w-3.5" />}
             Best
           </button>
