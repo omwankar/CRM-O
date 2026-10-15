@@ -1,4 +1,5 @@
 import { DashboardSidebar } from '@/components/DashboardSidebar';
+import { DashboardMain } from '@/components/DashboardMain';
 import { Notifications } from '@/components/notifications';
 import { WarmApi } from '@/components/WarmApi';
 
@@ -20,11 +21,7 @@ export default function DashboardLayout({
         </div>
 
         {/* Page content: single scroll container, overscroll contained for stable edges */}
-        <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain scroll-smooth p-6">
-          <div className="mx-auto w-full max-w-[1440px] min-h-0 pb-4">
-            {children}
-          </div>
-        </main>
+        <DashboardMain>{children}</DashboardMain>
       </div>
     </div>
   );

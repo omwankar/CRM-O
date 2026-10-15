@@ -32,7 +32,7 @@ const MODE_OPTIONS: Array<{ value: TransportMode | 'none'; label: string }> = [
   { value: 'courier', label: 'Courier / Express' },
 ];
 
-export function InquiryIntake({ onCreated }: { onCreated?: () => void }) {
+export function InquiryIntake({ onCreated, dark = false }: { onCreated?: () => void; dark?: boolean }) {
   const [raw, setRaw] = useState('');
   const [parsed, setParsed] = useState<ParsedInquiry | null>(null);
   const [requirement, setRequirement] = useState('');
@@ -144,15 +144,17 @@ export function InquiryIntake({ onCreated }: { onCreated?: () => void }) {
     ].filter(Boolean) as string[];
   }, [parsed]);
 
+  const inputClass = dark ? 'border-slate-600 bg-[#0b1220] text-slate-100' : '';
+
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-      <Card className="border-violet-100 p-4">
+      <Card className={dark ? 'border-slate-700 bg-[#151c2c] p-4 text-slate-100' : 'border-violet-100 p-4'}>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-violet-800">
+          <h2 className={`flex items-center gap-2 text-sm font-semibold ${dark ? 'text-slate-100' : 'text-violet-800'}`}>
             <Wand2 className="h-4 w-4" />
             Paste inquiry
           </h2>
-          <span className="text-xs text-muted-foreground">
+          <span className={`text-xs ${dark ? 'text-slate-400' : 'text-muted-foreground'}`}>
             {raw.length.toLocaleString()} characters
             {parsing ? ' · reading…' : parsed ? ' · extracted' : ''}
           </span>
@@ -161,7 +163,7 @@ export function InquiryIntake({ onCreated }: { onCreated?: () => void }) {
           value={raw}
           onChange={(e) => setRaw(e.target.value)}
           placeholder={'Paste an email or WhatsApp message. Fields fill in on the right.'}
-          className="min-h-[220px] bg-violet-50/30 font-mono text-[13px]"
+          className={`min-h-[220px] font-mono text-[13px] ${dark ? 'border-slate-600 bg-[#0b1220] text-slate-100' : 'bg-violet-50/30'}`}
         />
         {chips.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
@@ -174,9 +176,9 @@ export function InquiryIntake({ onCreated }: { onCreated?: () => void }) {
         )}
       </Card>
 
-      <Card className="border-blue-100 p-4">
+      <Card className={dark ? 'border-slate-700 bg-[#151c2c] p-4 text-slate-100' : 'border-blue-100 p-4'}>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-blue-800">
+          <h2 className={`flex items-center gap-2 text-sm font-semibold ${dark ? 'text-slate-100' : 'text-blue-800'}`}>
             <Sparkles className="h-4 w-4" />
             Structured record
           </h2>
@@ -184,31 +186,31 @@ export function InquiryIntake({ onCreated }: { onCreated?: () => void }) {
         </div>
 
         {!parsed ? (
-          <div className="flex min-h-[220px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-blue-200 bg-blue-50/40 text-center">
-            <Inbox className="h-8 w-8 text-blue-300" />
-            <p className="text-sm font-medium text-blue-800">Paste a message to start</p>
+          <div className={`flex min-h-[220px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed text-center ${dark ? 'border-slate-600 bg-[#0b1220]' : 'border-blue-200 bg-blue-50/40'}`}>
+            <Inbox className={`h-8 w-8 ${dark ? 'text-slate-500' : 'text-blue-300'}`} />
+            <p className={`text-sm font-medium ${dark ? 'text-slate-300' : 'text-blue-800'}`}>Paste a message to start</p>
           </div>
         ) : (
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Headline</Label>
-              <Input value={parsed.headline} onChange={(e) => set('headline', e.target.value)} />
+              <Label className={`text-xs ${dark ? 'text-slate-300' : ''}`}>Headline</Label>
+              <Input className={inputClass} value={parsed.headline} onChange={(e) => set('headline', e.target.value)} />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-xs">From</Label>
-                <Input value={parsed.origin} onChange={(e) => set('origin', e.target.value)} />
+                <Label className={`text-xs ${dark ? 'text-slate-300' : ''}`}>From</Label>
+                <Input className={inputClass} value={parsed.origin} onChange={(e) => set('origin', e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">To</Label>
-                <Input value={parsed.destination} onChange={(e) => set('destination', e.target.value)} />
+                <Label className={`text-xs ${dark ? 'text-slate-300' : ''}`}>To</Label>
+                <Input className={inputClass} value={parsed.destination} onChange={(e) => set('destination', e.target.value)} />
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Mode</Label>
+                <Label className={`text-xs ${dark ? 'text-slate-300' : ''}`}>Mode</Label>
                 <Select value={parsed.mode || 'none'} onValueChange={(value) => set('mode', (value === 'none' ? '' : value) as TransportMode)}>
-                  <SelectTrigger>
+                  <SelectTrigger className={dark ? 'border-slate-600 bg-[#0b1220] text-slate-100' : ''}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -221,25 +223,25 @@ export function InquiryIntake({ onCreated }: { onCreated?: () => void }) {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Incoterm</Label>
-                <Input value={parsed.incoterm} onChange={(e) => set('incoterm', e.target.value)} />
+                <Label className={`text-xs ${dark ? 'text-slate-300' : ''}`}>Incoterm</Label>
+                <Input className={inputClass} value={parsed.incoterm} onChange={(e) => set('incoterm', e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Ready date</Label>
-                <Input type="date" value={parsed.readyDate} onChange={(e) => set('readyDate', e.target.value)} />
+                <Label className={`text-xs ${dark ? 'text-slate-300' : ''}`}>Ready date</Label>
+                <Input className={inputClass} type="date" value={parsed.readyDate} onChange={(e) => set('readyDate', e.target.value)} />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Requirement</Label>
-              <Textarea value={requirement} onChange={(e) => setRequirement(e.target.value)} className="min-h-24 font-mono text-[12px]" />
+              <Label className={`text-xs ${dark ? 'text-slate-300' : ''}`}>Requirement</Label>
+              <Textarea value={requirement} onChange={(e) => setRequirement(e.target.value)} className={`min-h-24 font-mono text-[12px] ${inputClass}`} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Extra information</Label>
+              <Label className={`text-xs ${dark ? 'text-slate-300' : ''}`}>Extra information</Label>
               <Textarea
                 value={extraInfo}
                 onChange={(e) => setExtraInfo(e.target.value)}
                 placeholder="Handling notes. Keep agent rates on the pipeline card."
-                className="min-h-16 text-sm"
+                className={`min-h-16 text-sm ${inputClass}`}
               />
             </div>
             <div className="flex justify-end">
