@@ -1,0 +1,110 @@
+.ops {
+  --ops-bg: #f3f5f8;
+  --ops-surface: #ffffff;
+  --ops-sunk: #e9edf2;
+  --ops-line: #d6dce4;
+  --ops-line-soft: #e4e8ee;
+  --ops-fg: #16202e;
+  --ops-muted: #5a6676;
+  --ops-faint: #8893a2;
+  --ops-accent: #1f4fb8;
+  --ops-accent-soft: #e3eaf8;
+  --ops-ok: #1c7a4a;
+  --ops-ok-soft: #dff2e7;
+  --ops-warn: #a35f00;
+  --ops-warn-soft: #fbebd2;
+  --ops-crit: #b3261e;
+  --ops-crit-soft: #f8e0de;
+  --ops-shadow: 0 1px 2px rgba(22, 32, 46, 0.06);
+  --ops-shadow-lg: 0 4px 16px rgba(22, 32, 46, 0.06);
+  background: var(--ops-bg);
+  color: var(--ops-fg);
+  font-family: var(--font-ops-sans), "Instrument Sans", ui-sans-serif, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ops:not([data-theme="light"]) {
+    --ops-bg: #0f141b;
+    --ops-surface: #171e28;
+    --ops-sunk: #121820;
+    --ops-line: #2a3443;
+    --ops-line-soft: #243041;
+    --ops-fg: #e6ebf2;
+    --ops-muted: #9aa6b6;
+    --ops-faint: #7e8b9d;
+    --ops-accent: #7fa4f5;
+    --ops-accent-soft: #1d2b48;
+    --ops-ok: #5dcb8f;
+    --ops-ok-soft: #163528;
+    --ops-warn: #f0b055;
+    --ops-warn-soft: #3a2c14;
+    --ops-crit: #f2827a;
+    --ops-crit-soft: #3d1d1b;
+  }
+}
+
+.ops[data-theme="dark"] {
+  --ops-bg: #0f141b;
+  --ops-surface: #171e28;
+  --ops-sunk: #121820;
+  --ops-line: #2a3443;
+  --ops-line-soft: #243041;
+  --ops-fg: #e6ebf2;
+  --ops-muted: #9aa6b6;
+  --ops-faint: #7e8b9d;
+  --ops-accent: #7fa4f5;
+  --ops-accent-soft: #1d2b48;
+  --ops-ok: #5dcb8f;
+  --ops-ok-soft: #163528;
+  --ops-warn: #f0b055;
+  --ops-warn-soft: #3a2c14;
+  --ops-crit: #f2827a;
+  --ops-crit-soft: #3d1d1b;
+}
+
+.ops-mono {
+  font-family: var(--font-ops-mono), "IBM Plex Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.ops :focus-visible {
+  outline: 2px solid var(--ops-accent);
+  outline-offset: 2px;
+}
+
+.ops-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ops-line) transparent;
+}
+
+.ops-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.ops-scroll::-webkit-scrollbar-thumb {
+  background: var(--ops-line);
+  border-radius: 999px;
+}
+
+.ops-row:hover {
+  background: color-mix(in srgb, var(--ops-accent) 7%, var(--ops-surface));
+}
+
+.ops[data-slot='sheet-content'] > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ops,
+  .ops * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
