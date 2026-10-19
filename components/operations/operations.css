@@ -35,14 +35,29 @@
 
 
 .ops{
-  --bg:#FFF8DC; --surface:#FFFFFF; --sunk:#FCF1CF; --line:#E8D9A8; --line-soft:#F1E6C2;
-  --fg:#1F1A10; --muted:#5F5644; --faint:#968A6C; --icon:#2A2416;
-  --accent:#1E3F8C; --accent-soft:#E6ECF7; --accent-fg:#FFFFFF;
-  --ok:#17663D; --ok-soft:#DDF0E3; --warn:#8F5200; --warn-soft:#FBE6C4; --crit:#A3211A; --crit-soft:#F7DEDA;
-  --shadow:0 1px 2px rgba(60,45,10,.07),0 4px 16px rgba(60,45,10,.07);
-  --scrim:rgba(30,24,10,.42);
-  --f-ui:var(--font-ops-sans),"Instrument Sans",ui-sans-serif,system-ui,sans-serif;
-  --f-mono:var(--font-ops-mono),"IBM Plex Mono",ui-monospace,monospace;
+  /* Match CRM light theme tokens (globals.css :root) */
+  --bg:var(--background, #EEF4FF);
+  --surface:var(--card, #FFFFFF);
+  --sunk:#EFF6FF;
+  --line:rgba(37, 99, 235, 0.16);
+  --line-soft:rgba(37, 99, 235, 0.10);
+  --fg:var(--foreground, #0F172A);
+  --muted:var(--muted-foreground, #64748B);
+  --faint:#94A3B8;
+  --icon:#334155;
+  --accent:var(--primary, #2563EB);
+  --accent-soft:#DBEAFE;
+  --accent-fg:var(--primary-foreground, #FFFFFF);
+  --ok:#0F766E;
+  --ok-soft:#CCFBF1;
+  --warn:#B45309;
+  --warn-soft:#FEF3C7;
+  --crit:var(--destructive, #E11D48);
+  --crit-soft:#FFE4E6;
+  --shadow:0 1px 2px rgba(37, 99, 235, 0.06), 0 4px 16px rgba(37, 99, 235, 0.08);
+  --scrim:rgba(15, 23, 42, 0.45);
+  --f-ui:var(--font-jakarta), "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --f-mono:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   color-scheme:light;
 }
 .ops, .ops *{box-sizing:border-box}
@@ -258,7 +273,7 @@ to{transform:none;opacity:1}}}
 .ops .pastebox{display:grid;gap:8px;background:var(--sunk);border:1px dashed var(--line);border-radius:10px;padding:12px}
 .ops .pastebox textarea{width:100%;min-height:120px;resize:vertical;font-size:13px;line-height:1.45}
 .ops .found{font-size:13px;line-height:1.5;background:var(--surface);border:1px solid var(--line-soft);border-radius:8px;padding:8px 10px}
-.ops .mbody .field.autofill{background:#FFF1B8;border-color:#D9B23C}
+.ops .mbody .field.autofill{background:#DBEAFE;border-color:#93C5FD}
 .ops .mbody{padding:16px 20px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .ops .mbody .full{grid-column:1/-1}
 .ops .mbody label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--muted)}
