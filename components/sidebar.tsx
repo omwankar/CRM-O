@@ -15,6 +15,8 @@ type MenuItem = {
   label: string;
   href: string;
   badge?: number;
+  /** Open in a new browser tab (e.g. standalone Operations Pipeline). */
+  newTab?: boolean;
 };
 
 type MenuSection = {
@@ -126,7 +128,7 @@ function getMenuSections(role?: string, pendingCount?: number, showPipeline?: bo
     {
       label: 'Operations',
       items: [
-        ...(showPipeline ? [{ label: 'Pipeline', href: '/dashboard/operations' }] : []),
+        ...(showPipeline ? [{ label: 'Pipeline', href: '/operations', newTab: true }] : []),
         { label: 'Jobs / Shipments', href: '/dashboard/jobs' },
         { label: 'Projects', href: '/dashboard/projects' },
         { label: 'Vendors', href: '/dashboard/vendors' },
@@ -182,6 +184,8 @@ function getMenuSections(role?: string, pendingCount?: number, showPipeline?: bo
 
 function isItemActive(pathname: string, href: string, search: string = '') {
   if (href === '/dashboard') return pathname === '/dashboard';
+  // Standalone pipeline tab — never mark active in the CRM sidebar.
+  if (href === '/operations') return false;
 
   if (href.startsWith('/dashboard/tasks')) {
     return pathname === '/dashboard/tasks' || pathname.startsWith('/dashboard/tasks/');
@@ -288,6 +292,8 @@ export function Sidebar() {
                   <li key={item.href}>
                     <Link
                       href={item.href}
+                      target={item.newTab ? '_blank' : undefined}
+                      rel={item.newTab ? 'noopener noreferrer' : undefined}
                       onClick={() => setOpen(false)}
                       title={isCollapsed ? item.label : undefined}
                       className={cn(

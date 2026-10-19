@@ -31,8 +31,13 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
 
-  // Protect dashboard/admin
-  if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin')) {
+  // Pipeline is a standalone full-page app (HTML board behavior), not inside the CRM chrome.
+  if (pathname === '/dashboard/operations' || pathname.startsWith('/dashboard/operations/')) {
+    return NextResponse.redirect(new URL('/operations', request.url))
+  }
+
+  // Protect dashboard, admin, and standalone operations pipeline
+  if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/operations')) {
     if (!user) {
       return NextResponse.redirect(new URL('/auth/login', request.url))
     }

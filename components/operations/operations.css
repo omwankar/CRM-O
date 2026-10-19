@@ -39,8 +39,9 @@
 .ops .hint {font-size:12px;color:var(--muted)}
 .ops a {color:var(--accent)}
 
-.ops /* top bar */
-.top {position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line);margin-inline:-16px;padding:10px 16px}
+/* top bar */
+.ops .top {position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line);margin-inline:-16px;padding:10px 16px}
+.ops-standalone .ops {height:100%;}
 .ops .top-in {max-width:1480px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
 .ops .brand {display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;letter-spacing:-.01em}
 .ops .brand svg {color:var(--icon)}
