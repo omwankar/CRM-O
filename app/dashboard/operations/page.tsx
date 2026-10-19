@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { getOperationsPipeline } from '@/lib/api/operations';
 import { ActivityFeed } from '@/components/operations/ActivityFeed';
@@ -10,14 +9,13 @@ import { AgentsTable } from '@/components/operations/AgentsTable';
 import { Board } from '@/components/operations/Board';
 import { InquiryDrawer } from '@/components/operations/InquiryDrawer';
 import { NewInquiryModal } from '@/components/operations/NewInquiryModal';
-import { BoardSkeleton, TableSkeleton } from '@/components/operations/OpsSkeleton';
 import { PeopleFilter } from '@/components/operations/PeopleFilter';
 import { PipelineHeader, type OpsTab } from '@/components/operations/PipelineHeader';
 import { RegisterTable } from '@/components/operations/RegisterTable';
 
 export default function OperationsPipelinePage() {
   const qc = useQueryClient();
-  const { user, isSuperAdmin, inOperations, isLoading: authLoading } = useCurrentUser();
+  const { user, profile, isSuperAdmin, inOperations, isLoading: authLoading } = useCurrentUser();
   const allowed = isSuperAdmin || inOperations;
   const [tab, setTab] = useState<OpsTab>('inquiries');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -62,31 +60,41 @@ export default function OperationsPipelinePage() {
 
   if (authLoading) {
     return (
-      <div className="ops flex h-full items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin" />
+      <div className="ops">
+        <div className="wrap"><div className="empty"><h3>Loading…</h3>Getting the team&apos;s inquiries.</div></div>
       </div>
     );
   }
 
   if (!allowed) {
     return (
-      <div className="ops mx-auto flex h-full max-w-md flex-col justify-center px-6 text-center">
-        <h1 className="text-xl font-semibold">Operations only</h1>
-        <p className="mt-2 text-sm" style={{ color: 'var(--ops-muted)' }}>This pipeline is for the operations team.</p>
+      <div className="ops">
+        <div className="wrap">
+          <div className="link">
+            <h2>Operations only</h2>
+            <p className="hint" style={{ fontSize: 14, margin: 0 }}>This pipeline is for the operations team.</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="ops flex h-full min-h-0 flex-col overflow-hidden">
-      <PipelineHeader tab={tab} onTab={setTab} onNew={() => setCreating(true)} />
-      <div className="ops-scroll min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-4 sm:px-5">
-        {error ? <p className="text-sm" style={{ color: 'var(--ops-crit)' }}>{(error as Error).message}</p> : null}
+    <div className="ops">
+      <div className="wrap">
+        <PipelineHeader
+          tab={tab}
+          onTab={setTab}
+          onNew={() => setCreating(true)}
+          meName={(profile as { full_name?: string } | undefined)?.full_name || user?.email || 'You'}
+          isManager={isSuperAdmin}
+        />
+        {error ? <div className="banner err"><b>{(error as Error).message}</b></div> : null}
         {tab === 'inquiries' ? (
-          <div className="space-y-4">
+          <>
             <PeopleFilter people={data?.workload || []} personId={personId} onPerson={setPersonId} />
             {isLoading ? (
-              <BoardSkeleton />
+              <div className="empty"><h3>Loading…</h3></div>
             ) : (
               <Board
                 title={focusPerson ? `${focusPerson.full_name}'s inquiries` : 'All inquiries'}
@@ -99,10 +107,10 @@ export default function OperationsPipelinePage() {
                 onOpen={setSelectedId}
               />
             )}
-          </div>
+          </>
         ) : null}
         {tab === 'activity' ? (
-          isLoading ? <TableSkeleton /> : (
+          isLoading ? <div className="empty"><h3>Loading…</h3></div> : (
             <ActivityFeed
               people={data?.workload || []}
               activity={data?.activity || []}
@@ -113,10 +121,14 @@ export default function OperationsPipelinePage() {
           )
         ) : null}
         {tab === 'register' ? (
-          isLoading ? <TableSkeleton rows={8} /> : <RegisterTable inquiries={data?.inquiries || []} onOpen={setSelectedId} />
+          isLoading ? <div className="empty"><h3>Loading…</h3></div> : (
+            <RegisterTable inquiries={data?.inquiries || []} onOpen={setSelectedId} />
+          )
         ) : null}
         {tab === 'agents' ? (
-          isLoading ? <TableSkeleton /> : <AgentsTable agents={data?.agents || []} onChanged={refresh} />
+          isLoading ? <div className="empty"><h3>Loading…</h3></div> : (
+            <AgentsTable agents={data?.agents || []} onChanged={refresh} />
+          )
         ) : null}
       </div>
       <InquiryDrawer

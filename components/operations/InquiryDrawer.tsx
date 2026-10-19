@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -22,10 +22,8 @@ import {
 import { AgePill, Avatar, StatusPill } from '@/components/operations/bits';
 import { formatRoute, money } from '@/components/operations/opsVisual';
 import { formatUkDate, formatUkDateTime } from '@/lib/date';
+import { opsFontClass } from '@/components/operations/opsFonts';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
-
-const field = 'h-9 w-full rounded-[7px] border bg-[var(--ops-surface)] px-3 text-sm outline-none';
-const label = 'mb-1 block text-[11px] font-medium uppercase tracking-wide';
 
 export function InquiryDrawer({
   inquiry,
@@ -46,7 +44,7 @@ export function InquiryDrawer({
 }) {
   return (
     <Sheet open={Boolean(inquiry)} onOpenChange={(open) => { if (!open) onDismiss(); }}>
-      <SheetContent side="right" className="ops w-full max-w-[720px] gap-0 border-0 p-0 data-[state=closed]:duration-200 data-[state=open]:duration-200 sm:max-w-[720px]" style={{ background: 'var(--ops-surface)', color: 'var(--ops-fg)' }}>
+      <SheetContent side="right" className={`${opsFontClass} ops drawer w-full max-w-[720px] gap-0 border-0 p-0 data-[state=closed]:duration-200 data-[state=open]:duration-200 sm:max-w-[720px]`} style={{ background: 'var(--surface)', color: 'var(--fg)', position: 'fixed' }}>
         <SheetTitle className="sr-only">{inquiry?.enquiry_number || 'Inquiry'}</SheetTitle>
         {inquiry ? (
           <DrawerBody
@@ -177,140 +175,128 @@ function DrawerBody({
   }, {});
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col">
-      <header className="sticky top-0 z-10 border-b px-5 py-4 pr-12" style={{ background: 'var(--ops-surface)', borderColor: 'var(--ops-line-soft)' }}>
-        <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Inquiry ID</p>
-        <h2 className="ops-mono text-[21px] font-semibold leading-tight">{inquiry.enquiry_number}</h2>
-        <p className="mt-1 text-[15px] font-semibold">{customerName}</p>
-        <p className="ops-mono mt-0.5 text-sm" style={{ color: 'var(--ops-muted)' }}>{route}</p>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <StatusPill column={inquiry.column} />
-          <AgePill createdAt={inquiry.created_at} />
-          <span className="ops-mono text-xs" style={{ color: 'var(--ops-muted)' }}>{formatUkDate(inquiry.created_at)}</span>
-          <Link href={`/dashboard/enquiries/${inquiry.id}`} className="ml-auto text-sm font-medium" style={{ color: 'var(--ops-accent)' }}>Open in CRM</Link>
+    <div className="relative flex h-full min-h-0 flex-col" style={{ background: 'var(--surface)' }}>
+      <div className="dh" style={{ paddingRight: 48 }}>
+        <div style={{ minWidth: 0 }}>
+          <div className="lbl">Inquiry ID</div>
+          <div className="idbig">{inquiry.enquiry_number}</div>
+          <div className="cust">{customerName}</div>
+          <div className="route">
+            {route ? <span className="lane">{route}</span> : null}
+            <StatusPill column={inquiry.column} />
+            <AgePill createdAt={inquiry.created_at} />
+            <span>Inquiry date {formatUkDate(inquiry.created_at)}</span>
+            <Link href={`/dashboard/enquiries/${inquiry.id}`}>Open in CRM ↗</Link>
+          </div>
         </div>
-      </header>
+      </div>
 
       <div className="ops-scroll min-h-0 flex-1 overflow-y-auto">
         {isLoading && !enquiry ? (
-          <div className="flex justify-center py-16"><Loader2 className="h-5 w-5 animate-spin" /></div>
+          <div className="empty"><h3>Loading…</h3></div>
         ) : (
           <>
-            <section className="border-b px-5 py-4" style={{ borderColor: 'var(--ops-line-soft)' }}>
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h3 className="text-sm font-semibold">Who works this inquiry</h3>
+            <div className="sec">
+              <div className="sec-h">
+                <h3>Assigned to</h3>
                 {isSuperAdmin ? (
-                  <button type="button" disabled={assignMut.isPending} onClick={() => assignMut.mutate()} className="h-9 shrink-0 rounded-[7px] px-3 text-sm font-medium text-white disabled:opacity-50" style={{ background: 'var(--ops-accent)' }}>
-                    Save people
-                  </button>
-                ) : null}
+                  <button type="button" className="btn sm pri" disabled={assignMut.isPending} onClick={() => assignMut.mutate()}>Save people</button>
+                ) : (
+                  <span className="hint">Who works this inquiry</span>
+                )}
               </div>
               {isSuperAdmin ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="team">
                   {team.map((person) => {
                     const on = assignedIds.includes(person.user_id);
                     return (
                       <button
                         key={person.user_id}
                         type="button"
+                        className="tchip"
                         aria-pressed={on}
                         onClick={() => setAssignedIds((current) => (on ? current.filter((id) => id !== person.user_id) : [...current, person.user_id]))}
-                        className="inline-flex min-h-9 items-center gap-2 rounded-full border px-3 py-1 text-sm"
-                        style={on
-                          ? { background: 'var(--ops-accent-soft)', borderColor: 'var(--ops-accent)', color: 'var(--ops-accent)' }
-                          : { borderStyle: 'dashed', borderColor: 'var(--ops-line)', color: 'var(--ops-muted)', opacity: 0.55 }}
                       >
-                        <Avatar name={person.full_name} size={22} />
+                        <Avatar name={person.full_name} size="s" />
                         {person.full_name}
                       </button>
                     );
                   })}
                 </div>
               ) : working && inquiry.operators.some((operator) => operator.user_id === userId) ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="team">
                   {inquiry.operators.map((operator) => (
-                    <span key={operator.user_id} className="inline-flex items-center gap-2 rounded-full px-2 py-1 text-sm" style={{ background: 'var(--ops-sunk)' }}>
-                      <Avatar name={operator.full_name} size={22} />
+                    <span key={operator.user_id} className="tchip">
+                      <Avatar name={operator.full_name} size="s" />
                       {operator.full_name}
                     </span>
                   ))}
                 </div>
               ) : (
-                <button type="button" disabled={joinMut.isPending} onClick={() => joinMut.mutate()} className="h-9 rounded-[7px] border px-3 text-sm font-medium" style={{ borderColor: 'var(--ops-line)', color: 'var(--ops-fg)' }}>
-                  Join this inquiry
-                </button>
+                <button type="button" className="btn" disabled={joinMut.isPending} onClick={() => joinMut.mutate()}>Join this inquiry</button>
               )}
-            </section>
+            </div>
 
-            {bests.length > 0 ? (
-              <section className="border-b px-5 py-4" style={{ borderColor: 'var(--ops-line-soft)' }}>
-                <h3 className="mb-2 text-sm font-semibold">Best quote</h3>
-                <div className="space-y-2">
-                  {bests.map((send) => (
-                    <div key={send.id} className="rounded-[10px] px-3 py-3" style={{ background: 'var(--ops-ok-soft)', color: 'var(--ops-ok)' }}>
-                      <p className="ops-mono text-xl font-semibold">{money(send.quoted_price, send.currency)}</p>
-                      <p className="text-sm">{send.agent_name}</p>
-                      <p className="text-xs">chosen by {send.user_name}</p>
-                      {send.notes ? (
-                        <details className="mt-1 text-xs">
-                          <summary>Quote</summary>
-                          <p className="mt-1 whitespace-pre-wrap">{send.notes}</p>
-                        </details>
-                      ) : null}
-                    </div>
-                  ))}
+            <div className="sec">
+              <div className="sec-h"><h3>Best quote</h3></div>
+              {bests.length ? bests.map((send) => (
+                <div key={send.id} className="best">
+                  <div>
+                    <div className="lbl">Agent</div>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>{send.agent_name}</div>
+                    <div className="hint">chosen by {send.user_name}</div>
+                  </div>
+                  <div className="price">{money(send.quoted_price, send.currency)}</div>
+                  {send.notes ? <div className="qtext best-q">{send.notes}</div> : null}
                 </div>
-              </section>
-            ) : null}
+              )) : <p className="hint" style={{ margin: 0 }}>When quotes come back, choose the best one here.</p>}
+            </div>
 
-            <section className="border-b px-5 py-4" style={{ borderColor: 'var(--ops-line-soft)' }}>
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold">Agents and quotes</h3>
-                <span className="ops-mono text-xs" style={{ color: 'var(--ops-muted)' }}>{inquiry.sends.length} contacted</span>
+            <div className="sec">
+              <div className="sec-h">
+                <h3>Agents &amp; quotes</h3>
+                <span className="hint">{inquiry.rates_received} of {inquiry.sends.length} quotes received</span>
               </div>
               {working ? (
                 <>
-                  <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
-                    <input className={field} style={{ borderColor: 'var(--ops-line)', color: 'var(--ops-fg)' }} list="ops-agent-companies" value={company} onChange={(event) => { const value = event.target.value; setCompany(value); const match = agents.find((agent) => agent.company_name === value); if (match) { setContact(match.contact_name || ''); setAgentEmail(match.email || ''); setAgentPhone(match.phone || ''); } }} placeholder="Agent company" aria-label="Agent company" />
+                  <div className="agform">
+                    <input className="field" list="ops-agent-companies" value={company} onChange={(event) => { const value = event.target.value; setCompany(value); const match = agents.find((agent) => agent.company_name === value); if (match) { setContact(match.contact_name || ''); setAgentEmail(match.email || ''); setAgentPhone(match.phone || ''); } }} placeholder="Agent company" aria-label="Agent company" />
                     <datalist id="ops-agent-companies">{agents.map((agent) => <option key={agent.id} value={agent.company_name} />)}</datalist>
-                    <input className={field} style={{ borderColor: 'var(--ops-line)', color: 'var(--ops-fg)' }} value={contact} onChange={(event) => setContact(event.target.value)} placeholder="Contact" aria-label="Contact person" />
-                    <input className={field} style={{ borderColor: 'var(--ops-line)', color: 'var(--ops-fg)' }} value={agentPhone} onChange={(event) => setAgentPhone(event.target.value)} placeholder="Phone number" aria-label="Agent phone number" />
-                    <input className={field} style={{ borderColor: 'var(--ops-line)', color: 'var(--ops-fg)' }} value={agentEmail} onChange={(event) => setAgentEmail(event.target.value)} placeholder="Email" aria-label="Agent email" />
-                    <button type="button" disabled={agentMut.isPending || company.trim().length < 2} onClick={() => agentMut.mutate('typed')} className="h-9 rounded-[7px] px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40" style={{ background: 'var(--ops-accent)' }}>
-                      Add agent
-                    </button>
+                    <input className="field" value={contact} onChange={(event) => setContact(event.target.value)} placeholder="Contact person" aria-label="Contact person" />
+                    <input className="field" type="email" value={agentEmail} onChange={(event) => setAgentEmail(event.target.value)} placeholder="Email" aria-label="Agent email" />
+                    <input className="field" type="tel" value={agentPhone} onChange={(event) => setAgentPhone(event.target.value)} placeholder="Phone" aria-label="Agent phone number" />
+                    <button type="button" className="btn pri" disabled={agentMut.isPending || company.trim().length < 2} onClick={() => agentMut.mutate('typed')}>Add agent</button>
                   </div>
                   {agents.length > 0 ? (
-                    <div className="mt-3 rounded-[10px] border p-3" style={{ borderColor: 'var(--ops-line-soft)' }}>
-                      <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Pick saved agents</p>
-                      <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="pickbox">
+                      <div className="pickhead">
+                        <span className="lbl">Or pick saved agents</span>
+                        <button type="button" className="btn sm pri" disabled={!picked.length || agentMut.isPending} onClick={() => agentMut.mutate('saved')}>Add {picked.length || ''} selected</button>
+                      </div>
+                      <div className="quick">
                         {agents.map((agent) => {
                           const on = picked.includes(agent.id);
                           return (
-                            <button key={agent.id} type="button" aria-pressed={on} onClick={() => setPicked((current) => (on ? current.filter((id) => id !== agent.id) : [...current, agent.id]))} className="min-h-9 rounded-full border px-3 text-xs" style={on ? { background: 'var(--ops-accent-soft)', borderColor: 'var(--ops-accent)', color: 'var(--ops-accent)' } : { borderColor: 'var(--ops-line)', color: 'var(--ops-fg)' }}>
-                              {on ? '✓ ' : ''}{agent.company_name}
+                            <button key={agent.id} type="button" className="qchip" aria-pressed={on} onClick={() => setPicked((current) => (on ? current.filter((id) => id !== agent.id) : [...current, agent.id]))}>
+                              {agent.company_name}
                             </button>
                           );
                         })}
                       </div>
-                      <button type="button" disabled={!picked.length || agentMut.isPending} onClick={() => agentMut.mutate('saved')} className="mt-2 h-9 rounded-[7px] border px-3 text-sm disabled:opacity-40" style={{ borderColor: 'var(--ops-line)' }}>
-                        Add selected
-                      </button>
                     </div>
                   ) : null}
                 </>
               ) : (
-                <p className="text-sm" style={{ color: 'var(--ops-muted)' }}>Join this inquiry to add agents and rates.</p>
+                <p className="hint">Join this inquiry to add agents and rates.</p>
               )}
-              {Object.keys(grouped).length === 0 ? <p className="mt-3 text-sm" style={{ color: 'var(--ops-muted)' }}>No agents contacted yet.</p> : null}
               {Object.entries(grouped).map(([name, sends]) => (
-                <div key={name} className="mt-4">
-                  <p className="mb-2 text-xs font-medium" style={{ color: 'var(--ops-muted)' }}>Sent by {name}</p>
-                  <div className="overflow-x-auto rounded-[10px] border" style={{ borderColor: 'var(--ops-line)' }}>
-                    <table className="w-full min-w-[560px] text-left text-sm">
-                      <thead style={{ color: 'var(--ops-muted)' }}>
+                <div key={name} className="by">
+                  <div className="by-h"><Avatar name={name} size="s" /> {name} <span>{sends.length} agent{sends.length === 1 ? '' : 's'}</span></div>
+                  <div className="tbl-wrap">
+                    <table>
+                      <thead>
                         <tr>
-                          {['Agent', 'Contact', 'Rate', 'Notes', 'Actions'].map((heading) => <th key={heading} className="px-2 py-2 text-[11px] font-medium uppercase">{heading}</th>)}
+                          {['Agent · contact · email · phone', 'Rate', 'Notes', ''].map((heading) => <th key={heading || 'a'}>{heading}</th>)}
                         </tr>
                       </thead>
                       <tbody>
@@ -322,107 +308,94 @@ function DrawerBody({
                   </div>
                 </div>
               ))}
-            </section>
+              {!Object.keys(grouped).length ? <p className="hint">No agents contacted yet.</p> : null}
+            </div>
 
-            <section className="border-b px-5 py-4" style={{ borderColor: 'var(--ops-line-soft)' }}>
-              <h3 className="mb-3 text-sm font-semibold">Details</h3>
+            <div className="sec">
+              <div className="sec-h"><h3>Details</h3></div>
               {editing ? (
-                <form className="grid gap-3 sm:grid-cols-2" onSubmit={(event) => { event.preventDefault(); if (requirement.trim().length < 10) { toast.error('The shipment details need at least a short description'); return; } saveMut.mutate(); }}>
-                  <Field label="Customer"><input className={field} style={{ borderColor: 'var(--ops-line)' }} value={customer} onChange={(event) => setCustomer(event.target.value)} /></Field>
-                  <Field label="Title"><input className={field} style={{ borderColor: 'var(--ops-line)' }} value={title} onChange={(event) => setTitle(event.target.value)} /></Field>
-                  <div className="sm:col-span-2"><Field label="Shipment"><textarea className={`${field} min-h-[110px] py-2`} style={{ borderColor: 'var(--ops-line)' }} value={requirement} onChange={(event) => setRequirement(event.target.value)} /></Field></div>
-                  <Field label="Email"><input className={field} style={{ borderColor: 'var(--ops-line)' }} type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></Field>
-                  <Field label="Deadline"><input className={field} style={{ borderColor: 'var(--ops-line)' }} type="date" value={deadline} onChange={(event) => setDeadline(event.target.value)} /></Field>
-                  <Field label="Priority">
-                    <select className={field} style={{ borderColor: 'var(--ops-line)', color: 'var(--ops-fg)' }} value={priority} onChange={(event) => setPriority(event.target.value as 'low' | 'medium' | 'high')}>
+                <form className="agform" onSubmit={(event) => { event.preventDefault(); if (requirement.trim().length < 10) { toast.error('The shipment details need at least a short description'); return; } saveMut.mutate(); }}>
+                  <label><span className="lbl">Customer</span><input className="field" value={customer} onChange={(event) => setCustomer(event.target.value)} /></label>
+                  <label><span className="lbl">Title</span><input className="field" value={title} onChange={(event) => setTitle(event.target.value)} /></label>
+                  <label className="full" style={{ gridColumn: '1 / -1' }}><span className="lbl">Shipment</span><textarea className="field qpaste" value={requirement} onChange={(event) => setRequirement(event.target.value)} /></label>
+                  <label><span className="lbl">Email</span><input className="field" type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
+                  <label><span className="lbl">Deadline</span><input className="field" type="date" value={deadline} onChange={(event) => setDeadline(event.target.value)} /></label>
+                  <label><span className="lbl">Priority</span>
+                    <select className="field" value={priority} onChange={(event) => setPriority(event.target.value as 'low' | 'medium' | 'high')}>
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
                       <option value="high">High</option>
                     </select>
-                  </Field>
-                  <div className="sm:col-span-2"><Field label="Extra notes"><textarea className={`${field} min-h-20 py-2`} style={{ borderColor: 'var(--ops-line)' }} value={notes} onChange={(event) => setNotes(event.target.value)} /></Field></div>
-                  <div className="flex gap-2 sm:col-span-2">
-                    <button type="submit" disabled={saveMut.isPending} className="h-9 rounded-[7px] px-3 text-sm font-medium text-white" style={{ background: 'var(--ops-accent)' }}>Save inquiry</button>
-                    <button type="button" className="h-9 rounded-[7px] px-3 text-sm" onClick={() => setEditing(false)}>Cancel</button>
+                  </label>
+                  <label className="full" style={{ gridColumn: '1 / -1' }}><span className="lbl">Extra notes</span><textarea className="field" rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
+                  <div className="acts" style={{ gridColumn: '1 / -1' }}>
+                    <button type="submit" className="btn pri" disabled={saveMut.isPending}>Save inquiry</button>
+                    <button type="button" className="btn" onClick={() => setEditing(false)}>Cancel</button>
                   </div>
                 </form>
               ) : (
-                <dl className="grid gap-3 sm:grid-cols-2 text-sm">
-                  <Info label="Customer" value={customerName} />
-                  <Info label="Route" value={route} />
-                  <Info label="Email" value={enquiry?.client_email || '—'} />
-                  <Info label="Deadline" value={enquiry?.deadline ? formatUkDate(enquiry.deadline) : '—'} />
-                  <div className="sm:col-span-2"><Info label="Shipment" value={inquiry.requirement} /></div>
-                </dl>
+                <div className="agform">
+                  <div><div className="lbl">Customer</div><div>{customerName}</div></div>
+                  <div><div className="lbl">Route</div><div className="lane">{route || '—'}</div></div>
+                  <div><div className="lbl">Email</div><div>{enquiry?.client_email || '—'}</div></div>
+                  <div><div className="lbl">Deadline</div><div>{enquiry?.deadline ? formatUkDate(enquiry.deadline) : '—'}</div></div>
+                  <div style={{ gridColumn: '1 / -1' }}><div className="lbl">Shipment</div><div className="qtext">{inquiry.requirement}</div></div>
+                </div>
               )}
-            </section>
+            </div>
 
-            <section className="px-5 py-4">
-              <h3 className="mb-3 text-sm font-semibold">Updates</h3>
-              <form className="flex gap-2" onSubmit={(event) => { event.preventDefault(); if (update.trim()) updateMut.mutate(); }}>
-                <input className={field} style={{ borderColor: 'var(--ops-line)', color: 'var(--ops-fg)' }} value={update} onChange={(event) => setUpdate(event.target.value)} placeholder={`Post an update on ${inquiry.enquiry_number}`} aria-label="Update" />
-                <button type="submit" disabled={updateMut.isPending || !update.trim()} className="h-9 shrink-0 rounded-[7px] px-3 text-sm font-medium text-white disabled:opacity-40" style={{ background: 'var(--ops-accent)' }}>Post</button>
+            <div className="sec">
+              <div className="sec-h"><h3>Updates</h3></div>
+              <form className="noteform" onSubmit={(event) => { event.preventDefault(); if (update.trim()) updateMut.mutate(); }}>
+                <input className="field" value={update} onChange={(event) => setUpdate(event.target.value)} placeholder={`Add a note on ${inquiry.enquiry_number}`} aria-label="Update" />
+                <button type="submit" className="btn" disabled={updateMut.isPending || !update.trim()}>Add note</button>
               </form>
-              <ul className="mt-3 space-y-3">
+              <ul className="feed">
                 {inquiry.updates.map((item) => (
-                  <li key={item.id} className="flex gap-2 text-sm">
-                    <Avatar name={item.user_name} size={28} />
-                    <span>
-                      <span className="font-medium">{item.body}</span>
-                      <span className="mt-0.5 block text-xs" style={{ color: 'var(--ops-faint)' }}>{item.user_name} · {formatUkDateTime(item.created_at)}</span>
-                    </span>
+                  <li key={item.id} className="fi">
+                    <Avatar name={item.user_name} size="s" />
+                    <div>
+                      <div className="t"><b>{item.body}</b></div>
+                      <div className="w">{item.user_name} · {formatUkDateTime(item.created_at)}</div>
+                    </div>
                   </li>
                 ))}
               </ul>
-            </section>
+            </div>
           </>
         )}
       </div>
 
-      <footer className="sticky bottom-0 flex items-center justify-between gap-2 border-t px-5 py-3" style={{ background: 'var(--ops-surface)', borderColor: 'var(--ops-line-soft)' }}>
-        <div className="flex gap-2">
-          <button type="button" onClick={() => setEditing((value) => !value)} className="h-9 rounded-[7px] border px-3 text-sm" style={{ borderColor: 'var(--ops-line)' }}>Edit details</button>
-          <button type="button" disabled={inquiry.stage === 'lost_closed' || inquiry.stage === 'won_closed'} onClick={() => setConfirm('close')} className="h-9 rounded-[7px] border px-3 text-sm disabled:opacity-40" style={{ borderColor: 'var(--ops-line)' }}>Mark closed</button>
+      <div className="sec" style={{ borderTop: '1px solid var(--line-soft)' }}>
+        <div className="acts" style={{ justifyContent: 'space-between' }}>
+          <span className="acts">
+            <button type="button" className="btn sm" onClick={() => setEditing((value) => !value)}>Edit details</button>
+            <button type="button" className="btn sm" disabled={inquiry.stage === 'lost_closed' || inquiry.stage === 'won_closed'} onClick={() => setConfirm('close')}>Close inquiry</button>
+          </span>
+          <button type="button" className="btn sm danger" onClick={() => setConfirm('delete')}>Delete inquiry</button>
         </div>
-        <button type="button" onClick={() => setConfirm('delete')} className="h-9 rounded-[7px] border px-3 text-sm" style={{ borderColor: 'var(--ops-crit)', color: 'var(--ops-crit)' }}>Delete inquiry</button>
-      </footer>
+      </div>
 
       {confirm ? (
-        <div className="absolute inset-0 z-20 flex items-center justify-center p-4" style={{ background: 'rgba(10,15,22,0.42)' }}>
-          <div role="dialog" aria-modal="true" className="w-full max-w-[440px] rounded-[10px] p-5" style={{ background: 'var(--ops-surface)', boxShadow: 'var(--ops-shadow-lg)' }}>
-            <h3 className="text-base font-semibold">{confirm === 'delete' ? 'Delete inquiry' : 'Mark closed'}</h3>
-            <p className="mt-2 text-sm" style={{ color: 'var(--ops-muted)' }}>
-              {confirm === 'delete'
-                ? `Delete ${inquiry.enquiry_number}? This removes it from Enquiries too.`
-                : `Close ${inquiry.enquiry_number}? It leaves the open board.`}
-            </p>
-            <div className="mt-4 flex justify-end gap-2">
-              <button type="button" className="h-9 rounded-[7px] px-3 text-sm" onClick={() => setConfirm(null)}>Cancel</button>
-              <button type="button" className="h-9 rounded-[7px] px-3 text-sm text-white" style={{ background: confirm === 'delete' ? 'var(--ops-crit)' : 'var(--ops-accent)' }} onClick={() => (confirm === 'delete' ? deleteMut.mutate() : closeMut.mutate())}>
+        <div className="scrim" style={{ placeItems: 'center', zIndex: 30 }}>
+          <div className="modal" role="dialog" aria-modal="true" style={{ maxWidth: 440 }}>
+            <header><h2>{confirm === 'delete' ? 'Delete inquiry' : 'Mark closed'}</h2></header>
+            <div className="mbody" style={{ gridTemplateColumns: '1fr' }}>
+              <p className="hint" style={{ margin: 0 }}>
+                {confirm === 'delete'
+                  ? `Delete ${inquiry.enquiry_number}? This removes it from Enquiries too.`
+                  : `Close ${inquiry.enquiry_number}? It leaves the open board.`}
+              </p>
+            </div>
+            <div className="mfoot">
+              <button type="button" className="btn" onClick={() => setConfirm(null)}>Cancel</button>
+              <button type="button" className={`btn ${confirm === 'delete' ? 'delyes' : 'pri'}`} onClick={() => (confirm === 'delete' ? deleteMut.mutate() : closeMut.mutate())}>
                 {confirm === 'delete' ? 'Delete' : 'Mark closed'}
               </button>
             </div>
           </div>
         </div>
       ) : null}
-    </div>
-  );
-}
-
-function Field({ label: text, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="block">
-      <span className={label} style={{ color: 'var(--ops-muted)' }}>{text}</span>
-      {children}
-    </label>
-  );
-}
-
-function Info({ label: text, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className={label} style={{ color: 'var(--ops-muted)' }}>{text}</dt>
-      <dd className="whitespace-pre-wrap" style={{ color: 'var(--ops-fg)' }}>{value}</dd>
     </div>
   );
 }
@@ -445,42 +418,42 @@ function SendRow({ send, mine, onChanged }: { send: AgentSend; mine: boolean; on
     onSuccess: () => { toast.success('Best quote is now on the enquiry'); onChanged(); },
     onError: (error: Error) => toast.error(error.message),
   });
-  const rowStyle = send.is_best
-    ? { background: 'var(--ops-ok-soft)' }
-    : editingRate
-      ? { background: 'var(--ops-accent-soft)' }
-      : undefined;
   return (
-    <tr style={rowStyle}>
-      <td className="px-2 py-2 font-medium">{send.agent_name}</td>
-      <td className="px-2 py-2 text-xs" style={{ color: 'var(--ops-muted)' }}>
-        {send.contact_name || '—'}
-        {send.contact_phone ? <span className="mt-0.5 block">{send.contact_phone}</span> : null}
+    <tr className={send.is_best ? 'isbest' : editingRate ? 'editing' : undefined}>
+      <td className="agcell">
+        <b>{send.agent_name}</b>
+        {send.contact_name ? <div>{send.contact_name}</div> : null}
         {send.contact_email ? (
-          <button type="button" className="ml-1 inline-flex items-center gap-1" aria-label={`Copy ${send.contact_email}`} onClick={() => navigator.clipboard.writeText(send.contact_email || '')}>
-            {send.contact_email} <Copy className="h-3 w-3" />
-          </button>
-        ) : null}
-      </td>
-      <td className="px-2 py-2">
-        {mine ? (
-          <input className="ops-mono h-9 w-24 rounded-[7px] border px-2 text-sm" style={{ borderColor: 'var(--ops-line)', background: 'var(--ops-surface)' }} type="number" min="0" value={price} aria-label="Rate" onFocus={() => setEditingRate(true)} onBlur={() => setEditingRate(false)} onChange={(event) => setPrice(event.target.value)} />
-        ) : (
-          <span className="ops-mono text-sm">{send.quoted_price != null ? money(send.quoted_price, send.currency) : '—'}</span>
-        )}
-      </td>
-      <td className="max-w-[140px] truncate px-2 py-2 text-xs" style={{ color: 'var(--ops-muted)' }}>{send.notes || '—'}</td>
-      <td className="px-2 py-2">
-        {mine ? (
-          <span className="flex gap-1">
-            <button type="button" className="h-9 rounded-[7px] border px-2 text-xs disabled:opacity-40" style={{ borderColor: 'var(--ops-line)' }} disabled={rateMut.isPending || !price} onClick={() => rateMut.mutate()}>Save rate</button>
-            <button type="button" className="inline-flex h-9 items-center rounded-[7px] px-2 text-xs text-white disabled:opacity-40" style={{ background: 'var(--ops-accent)' }} disabled={bestMut.isPending || !price} onClick={() => bestMut.mutate()}>
-              {bestMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Star className="mr-1 h-3.5 w-3.5" />}Best
+          <div className="email">
+            <span className="mono">{send.contact_email}</span>
+            <button type="button" className="btn sm ghost copy" aria-label={`Copy ${send.contact_email}`} onClick={() => navigator.clipboard.writeText(send.contact_email || '')}>
+              <Copy className="h-3 w-3" /> Copy
             </button>
-          </span>
+          </div>
+        ) : null}
+        {send.contact_phone ? <div className="email"><span className="mono">{send.contact_phone}</span></div> : null}
+      </td>
+      <td className="num">
+        {mine ? (
+          <input className="field t" type="number" min="0" value={price} aria-label="Rate" onFocus={() => setEditingRate(true)} onBlur={() => setEditingRate(false)} onChange={(event) => setPrice(event.target.value)} />
         ) : (
-          <span className="text-xs" style={{ color: 'var(--ops-muted)' }}>{send.is_best ? 'Best' : ''}</span>
+          send.quoted_price != null ? money(send.quoted_price, send.currency) : '—'
         )}
+      </td>
+      <td>{send.notes || '—'}</td>
+      <td>
+        <div className="acts">
+          {mine ? (
+            <>
+              <button type="button" className="btn sm" disabled={rateMut.isPending || !price} onClick={() => rateMut.mutate()}>Save</button>
+              <button type="button" className="btn sm ok" disabled={bestMut.isPending || !price} onClick={() => bestMut.mutate()}>
+                {bestMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Star className="h-3.5 w-3.5" />} Select best
+              </button>
+            </>
+          ) : (
+            send.is_best ? <span className="pill ok">✓ Best</span> : null
+          )}
+        </div>
       </td>
     </tr>
   );

@@ -4,8 +4,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Inbox, Loader2, Save, Sparkles, Wand2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -144,17 +142,17 @@ export function InquiryIntake({ onCreated }: { onCreated?: () => void }) {
     ].filter(Boolean) as string[];
   }, [parsed]);
 
-  const inputClass = 'border-[var(--ops-line)] bg-[var(--ops-surface)] text-[var(--ops-fg)]';
+  const inputClass = 'field';
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <Card className="border-[var(--ops-line)] bg-[var(--ops-surface)] p-4 text-[var(--ops-fg)] shadow-none">
+      <div className="panel" style={{ padding: 16 }}>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-sm font-semibold">
             <Wand2 className="h-4 w-4" />
             Paste email or WhatsApp message
           </h2>
-          <span className="text-xs" style={{ color: 'var(--ops-muted)' }}>
+          <span className="hint">
             {raw.length.toLocaleString()} characters
             {parsing ? ' · reading…' : parsed ? ' · extracted' : ''}
           </span>
@@ -163,77 +161,75 @@ export function InquiryIntake({ onCreated }: { onCreated?: () => void }) {
           value={raw}
           onChange={(e) => setRaw(e.target.value)}
           placeholder={'Paste an email or WhatsApp message. Fields fill in on the right.'}
-          className={`min-h-[280px] font-mono text-[13px] ${inputClass}`}
+          className={`qpaste min-h-[280px] font-mono text-[13px] ${inputClass}`}
         />
         {chips.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          <div className="quick" style={{ marginTop: 12 }}>
             {chips.map((chip) => (
-              <span key={chip} className="rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: 'var(--ops-accent-soft)', color: 'var(--ops-accent)' }}>
-                {chip}
-              </span>
+              <span key={chip} className="pill acc">{chip}</span>
             ))}
           </div>
         )}
-      </Card>
+      </div>
 
-      <Card className="border-[var(--ops-line)] bg-[var(--ops-surface)] p-4 text-[var(--ops-fg)] shadow-none">
+      <div className="panel" style={{ padding: 16 }}>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-sm font-semibold">
             <Sparkles className="h-4 w-4" />
             Check and edit
           </h2>
-          {parsing ? <Loader2 className="h-4 w-4 animate-spin text-blue-500" /> : null}
+          {parsing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
         </div>
 
         {!parsed ? (
-          <div className="flex min-h-[220px] flex-col items-center justify-center gap-2 rounded-[10px] border border-dashed text-center" style={{ borderColor: 'var(--ops-line)', background: 'var(--ops-sunk)', color: 'var(--ops-muted)' }}>
-            <Inbox className="h-8 w-8" />
-            <p className="text-sm font-medium">Paste a message to start</p>
+          <div className="empty" style={{ margin: 0 }}>
+            <Inbox className="mx-auto mb-2 h-8 w-8" />
+            <h3>Paste a message to start</h3>
           </div>
         ) : (
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Inquiry ID</Label>
+              <Label className="lbl">Inquiry ID</Label>
               <Input className={inputClass} value="Assigned automatically" readOnly aria-label="Inquiry ID" />
-              <p className="text-xs" style={{ color: 'var(--ops-muted)' }}>The next number, such as ENQ-2026-012, is created when you save.</p>
+              <p className="hint">The next number, such as ENQ-2026-012, is created when you save.</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Customer name</Label>
+                <Label className="lbl">Customer name</Label>
                 <Input className={inputClass} value={parsed.senderName} onChange={(e) => set('senderName', e.target.value)} placeholder="Contact name" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Company</Label>
+                <Label className="lbl">Company</Label>
                 <Input className={inputClass} value={parsed.senderCompany} onChange={(e) => set('senderCompany', e.target.value)} placeholder="Customer company" />
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Customer email</Label>
+                <Label className="lbl">Customer email</Label>
                 <Input className={inputClass} type="email" value={parsed.senderEmail} onChange={(e) => set('senderEmail', e.target.value)} placeholder="name@company.com" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Customer phone</Label>
+                <Label className="lbl">Customer phone</Label>
                 <Input className={inputClass} value={parsed.senderPhone} onChange={(e) => set('senderPhone', e.target.value)} placeholder="Phone number" />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Subject</Label>
+              <Label className="lbl">Subject</Label>
               <Input className={inputClass} value={parsed.headline} onChange={(e) => set('headline', e.target.value)} />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Route from</Label>
+                <Label className="lbl">Route from</Label>
                 <Input className={inputClass} value={parsed.origin} onChange={(e) => set('origin', e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Route to</Label>
+                <Label className="lbl">Route to</Label>
                 <Input className={inputClass} value={parsed.destination} onChange={(e) => set('destination', e.target.value)} />
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-1.5">
-                <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Mode</Label>
+                <Label className="lbl">Mode</Label>
                 <Select value={parsed.mode || 'none'} onValueChange={(value) => set('mode', (value === 'none' ? '' : value) as TransportMode)}>
                   <SelectTrigger className={inputClass}>
                     <SelectValue />
@@ -248,7 +244,7 @@ export function InquiryIntake({ onCreated }: { onCreated?: () => void }) {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Incoterm</Label>
+                <Label className="lbl">Incoterm</Label>
                 <Select value={parsed.incoterm && INCOTERMS.includes(parsed.incoterm as typeof INCOTERMS[number]) ? parsed.incoterm : parsed.incoterm ? parsed.incoterm : 'none'} onValueChange={(value) => set('incoterm', value === 'none' ? '' : value)}>
                   <SelectTrigger className={inputClass}>
                     <SelectValue placeholder="Select incoterm" />
@@ -265,16 +261,16 @@ export function InquiryIntake({ onCreated }: { onCreated?: () => void }) {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Deadline</Label>
+                <Label className="lbl">Deadline</Label>
                 <Input className={inputClass} type="date" value={parsed.readyDate} onChange={(e) => set('readyDate', e.target.value)} />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Shipment</Label>
+              <Label className="lbl">Shipment</Label>
               <Textarea value={requirement} onChange={(e) => setRequirement(e.target.value)} className={`min-h-24 font-mono text-[12px] ${inputClass}`} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Extra notes</Label>
+              <Label className="lbl">Extra notes</Label>
               <Textarea
                 value={extraInfo}
                 onChange={(e) => setExtraInfo(e.target.value)}
@@ -282,15 +278,15 @@ export function InquiryIntake({ onCreated }: { onCreated?: () => void }) {
                 className={`min-h-16 text-sm ${inputClass}`}
               />
             </div>
-            <div className="flex justify-end">
-              <Button className="bg-[var(--ops-accent)] text-white hover:bg-[var(--ops-accent)] disabled:opacity-40" onClick={() => saveMut.mutate()} disabled={saveMut.isPending || requirement.trim().length < 10}>
+            <div className="acts" style={{ justifyContent: 'flex-end' }}>
+              <button type="button" className="btn pri" onClick={() => saveMut.mutate()} disabled={saveMut.isPending || requirement.trim().length < 10}>
                 {saveMut.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Create inquiry
-              </Button>
+              </button>
             </div>
           </div>
         )}
-      </Card>
+      </div>
     </div>
   );
 }

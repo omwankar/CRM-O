@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react';
+import { Avatar } from '@/components/operations/bits';
 
 const TABS = [
   ['inquiries', 'Inquiries'],
@@ -9,42 +10,52 @@ const TABS = [
 
 export type OpsTab = (typeof TABS)[number][0];
 
-export function PipelineHeader({ tab, onTab, onNew }: { tab: OpsTab; onTab: (tab: OpsTab) => void; onNew: () => void }) {
+export function PipelineHeader({
+  tab,
+  onTab,
+  onNew,
+  meName,
+  isManager,
+}: {
+  tab: OpsTab;
+  onTab: (tab: OpsTab) => void;
+  onNew: () => void;
+  meName?: string;
+  isManager?: boolean;
+}) {
   return (
-    <header className="sticky top-0 z-20 shrink-0 border-b px-4 py-3 sm:px-5" style={{ background: 'var(--ops-surface)', borderColor: 'var(--ops-line-soft)' }}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight" style={{ color: 'var(--ops-fg)' }}>Operations pipeline</h1>
-          <p className="text-sm" style={{ color: 'var(--ops-muted)' }}>Newest inquiries come first. A super admin chooses who works each one.</p>
+    <div className="top">
+      <div className="top-in">
+        <div className="brand">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M3 7h13l5 5v5h-3" />
+            <path d="M3 7v10h3" />
+            <circle cx="8" cy="17" r="2" />
+            <circle cx="16" cy="17" r="2" />
+            <path d="M10 17h4" />
+          </svg>
+          Operations Pipeline
         </div>
-        <button
-          type="button"
-          onClick={onNew}
-          className="inline-flex h-9 items-center gap-1 rounded-[7px] px-3 text-sm font-medium text-white"
-          style={{ background: 'var(--ops-accent)' }}
-        >
-          <Plus className="h-4 w-4" aria-hidden />
+        <div className="tabs" role="tablist" aria-label="Pipeline sections">
+          {TABS.map(([id, label]) => (
+            <button key={id} type="button" role="tab" className="tab" aria-selected={tab === id} onClick={() => onTab(id)}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="spacer" />
+        {meName ? (
+          <div className="me">
+            <Avatar name={meName} size="s" />
+            <span><b>{meName}</b></span>
+            <span className="role">{isManager ? 'Manager' : 'Operations'}</span>
+          </div>
+        ) : null}
+        <button type="button" className="btn pri" onClick={onNew}>
+          <Plus width={14} height={14} aria-hidden />
           New inquiry
         </button>
       </div>
-      <div className="mt-3 inline-flex flex-wrap gap-1 rounded-[10px] p-1" style={{ background: 'var(--ops-sunk)' }} role="tablist" aria-label="Pipeline sections">
-        {TABS.map(([id, label]) => {
-          const selected = tab === id;
-          return (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={selected}
-              onClick={() => onTab(id)}
-              className="h-9 rounded-[7px] px-3 text-sm font-medium"
-              style={selected ? { background: 'var(--ops-surface)', color: 'var(--ops-fg)', boxShadow: 'var(--ops-shadow)' } : { color: 'var(--ops-muted)' }}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
-    </header>
+    </div>
   );
 }
