@@ -1,80 +1,40 @@
 .ops {
-  --ops-bg: #f3f5f8;
-  --ops-surface: #ffffff;
-  --ops-sunk: #e9edf2;
-  --ops-line: #d6dce4;
-  --ops-line-soft: #e4e8ee;
-  --ops-fg: #16202e;
-  --ops-muted: #5a6676;
-  --ops-faint: #8893a2;
-  --ops-accent: #1f4fb8;
-  --ops-accent-soft: #e3eaf8;
-  --ops-ok: #1c7a4a;
-  --ops-ok-soft: #dff2e7;
-  --ops-warn: #a35f00;
-  --ops-warn-soft: #fbebd2;
-  --ops-crit: #b3261e;
-  --ops-crit-soft: #f8e0de;
-  --ops-shadow: 0 1px 2px rgba(22, 32, 46, 0.06);
-  --ops-shadow-lg: 0 4px 16px rgba(22, 32, 46, 0.06);
-  background: var(--ops-bg);
-  color: var(--ops-fg);
-  font-family: var(--font-ops-sans), "Instrument Sans", ui-sans-serif, sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  .ops:not([data-theme="light"]) {
-    --ops-bg: #0f141b;
-    --ops-surface: #171e28;
-    --ops-sunk: #121820;
-    --ops-line: #2a3443;
-    --ops-line-soft: #243041;
-    --ops-fg: #e6ebf2;
-    --ops-muted: #9aa6b6;
-    --ops-faint: #7e8b9d;
-    --ops-accent: #7fa4f5;
-    --ops-accent-soft: #1d2b48;
-    --ops-ok: #5dcb8f;
-    --ops-ok-soft: #163528;
-    --ops-warn: #f0b055;
-    --ops-warn-soft: #3a2c14;
-    --ops-crit: #f2827a;
-    --ops-crit-soft: #3d1d1b;
-  }
-}
-
-.ops[data-theme="dark"] {
-  --ops-bg: #0f141b;
-  --ops-surface: #171e28;
-  --ops-sunk: #121820;
-  --ops-line: #2a3443;
-  --ops-line-soft: #243041;
-  --ops-fg: #e6ebf2;
-  --ops-muted: #9aa6b6;
-  --ops-faint: #7e8b9d;
-  --ops-accent: #7fa4f5;
-  --ops-accent-soft: #1d2b48;
-  --ops-ok: #5dcb8f;
-  --ops-ok-soft: #163528;
-  --ops-warn: #f0b055;
-  --ops-warn-soft: #3a2c14;
-  --ops-crit: #f2827a;
-  --ops-crit-soft: #3d1d1b;
+  --ops-bg: var(--background);
+  --ops-surface: var(--card);
+  --ops-sunk: var(--muted);
+  --ops-line: var(--border);
+  --ops-line-soft: var(--border);
+  --ops-fg: var(--foreground);
+  --ops-muted: var(--muted-foreground);
+  --ops-faint: var(--muted-foreground);
+  --ops-accent: var(--primary);
+  --ops-accent-soft: #eff6ff;
+  --ops-ok: #047857;
+  --ops-ok-soft: #d1fae5;
+  --ops-warn: #b45309;
+  --ops-warn-soft: #fef3c7;
+  --ops-crit: #be123c;
+  --ops-crit-soft: #ffe4e6;
+  --ops-shadow: 0 8px 24px rgba(37, 99, 235, 0.06);
+  --ops-shadow-lg: 0 12px 28px rgba(37, 99, 235, 0.1);
+  background: transparent;
+  color: var(--foreground);
+  font-family: inherit;
 }
 
 .ops-mono {
-  font-family: var(--font-ops-mono), "IBM Plex Mono", ui-monospace, monospace;
+  font-family: var(--font-mono), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
 }
 
 .ops :focus-visible {
-  outline: 2px solid var(--ops-accent);
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
 .ops-scroll {
   scrollbar-width: thin;
-  scrollbar-color: var(--ops-line) transparent;
+  scrollbar-color: var(--border) transparent;
 }
 
 .ops-scroll::-webkit-scrollbar {
@@ -83,12 +43,12 @@
 }
 
 .ops-scroll::-webkit-scrollbar-thumb {
-  background: var(--ops-line);
+  background: var(--border);
   border-radius: 999px;
 }
 
 .ops-row:hover {
-  background: color-mix(in srgb, var(--ops-accent) 7%, var(--ops-surface));
+  background: color-mix(in srgb, var(--primary) 7%, var(--card));
 }
 
 .ops[data-slot='sheet-content'] > button {

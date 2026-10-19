@@ -1,10 +1,10 @@
 import type { PipelineInquiry } from '@/lib/api/operations';
 
 export const COLUMNS = [
-  { id: 'to_send', label: 'To send', dot: '#8893A2', empty: 'No inquiries to send' },
-  { id: 'waiting', label: 'Waiting for rates', dot: '#A35F00', empty: 'No inquiries waiting on rates' },
-  { id: 'choose_best', label: 'Choose best', dot: '#1F4FB8', empty: 'No quotes ready to compare' },
-  { id: 'best_selected', label: 'Best selected', dot: '#1C7A4A', empty: 'No best rate chosen yet' },
+  { id: 'to_send', label: 'To send', dot: '#64748B', empty: 'No inquiries to send' },
+  { id: 'waiting', label: 'Waiting for rates', dot: '#F59E0B', empty: 'No inquiries waiting on rates' },
+  { id: 'choose_best', label: 'Choose best', dot: '#2563EB', empty: 'No quotes ready to compare' },
+  { id: 'best_selected', label: 'Best selected', dot: '#059669', empty: 'No best rate chosen yet' },
 ] as const;
 
 const NOISE = /^(dear|hi|hello|pallets|product|kindly|please|good|team)\b/i;
@@ -34,7 +34,7 @@ export function personHue(name: string) {
   if (lower.includes('vikram')) return '#c2410c';
   if (lower.includes('amal')) return '#047857';
   if (lower.includes('manju')) return '#0e7490';
-  return '#1F4FB8';
+  return '#2563EB';
 }
 
 export function initial(name: string) {

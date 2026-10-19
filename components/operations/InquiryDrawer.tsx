@@ -23,7 +23,6 @@ import { AgePill, Avatar, StatusPill } from '@/components/operations/bits';
 import { formatRoute, money } from '@/components/operations/opsVisual';
 import { formatUkDate, formatUkDateTime } from '@/lib/date';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
-import { opsFontClass } from '@/components/operations/opsFonts';
 
 const field = 'h-9 w-full rounded-[7px] border bg-[var(--ops-surface)] px-3 text-sm outline-none';
 const label = 'mb-1 block text-[11px] font-medium uppercase tracking-wide';
@@ -47,7 +46,7 @@ export function InquiryDrawer({
 }) {
   return (
     <Sheet open={Boolean(inquiry)} onOpenChange={(open) => { if (!open) onDismiss(); }}>
-      <SheetContent side="right" className={`${opsFontClass} ops w-full max-w-[720px] gap-0 border-0 p-0 data-[state=closed]:duration-200 data-[state=open]:duration-200 sm:max-w-[720px]`} style={{ background: 'var(--ops-surface)', color: 'var(--ops-fg)' }}>
+      <SheetContent side="right" className="ops w-full max-w-[720px] gap-0 border-0 p-0 data-[state=closed]:duration-200 data-[state=open]:duration-200 sm:max-w-[720px]" style={{ background: 'var(--ops-surface)', color: 'var(--ops-fg)' }}>
         <SheetTitle className="sr-only">{inquiry?.enquiry_number || 'Inquiry'}</SheetTitle>
         {inquiry ? (
           <DrawerBody

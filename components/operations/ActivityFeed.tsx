@@ -79,7 +79,7 @@ function ActivityText({ text }: { text: string }) {
 
 function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return (
-    <button type="button" onClick={onClick} aria-pressed={active} className="h-9 rounded-full px-3 text-xs font-medium" style={active ? { background: 'var(--ops-fg)', color: 'var(--ops-bg)' } : { background: 'var(--ops-surface)', color: 'var(--ops-muted)', boxShadow: 'inset 0 0 0 1px var(--ops-line)' }}>
+    <button type="button" onClick={onClick} aria-pressed={active} className="h-9 rounded-full px-3 text-xs font-medium" style={active ? { background: 'var(--ops-accent)', color: '#fff' } : { background: 'var(--ops-surface)', color: 'var(--ops-muted)', boxShadow: 'inset 0 0 0 1px var(--ops-line)' }}>
       {children}
     </button>
   );
