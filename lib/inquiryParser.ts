@@ -255,6 +255,7 @@ function findAmount(line: string): { amount: number; currency: string } | null {
 }
 
 const INCOTERMS = ['EXW', 'FCA', 'FAS', 'FOB', 'CFR', 'CIF', 'CPT', 'CIP', 'DAP', 'DPU', 'DDP', 'DDU'];
+export { INCOTERMS };
 
 function detectIncoterm(text: string): string {
   if (/ex[\s-]?works/i.test(text)) return 'EXW';

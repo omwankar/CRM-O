@@ -20,6 +20,7 @@ import { createOperationsEnquiry } from '@/lib/api/operations';
 import {
   buildRequirement,
   parseInquiry,
+  INCOTERMS,
   type ParsedInquiry,
   type TransportMode,
 } from '@/lib/inquiryParser';
@@ -192,7 +193,32 @@ export function InquiryIntake({ onCreated }: { onCreated?: () => void }) {
         ) : (
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Customer / headline</Label>
+              <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Inquiry ID</Label>
+              <Input className={inputClass} value="Assigned automatically" readOnly aria-label="Inquiry ID" />
+              <p className="text-xs" style={{ color: 'var(--ops-muted)' }}>The next number, such as ENQ-2026-012, is created when you save.</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Customer name</Label>
+                <Input className={inputClass} value={parsed.senderName} onChange={(e) => set('senderName', e.target.value)} placeholder="Contact name" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Company</Label>
+                <Input className={inputClass} value={parsed.senderCompany} onChange={(e) => set('senderCompany', e.target.value)} placeholder="Customer company" />
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Customer email</Label>
+                <Input className={inputClass} type="email" value={parsed.senderEmail} onChange={(e) => set('senderEmail', e.target.value)} placeholder="name@company.com" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Customer phone</Label>
+                <Input className={inputClass} value={parsed.senderPhone} onChange={(e) => set('senderPhone', e.target.value)} placeholder="Phone number" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Subject</Label>
               <Input className={inputClass} value={parsed.headline} onChange={(e) => set('headline', e.target.value)} />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -223,7 +249,20 @@ export function InquiryIntake({ onCreated }: { onCreated?: () => void }) {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Incoterm</Label>
-                <Input className={inputClass} value={parsed.incoterm} onChange={(e) => set('incoterm', e.target.value)} />
+                <Select value={parsed.incoterm && INCOTERMS.includes(parsed.incoterm as typeof INCOTERMS[number]) ? parsed.incoterm : parsed.incoterm ? parsed.incoterm : 'none'} onValueChange={(value) => set('incoterm', value === 'none' ? '' : value)}>
+                  <SelectTrigger className={inputClass}>
+                    <SelectValue placeholder="Select incoterm" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Not set</SelectItem>
+                    {parsed.incoterm && !INCOTERMS.includes(parsed.incoterm as typeof INCOTERMS[number]) ? (
+                      <SelectItem value={parsed.incoterm}>{parsed.incoterm}</SelectItem>
+                    ) : null}
+                    {INCOTERMS.map((term) => (
+                      <SelectItem key={term} value={term}>{term}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--ops-muted)' }}>Deadline</Label>

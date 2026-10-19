@@ -15,7 +15,7 @@ export function PipelineHeader({ tab, onTab, onNew }: { tab: OpsTab; onTab: (tab
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold tracking-tight" style={{ color: 'var(--ops-fg)' }}>Operations pipeline</h1>
-          <p className="text-sm" style={{ color: 'var(--ops-muted)' }}>Oldest open inquiries come first. A super admin chooses who works each one.</p>
+          <p className="text-sm" style={{ color: 'var(--ops-muted)' }}>Newest inquiries come first. A super admin chooses who works each one.</p>
         </div>
         <button
           type="button"

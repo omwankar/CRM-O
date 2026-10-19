@@ -94,6 +94,7 @@ function DrawerBody({
   const [company, setCompany] = useState('');
   const [contact, setContact] = useState('');
   const [agentEmail, setAgentEmail] = useState('');
+  const [agentPhone, setAgentPhone] = useState('');
   const [picked, setPicked] = useState<string[]>([]);
   const [update, setUpdate] = useState('');
   const [assignedIds, setAssignedIds] = useState<string[]>([]);
@@ -150,8 +151,8 @@ function DrawerBody({
   const agentMut = useMutation({
     mutationFn: (mode: 'typed' | 'saved') => addOperationsAgent(inquiry.id, mode === 'saved'
       ? { saved_agent_ids: picked }
-      : { agent_name: company.trim(), contact_name: contact.trim() || null, contact_email: agentEmail.trim() || null }),
-    onSuccess: () => { setCompany(''); setContact(''); setAgentEmail(''); setPicked([]); toast.success('Agent added'); onChanged(); },
+      : { agent_name: company.trim(), contact_name: contact.trim() || null, contact_email: agentEmail.trim() || null, contact_phone: agentPhone.trim() || null }),
+    onSuccess: () => { setCompany(''); setContact(''); setAgentEmail(''); setAgentPhone(''); setPicked([]); toast.success('Agent added'); onChanged(); },
     onError: (error: Error) => toast.error(error.message),
   });
   const updateMut = useMutation({
@@ -270,9 +271,10 @@ function DrawerBody({
               {working ? (
                 <>
                   <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
-                    <input className={field} style={{ borderColor: 'var(--ops-line)', color: 'var(--ops-fg)' }} list="ops-agent-companies" value={company} onChange={(event) => { const value = event.target.value; setCompany(value); const match = agents.find((agent) => agent.company_name === value); if (match) { setContact(match.contact_name || ''); setAgentEmail(match.email || ''); } }} placeholder="Agent company" aria-label="Agent company" />
+                    <input className={field} style={{ borderColor: 'var(--ops-line)', color: 'var(--ops-fg)' }} list="ops-agent-companies" value={company} onChange={(event) => { const value = event.target.value; setCompany(value); const match = agents.find((agent) => agent.company_name === value); if (match) { setContact(match.contact_name || ''); setAgentEmail(match.email || ''); setAgentPhone(match.phone || ''); } }} placeholder="Agent company" aria-label="Agent company" />
                     <datalist id="ops-agent-companies">{agents.map((agent) => <option key={agent.id} value={agent.company_name} />)}</datalist>
                     <input className={field} style={{ borderColor: 'var(--ops-line)', color: 'var(--ops-fg)' }} value={contact} onChange={(event) => setContact(event.target.value)} placeholder="Contact" aria-label="Contact person" />
+                    <input className={field} style={{ borderColor: 'var(--ops-line)', color: 'var(--ops-fg)' }} value={agentPhone} onChange={(event) => setAgentPhone(event.target.value)} placeholder="Phone number" aria-label="Agent phone number" />
                     <input className={field} style={{ borderColor: 'var(--ops-line)', color: 'var(--ops-fg)' }} value={agentEmail} onChange={(event) => setAgentEmail(event.target.value)} placeholder="Email" aria-label="Agent email" />
                     <button type="button" disabled={agentMut.isPending || company.trim().length < 2} onClick={() => agentMut.mutate('typed')} className="h-9 rounded-[7px] px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40" style={{ background: 'var(--ops-accent)' }}>
                       Add agent
@@ -453,6 +455,7 @@ function SendRow({ send, mine, onChanged }: { send: AgentSend; mine: boolean; on
       <td className="px-2 py-2 font-medium">{send.agent_name}</td>
       <td className="px-2 py-2 text-xs" style={{ color: 'var(--ops-muted)' }}>
         {send.contact_name || '—'}
+        {send.contact_phone ? <span className="mt-0.5 block">{send.contact_phone}</span> : null}
         {send.contact_email ? (
           <button type="button" className="ml-1 inline-flex items-center gap-1" aria-label={`Copy ${send.contact_email}`} onClick={() => navigator.clipboard.writeText(send.contact_email || '')}>
             {send.contact_email} <Copy className="h-3 w-3" />

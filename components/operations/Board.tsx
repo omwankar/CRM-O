@@ -43,7 +43,7 @@ export function Board({
           <input type="checkbox" checked={showClosed} onChange={(event) => onShowClosed(event.target.checked)} />
           Show closed
         </label>
-        <span className="text-xs" style={{ color: 'var(--ops-muted)' }}>Oldest first · #1 is top priority</span>
+        <span className="text-xs" style={{ color: 'var(--ops-muted)' }}>Newest first</span>
       </div>
       <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr))]">
         {COLUMNS.map((column) => (
