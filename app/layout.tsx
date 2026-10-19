@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { Plus_Jakarta_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from '@/components/ui/sonner'
-import { ThemeProvider } from '@/components/theme-provider'
 import { QueryProvider } from '@/lib/query-client'
 import './globals.css'
 
@@ -35,16 +34,8 @@ export default function RootLayout({
     <html lang="en" className={`${plusJakarta.variable} light`} suppressHydrationWarning>
       <body className="font-sans antialiased bg-background text-foreground">
         <QueryProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="light"
-            forcedTheme="light"
-            enableSystem={false}
-            disableTransitionOnChange
-          >
-            {children}
-            <Toaster richColors closeButton position="top-right" />
-          </ThemeProvider>
+          {children}
+          <Toaster richColors closeButton position="top-right" />
         </QueryProvider>
         <Analytics />
       </body>

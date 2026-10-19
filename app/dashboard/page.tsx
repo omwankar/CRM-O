@@ -235,8 +235,16 @@ export default function DashboardPage() {
     .sort((a, b) => b[1] - a[1]);
   const sourceTotal = priorityEntries.reduce((a, [, v]) => a + v, 0);
 
+  // Role-based labels/hrefs only after mount — sessionStorage profile cache
+  // would otherwise mismatch SSR (no cache) vs client (cached super_admin).
+  const showOpsQuick = isClient && (isSuperAdmin || inOperations);
+  const tasksAllHref = isClient && isSuperAdmin ? '/dashboard/tasks?view=team' : '/dashboard/tasks';
   const quickActions = [
-    { label: isSuperAdmin || inOperations ? 'Operations pipeline' : 'Enquiries', icon: Inbox, href: isSuperAdmin || inOperations ? '/dashboard/operations' : '/dashboard/enquiries' },
+    {
+      label: showOpsQuick ? 'Operations pipeline' : 'Enquiries',
+      icon: Inbox,
+      href: showOpsQuick ? '/operations' : '/dashboard/enquiries',
+    },
     { label: 'New Enquiry', icon: FileSearch, href: '/dashboard/enquiries/new' },
     { label: 'Add Contact', icon: Contact2, href: '/dashboard/contacts' },
     { label: 'Tasks', icon: CheckSquare, href: '/dashboard/tasks' },
@@ -442,7 +450,7 @@ export default function DashboardPage() {
                   Upcoming Tasks
                 </h2>
                 <Link
-                  href={isSuperAdmin ? '/dashboard/tasks?view=team' : '/dashboard/tasks'}
+                  href={tasksAllHref}
                   className="text-xs font-medium text-blue-600 hover:underline"
                 >
                   View all
