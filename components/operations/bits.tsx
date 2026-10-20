@@ -22,7 +22,7 @@ export function AvatarStack({ names }: { names: string[] }) {
 export function AgePill({ createdAt, closed }: { createdAt: string; closed?: boolean }) {
   const age = ageParts(createdAt);
   const cls = closed ? '' : age.tone === 'crit' ? 'crit' : age.tone === 'warn' ? 'warn' : 'ok';
-  return <span className={`pill ${cls} age`}>{age.label}</span>;
+  return <span className={`pill ${cls} age`} title="Inquiry date">{age.label}</span>;
 }
 
 export function StatusPill({ column, closedLabel }: { column: string; closedLabel?: string }) {

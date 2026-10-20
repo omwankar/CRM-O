@@ -1,5 +1,7 @@
+import { opsFontClass } from '@/components/operations/opsFonts';
 import '@/components/operations/operations.css';
+import '@/components/operations/operations-polish.css';
 
 export default function OperationsLayout({ children }: { children: React.ReactNode }) {
-  return <div className="flex h-full min-h-0 flex-col">{children}</div>;
+  return <div className={opsFontClass}>{children}</div>;
 }

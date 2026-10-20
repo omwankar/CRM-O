@@ -1,0 +1,262 @@
+/* Beat CRM Tailwind so the HTML cream board stays readable and solid. */
+
+html:has(.ops-standalone),
+html:has(.ops-standalone) body {
+  background: #fff8dc !important;
+  background-image: none !important;
+  color: #1f1a10;
+}
+
+.ops-standalone,
+.ops {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.ops h1,
+.ops h2,
+.ops h3,
+.ops h4 {
+  font-family: var(--f-ui) !important;
+  color: var(--fg) !important;
+  line-height: 1.3 !important;
+  letter-spacing: -0.01em;
+}
+
+.ops .toolbar h2 {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+}
+
+.ops .vh h2,
+.ops .link h2,
+.ops .empty h3,
+.ops .modal header h2 {
+  font-size: inherit;
+  font-weight: 700 !important;
+}
+
+.ops .col-h h3 {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+
+.ops .sec-h h3 {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+}
+
+.ops button:not(.btn):not(.tab):not(.chip):not(.qchip):not(.tchip):not(.wk):not(.card):not(.idlink):not(.agtoggle):not(.updtoggle) {
+  background: transparent;
+}
+
+.ops .btn {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--fg) !important;
+  box-shadow: none;
+}
+
+.ops .btn.pri {
+  background-color: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent-fg) !important;
+}
+
+.ops .btn.ok {
+  background-color: var(--ok) !important;
+  border-color: var(--ok) !important;
+  color: #fff !important;
+}
+
+.ops .btn.danger,
+.ops .btn.delyes {
+  color: var(--crit) !important;
+  border-color: var(--crit) !important;
+}
+
+.ops .btn.delyes {
+  background-color: var(--crit) !important;
+  color: #fff !important;
+}
+
+.ops .btn.ghost {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  color: var(--muted) !important;
+}
+
+.ops .tab {
+  background: transparent !important;
+  color: var(--muted) !important;
+  border: 0 !important;
+}
+
+.ops .tab[aria-selected='true'] {
+  background: var(--surface) !important;
+  color: var(--fg) !important;
+  box-shadow: var(--shadow);
+}
+
+.ops .chip {
+  background: transparent !important;
+  border: 1px solid var(--line) !important;
+  color: var(--muted) !important;
+}
+
+.ops .chip[aria-pressed='true'] {
+  background: var(--fg) !important;
+  border-color: var(--fg) !important;
+  color: var(--bg) !important;
+}
+
+.ops .wk,
+.ops .card,
+.ops .panel,
+.ops .agrp,
+.ops .modal,
+.ops .link {
+  background: var(--surface) !important;
+  color: var(--fg);
+  box-shadow: var(--shadow);
+}
+
+.ops .wk,
+.ops .card,
+.ops .panel,
+.ops .agrp {
+  border: 1px solid var(--line) !important;
+}
+
+.ops .col {
+  background: var(--sunk) !important;
+  border: 1px solid var(--line-soft) !important;
+}
+
+.ops .search,
+.ops .field,
+.ops .sel,
+.ops input.field,
+.ops select.field,
+.ops textarea.field,
+.ops textarea.qpaste {
+  background: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--fg) !important;
+  box-shadow: none;
+  outline: none;
+}
+
+.ops .search:focus,
+.ops .field:focus,
+.ops .sel:focus,
+.ops textarea:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.ops .pill {
+  background: var(--sunk) !important;
+  color: var(--muted) !important;
+}
+
+.ops .pill.ok {
+  background: var(--ok-soft) !important;
+  color: var(--ok) !important;
+}
+
+.ops .pill.warn {
+  background: var(--warn-soft) !important;
+  color: var(--warn) !important;
+}
+
+.ops .pill.crit {
+  background: var(--crit-soft) !important;
+  color: var(--crit) !important;
+}
+
+.ops .pill.acc {
+  background: var(--accent-soft) !important;
+  color: var(--accent) !important;
+}
+
+.ops .tchip {
+  background: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+}
+
+.ops button.tchip[aria-pressed='true'] {
+  background: var(--accent-soft) !important;
+  border-color: var(--accent) !important;
+}
+
+.ops .qchip {
+  background: transparent !important;
+  border: 1px dashed var(--line) !important;
+  color: var(--muted) !important;
+}
+
+.ops .qchip[aria-pressed='true'] {
+  background: var(--accent-soft) !important;
+  border: 1px solid var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+.ops .best {
+  background: var(--ok-soft) !important;
+  border: 1px solid var(--ok) !important;
+}
+
+.ops .empty {
+  background: var(--surface) !important;
+  border: 1px dashed var(--line) !important;
+}
+
+.ops .ltable thead th,
+.ops table th {
+  background: var(--sunk) !important;
+  color: var(--muted) !important;
+}
+
+.ops .ltable tr.dgrp td {
+  background: var(--sunk) !important;
+}
+
+.ops .idlink {
+  background: none !important;
+  border: 0 !important;
+  color: var(--accent) !important;
+}
+
+.ops .drawer {
+  background: var(--surface) !important;
+  color: var(--fg) !important;
+  border-left: 1px solid var(--line) !important;
+  box-shadow: -12px 0 40px rgba(60, 45, 10, 0.12);
+}
+
+html:has(.ops-standalone) [data-slot='sheet-overlay'] {
+  background: rgba(30, 24, 10, 0.42) !important;
+}
+
+html:has(.ops-standalone) [data-slot='sheet-content'].ops {
+  background: var(--surface, #fff) !important;
+  color: var(--fg, #1f1a10) !important;
+}
+
+html:has(.ops-standalone) [data-slot='dialog-content'].ops {
+  background: var(--surface, #fff) !important;
+  color: var(--fg, #1f1a10) !important;
+  border-color: var(--line, #e8d9a8) !important;
+}
+
+.ops .hint {
+  color: var(--muted) !important;
+}
+
+.ops .faint,
+.ops .colempty {
+  color: var(--faint) !important;
+}

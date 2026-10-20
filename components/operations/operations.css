@@ -1,63 +1,31 @@
-/* Operations pipeline — exact styles from Operations-Pipeline.html, scoped to .ops */
+/* Exact styles from Operations-Pipeline.html — do not restyle. */
+.ops-standalone {
+  min-height: 100svh;
+  background: #FFF8DC;
+}
 .ops {
-  height: 100%;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  min-height: 100svh;
+  background: var(--bg, #FFF8DC);
 }
-.ops-standalone .ops { height: 100%; }
-.ops .wrap {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  width: 100%;
-}
-/* Beat Tailwind preflight so HTML demo styles win */
 .ops button {
-  background-color: transparent;
   background-image: none;
-  border-style: solid;
-  border-width: 0;
-  padding: 0;
-  color: inherit;
-  font: inherit;
-  line-height: inherit;
+  cursor: pointer;
 }
-.ops input,
-.ops select,
-.ops textarea {
-  background-color: transparent;
-  border-style: solid;
+.ops input, .ops select, .ops textarea {
   color: inherit;
   font: inherit;
 }
 
 
 .ops{
-  /* Match CRM light theme tokens (globals.css :root) */
-  --bg:var(--background, #EEF4FF);
-  --surface:var(--card, #FFFFFF);
-  --sunk:#EFF6FF;
-  --line:rgba(37, 99, 235, 0.16);
-  --line-soft:rgba(37, 99, 235, 0.10);
-  --fg:var(--foreground, #0F172A);
-  --muted:var(--muted-foreground, #64748B);
-  --faint:#94A3B8;
-  --icon:#334155;
-  --accent:var(--primary, #2563EB);
-  --accent-soft:#DBEAFE;
-  --accent-fg:var(--primary-foreground, #FFFFFF);
-  --ok:#0F766E;
-  --ok-soft:#CCFBF1;
-  --warn:#B45309;
-  --warn-soft:#FEF3C7;
-  --crit:var(--destructive, #E11D48);
-  --crit-soft:#FFE4E6;
-  --shadow:0 1px 2px rgba(37, 99, 235, 0.06), 0 4px 16px rgba(37, 99, 235, 0.08);
-  --scrim:rgba(15, 23, 42, 0.45);
-  --f-ui:var(--font-jakarta), "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --f-mono:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --bg:#FFF8DC; --surface:#FFFFFF; --sunk:#FCF1CF; --line:#E8D9A8; --line-soft:#F1E6C2;
+  --fg:#1F1A10; --muted:#5F5644; --faint:#968A6C; --icon:#2A2416;
+  --accent:#1E3F8C; --accent-soft:#E6ECF7; --accent-fg:#FFFFFF;
+  --ok:#17663D; --ok-soft:#DDF0E3; --warn:#8F5200; --warn-soft:#FBE6C4; --crit:#A3211A; --crit-soft:#F7DEDA;
+  --shadow:0 1px 2px rgba(60,45,10,.07),0 4px 16px rgba(60,45,10,.07);
+  --scrim:rgba(30,24,10,.42);
+  --f-ui:var(--font-ops-sans),"Instrument Sans",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:var(--font-ops-mono),"IBM Plex Mono",ui-monospace,monospace;
   color-scheme:light;
 }
 .ops, .ops *{box-sizing:border-box}
@@ -273,7 +241,7 @@ to{transform:none;opacity:1}}}
 .ops .pastebox{display:grid;gap:8px;background:var(--sunk);border:1px dashed var(--line);border-radius:10px;padding:12px}
 .ops .pastebox textarea{width:100%;min-height:120px;resize:vertical;font-size:13px;line-height:1.45}
 .ops .found{font-size:13px;line-height:1.5;background:var(--surface);border:1px solid var(--line-soft);border-radius:8px;padding:8px 10px}
-.ops .mbody .field.autofill{background:#DBEAFE;border-color:#93C5FD}
+.ops .mbody .field.autofill{background:#FFF1B8;border-color:#D9B23C}
 .ops .mbody{padding:16px 20px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .ops .mbody .full{grid-column:1/-1}
 .ops .mbody label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--muted)}
@@ -283,3 +251,8 @@ to{transform:none;opacity:1}}}
 .ops .mrow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center}
 @media (max-width:520px){.mbody{grid-template-columns:1fr}}
 .ops .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:8px;font-weight:600;font-size:13px;z-index:60;box-shadow:var(--shadow)}
+.ops{color-scheme:light}
+.ops{margin:0;font-size:14px}
+.ops img{max-width:100%}
+.ops [hidden]{display:none!important}
+.ops .localnote{max-width:1480px;margin:0 auto;padding:0 16px 24px;font-size:12px;color:var(--muted)}

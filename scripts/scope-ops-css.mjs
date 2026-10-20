@@ -3,17 +3,18 @@ import fs from 'fs';
 const htmlPath = process.argv[2];
 const outPath = process.argv[3];
 const html = fs.readFileSync(htmlPath, 'utf8');
-const m = html.match(/<style>([\s\S]*?)<\/style>/);
-if (!m) throw new Error('no style block');
+const blocks = [...html.matchAll(/<style>([\s\S]*?)<\/style>/g)].map((m) => m[1]);
+if (!blocks.length) throw new Error('no style blocks');
 
-// Strip comments first so they cannot be mistaken for selectors
-let css = m[1].replace(/\/\*[\s\S]*?\*\//g, '');
-
+let css = blocks.join('\n');
+css = css.replace(/\/\*[\s\S]*?\*\//g, '');
 css = css.replace(/:root\{/g, '.ops{');
 css = css.replace(
   /body\{background:var\(--bg\);color:var\(--fg\);font-family:var\(--f-ui\);font-size:14px;line-height:1\.45\}/,
   '.ops{background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:14px;line-height:1.45}',
 );
+css = css.replace(/html\{color-scheme:light\}/, '.ops{color-scheme:light}');
+css = css.replace(/body\{margin:0;font-size:14px\}/, '.ops{margin:0;font-size:14px}');
 css = css.replace(/\*\{box-sizing:border-box\}/, '.ops,.ops *{box-sizing:border-box}');
 
 css = css.replace(/(^|})\s*([^{}@]+?)\{/g, (match, brace, selectors) => {
@@ -35,7 +36,6 @@ css = css.replace(/(^|})\s*([^{}@]+?)\{/g, (match, brace, selectors) => {
   return `${brace}\n${scoped}{`;
 });
 
-// Prefer next/font variables when present
 css = css.replace(
   /--f-ui:"Instrument Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;/,
   '--f-ui:var(--font-ops-sans),"Instrument Sans",ui-sans-serif,system-ui,sans-serif;',
@@ -45,31 +45,25 @@ css = css.replace(
   '--f-mono:var(--font-ops-mono),"IBM Plex Mono",ui-monospace,monospace;',
 );
 
-const header = `/* Operations pipeline — exact styles from Operations-Pipeline.html, scoped to .ops */
-.ops {
-  height: 100%;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+const header = `/* Exact styles from Operations-Pipeline.html — do not restyle. */
+.ops-standalone {
+  min-height: 100svh;
+  background: #FFF8DC;
 }
-.ops-standalone .ops { height: 100%; }
-.ops .wrap {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  width: 100%;
+.ops {
+  min-height: 100svh;
+  background: var(--bg, #FFF8DC);
+}
+.ops button {
+  background-image: none;
+  cursor: pointer;
+}
+.ops input, .ops select, .ops textarea {
+  color: inherit;
+  font: inherit;
 }
 
 `;
 
 fs.writeFileSync(outPath, header + css);
-const check = fs.readFileSync(outPath, 'utf8');
-const bad = (check.match(/\.ops\s+\.ops\s*\{/g) || []).length;
-console.log('Wrote', outPath, check.length, 'bad nested', bad);
-console.log(check.slice(0, 700));
-console.log('---');
-console.log(check.includes('.ops .strip{') || check.includes('.ops .strip {'), 'strip');
-console.log(check.includes('.ops .board{') || check.includes('.ops .board {'), 'board');
-console.log(check.includes('.ops .card{') || check.includes('.ops .card {'), 'card');
-console.log(check.includes('.ops .btn.pri{') || check.includes('.ops .btn.pri {'), 'btn.pri');
+console.log('Wrote', outPath, fs.statSync(outPath).size);

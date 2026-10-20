@@ -21,12 +21,34 @@ export function formatRoute(inquiry: Pick<PipelineInquiry, 'route' | 'title' | '
   return (message || pool.find((line) => !NOISE.test(line)) || '').slice(0, 60);
 }
 
+export function inquiryDayKey(iso?: string | null) {
+  if (!iso) return '';
+  const date = new Date(iso.length <= 10 ? `${iso}T00:00:00` : iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+export function fmtInqDate(iso?: string | null) {
+  if (!iso) return 'No date';
+  const date = new Date(iso.length <= 10 ? `${iso}T00:00:00` : iso);
+  if (Number.isNaN(date.getTime())) return 'No date';
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+export function dayShort(iso?: string | null) {
+  if (!iso) return 'No inquiry date';
+  const date = new Date(iso.length <= 10 ? `${iso}T00:00:00` : iso);
+  if (Number.isNaN(date.getTime())) return 'No inquiry date';
+  return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 export function ageParts(createdAt: string) {
-  const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / 86400000);
-  if (days <= 0) return { label: 'today', tone: 'ok' as const, days: 0 };
-  if (days === 1) return { label: '1 day', tone: 'ok' as const, days: 1 };
-  if (days <= 3) return { label: `${days} days`, tone: 'warn' as const, days };
-  return { label: `${days} days`, tone: 'crit' as const, days };
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const received = new Date(inquiryDayKey(createdAt) + 'T00:00:00');
+  const days = Number.isNaN(received.getTime()) ? 0 : Math.max(0, Math.round((start.getTime() - received.getTime()) / 86400000));
+  const tone = days >= 4 ? 'crit' as const : days >= 2 ? 'warn' as const : 'ok' as const;
+  return { label: fmtInqDate(createdAt), tone, days };
 }
 
 export function personHue(name: string) {

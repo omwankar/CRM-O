@@ -22,12 +22,11 @@ export function OperationsPipelineApp() {
   const [personId, setPersonId] = useState<string | null>(null);
   const [activityPerson, setActivityPerson] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [showClosed, setShowClosed] = useState(false);
   const [creating, setCreating] = useState(false);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['operations-pipeline', showClosed],
-    queryFn: () => getOperationsPipeline(showClosed),
+    queryKey: ['operations-pipeline', true],
+    queryFn: () => getOperationsPipeline(true),
     enabled: !authLoading && allowed,
   });
 
@@ -71,7 +70,7 @@ export function OperationsPipelineApp() {
       <div className="ops">
         <div className="wrap">
           <div className="link">
-            <h2>Operations only</h2>
+            <h2>Welcome</h2>
             <p className="hint" style={{ fontSize: 14, margin: 0 }}>This pipeline is for the operations team.</p>
           </div>
         </div>
@@ -89,47 +88,51 @@ export function OperationsPipelineApp() {
           meName={(profile as { full_name?: string } | undefined)?.full_name || user?.email || 'You'}
           isManager={isSuperAdmin}
         />
-        {error ? <div className="banner err"><b>{(error as Error).message}</b></div> : null}
-        {tab === 'inquiries' ? (
-          <>
-            <PeopleFilter people={data?.workload || []} personId={personId} onPerson={setPersonId} />
-            {isLoading ? (
-              <div className="empty"><h3>Loading…</h3></div>
-            ) : (
-              <Board
-                title={focusPerson ? `${focusPerson.full_name}'s inquiries` : 'All inquiries'}
-                search={search}
-                onSearch={setSearch}
-                showClosed={showClosed}
-                onShowClosed={setShowClosed}
-                inquiries={visible}
-                selectedId={selectedId}
+        <main>
+          {error ? <div className="banner err"><b>{(error as Error).message}</b></div> : null}
+          {tab === 'inquiries' ? (
+            <>
+              <PeopleFilter people={data?.workload || []} personId={personId} onPerson={setPersonId} meId={user?.id} />
+              {isLoading ? (
+                <div className="empty"><h3>Loading…</h3></div>
+              ) : (
+                <Board
+                  title={focusPerson ? `${focusPerson.full_name}'s inquiries` : 'All inquiries'}
+                  search={search}
+                  onSearch={setSearch}
+                  inquiries={visible}
+                  selectedId={selectedId}
+                  onOpen={setSelectedId}
+                  onNew={() => setCreating(true)}
+                  isManager={isSuperAdmin}
+                  personId={personId}
+                  onClearPerson={() => setPersonId(null)}
+                />
+              )}
+            </>
+          ) : null}
+          {tab === 'activity' ? (
+            isLoading ? <div className="empty"><h3>Loading…</h3></div> : (
+              <ActivityFeed
+                people={data?.workload || []}
+                activity={data?.activity || []}
+                personId={activityPerson}
+                onPerson={setActivityPerson}
                 onOpen={setSelectedId}
               />
-            )}
-          </>
-        ) : null}
-        {tab === 'activity' ? (
-          isLoading ? <div className="empty"><h3>Loading…</h3></div> : (
-            <ActivityFeed
-              people={data?.workload || []}
-              activity={data?.activity || []}
-              personId={activityPerson}
-              onPerson={setActivityPerson}
-              onOpen={setSelectedId}
-            />
-          )
-        ) : null}
-        {tab === 'register' ? (
-          isLoading ? <div className="empty"><h3>Loading…</h3></div> : (
-            <RegisterTable inquiries={data?.inquiries || []} onOpen={setSelectedId} />
-          )
-        ) : null}
-        {tab === 'agents' ? (
-          isLoading ? <div className="empty"><h3>Loading…</h3></div> : (
-            <AgentsTable agents={data?.agents || []} onChanged={refresh} />
-          )
-        ) : null}
+            )
+          ) : null}
+          {tab === 'register' ? (
+            isLoading ? <div className="empty"><h3>Loading…</h3></div> : (
+              <RegisterTable inquiries={data?.inquiries || []} onOpen={setSelectedId} />
+            )
+          ) : null}
+          {tab === 'agents' ? (
+            isLoading ? <div className="empty"><h3>Loading…</h3></div> : (
+              <AgentsTable agents={data?.agents || []} onChanged={refresh} />
+            )
+          ) : null}
+        </main>
       </div>
       <InquiryDrawer
         inquiry={selected}
