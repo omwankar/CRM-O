@@ -136,17 +136,22 @@ html:has(.ops-standalone) body {
 }
 
 .ops .search,
-.ops .field,
+.ops .field:not(.autofill),
 .ops .sel,
-.ops input.field,
-.ops select.field,
-.ops textarea.field,
+.ops input.field:not(.autofill),
+.ops select.field:not(.autofill),
+.ops textarea.field:not(.autofill),
 .ops textarea.qpaste {
   background: var(--surface) !important;
   border: 1px solid var(--line) !important;
   color: var(--fg) !important;
   box-shadow: none;
   outline: none;
+}
+
+.ops .mbody .field.autofill {
+  background: #FFF1B8 !important;
+  border-color: #D9B23C !important;
 }
 
 .ops .search:focus,

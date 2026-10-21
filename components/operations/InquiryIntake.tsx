@@ -1,292 +1,266 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Inbox, Loader2, Save, Sparkles, Wand2 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { createOperationsEnquiry } from '@/lib/api/operations';
-import {
-  buildRequirement,
-  parseInquiry,
-  INCOTERMS,
-  type ParsedInquiry,
-  type TransportMode,
-} from '@/lib/inquiryParser';
+import { parseInquiry, INCOTERMS } from '@/lib/inquiryParser';
+import { makeInqId } from '@/components/operations/inqId';
+import { Avatar } from '@/components/operations/bits';
 
-const MODE_OPTIONS: Array<{ value: TransportMode | 'none'; label: string }> = [
-  { value: 'none', label: 'Not identified' },
-  { value: 'air', label: 'Air' },
-  { value: 'sea', label: 'Sea / Ocean' },
-  { value: 'road', label: 'Road / Land' },
-  { value: 'courier', label: 'Courier / Express' },
-];
+const MODES = ['Air', 'Ocean FCL', 'Ocean LCL', 'Land', 'Courier', 'Multimodal'];
+const RECEIVED_BY = ['Shyam', 'Freeda', 'Outreach', 'General Email'];
 
-export function InquiryIntake({ onCreated }: { onCreated?: () => void }) {
-  const [raw, setRaw] = useState('');
-  const [parsed, setParsed] = useState<ParsedInquiry | null>(null);
-  const [requirement, setRequirement] = useState('');
-  const [extraInfo, setExtraInfo] = useState('');
-  const [parsing, setParsing] = useState(false);
+function today() {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function htmlMode(mode?: string, loadType?: string) {
+  const value = `${mode || ''} ${loadType || ''}`.toLowerCase();
+  if (value.includes('air')) return 'Air';
+  if (value.includes('fcl')) return 'Ocean FCL';
+  if (value.includes('lcl')) return 'Ocean LCL';
+  if (value.includes('courier') || value.includes('express')) return 'Courier';
+  if (value.includes('land') || value.includes('road')) return 'Land';
+  if (value.includes('sea') || value.includes('ocean')) return 'Ocean FCL';
+  return '';
+}
+
+export function InquiryIntake({
+  team,
+  existingIds,
+  onCreated,
+  onCancel,
+}: {
+  team: Array<{ user_id: string; full_name: string }>;
+  existingIds: string[];
+  onCreated?: () => void;
+  onCancel?: () => void;
+}) {
+  const [email, setEmail] = useState('');
+  const [found, setFound] = useState('');
+  const [refId, setRefId] = useState('');
+  const [manualId, setManualId] = useState(false);
+  const [autofill, setAutofill] = useState<Record<string, boolean>>({});
+  const [customer, setCustomer] = useState('');
+  const [contact, setContact] = useState('');
+  const [cEmail, setCEmail] = useState('');
+  const [cPhone, setCPhone] = useState('');
+  const [origin, setOrigin] = useState('');
+  const [destination, setDestination] = useState('');
+  const [mode, setMode] = useState('');
+  const [incoterm, setIncoterm] = useState('');
+  const [receivedOn, setReceivedOn] = useState(today());
+  const [receivedBy, setReceivedBy] = useState('');
+  const [cargo, setCargo] = useState('');
+  const [notes, setNotes] = useState('');
+  const [assigned, setAssigned] = useState<string[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    if (timer.current) clearTimeout(timer.current);
-    if (!raw.trim()) {
-      setParsed(null);
-      setRequirement('');
+  const mark = (key: string, on: boolean) => setAutofill((current) => ({ ...current, [key]: on }));
+
+  const refreshId = (nextOrigin = origin, nextDest = destination, nextContact = contact, nextCompany = customer) => {
+    if (manualId) return;
+    if (!nextOrigin.trim() && !nextDest.trim()) {
+      setRefId('');
+      mark('ref', false);
       return;
     }
-    setParsing(true);
-    timer.current = setTimeout(() => {
-      const result = parseInquiry(raw);
-      setParsed(result);
-      setRequirement(buildRequirement(result));
-      setParsing(false);
-    }, 600);
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
-  }, [raw]);
+    setRefId(makeInqId(nextOrigin, nextDest, nextContact, nextCompany, existingIds));
+    mark('ref', true);
+  };
 
-  const set = <K extends keyof ParsedInquiry>(key: K, value: ParsedInquiry[K]) => {
-    setParsed((current) => (current ? { ...current, [key]: value } : current));
+  const readEmail = (text: string) => {
+    if (!text.trim()) {
+      setFound('');
+      return;
+    }
+    const parsed = parseInquiry(text);
+    const nextMode = htmlMode(parsed.mode, parsed.loadType);
+    const nextOrigin = parsed.origin;
+    const nextDest = parsed.destination;
+    const nextContact = parsed.senderName;
+    const nextCompany = parsed.senderCompany;
+    setContact(nextContact); mark('contact', Boolean(nextContact));
+    setCEmail(parsed.senderEmail); mark('email', Boolean(parsed.senderEmail));
+    setCPhone(parsed.senderPhone); mark('phone', Boolean(parsed.senderPhone));
+    setCustomer(nextCompany); mark('customer', Boolean(nextCompany));
+    setOrigin(nextOrigin); mark('origin', Boolean(nextOrigin));
+    setDestination(nextDest); mark('destination', Boolean(nextDest));
+    setMode(nextMode); mark('mode', Boolean(nextMode));
+    setIncoterm(parsed.incoterm); mark('incoterm', Boolean(parsed.incoterm));
+    setCargo([parsed.commodity, parsed.pieces, parsed.weight, parsed.dimensions].filter(Boolean).join(' · '));
+    setNotes(text.trim()); mark('notes', true);
+    if (parsed.readyDate) setReceivedOn(parsed.readyDate);
+    if (!manualId) {
+      if (nextOrigin || nextDest) {
+        setRefId(makeInqId(nextOrigin, nextDest, nextContact, nextCompany, existingIds));
+        mark('ref', true);
+      }
+    }
+    const got = [
+      nextContact && 'contact person',
+      parsed.senderEmail && 'email',
+      parsed.senderPhone && 'phone',
+      nextCompany && 'company',
+      nextOrigin && 'from',
+      nextDest && 'to',
+      nextMode && 'service',
+      parsed.incoterm && 'incoterm',
+    ].filter(Boolean);
+    setFound(`Filled from the email: ${got.length ? got.join(', ') : 'nothing recognised'}. Yellow fields came from the email. Check them before saving.`);
   };
 
   useEffect(() => {
-    if (parsed) setRequirement(buildRequirement(parsed));
-  }, [
-    parsed?.mode,
-    parsed?.loadType,
-    parsed?.origin,
-    parsed?.destination,
-    parsed?.incoterm,
-    parsed?.readyDate,
-    parsed?.commodity,
-    parsed?.pieces,
-    parsed?.dimensions,
-    parsed?.weight,
-    parsed?.chargeableWeight,
-    parsed?.services,
-    parsed?.price,
-    parsed?.currency,
-    parsed?.routing,
-    parsed?.airline,
-  ]);
+    if (timer.current) clearTimeout(timer.current);
+    if (!email.trim()) {
+      setFound('');
+      return;
+    }
+    timer.current = setTimeout(() => readEmail(email), 600);
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, [email]);
 
   const saveMut = useMutation({
     mutationFn: () => {
-      if (!parsed) throw new Error('Paste an inquiry first');
-      const req = requirement.trim();
-      if (req.length < 10) throw new Error('The requirement summary is too short');
-      const prospect = [parsed.senderName, parsed.senderCompany].filter(Boolean).join(' — ');
-      const receivedVia =
-        parsed.receivedThrough === 'whatsapp'
-          ? 'WhatsApp'
-          : parsed.receivedThrough === 'email'
-            ? 'Email'
-            : parsed.receivedThrough === 'phone'
-              ? 'Phone call'
-              : 'Other';
+      const id = refId.trim();
+      if (!id) throw new Error('Enter the inquiry ID.');
+      const lane = [origin, destination].filter(Boolean).join(' → ');
+      const requirement = [lane && `${lane}${mode ? ` · ${mode}` : ''}${incoterm ? ` · ${incoterm}` : ''}`, cargo, notes].filter(Boolean).join('\n').trim();
+      const padded = requirement.length >= 10 ? requirement : `${requirement || 'Freight enquiry'} `.padEnd(10, '.');
       return createOperationsEnquiry({
-        title: parsed.headline || null,
-        requirement: req,
-        prospect_name: prospect || null,
-        standalone_project_name: parsed.senderCompany || null,
-        client_email: parsed.senderEmail || null,
-        client_budget: parsed.price ?? null,
-        client_currency: parsed.currency || null,
-        deadline: parsed.readyDate || null,
-        priority: parsed.priority,
-        stage: 'new_enquiry',
+        enquiry_number: id,
+        title: lane || customer || contact || id,
+        requirement: padded,
+        prospect_name: [contact, customer].filter(Boolean).join(' — ') || null,
+        standalone_project_name: customer || null,
+        client_email: cEmail || null,
+        deadline: receivedOn || null,
         notes: [
-          `Received through: ${receivedVia}`,
-          parsed.senderPhone ? `Sender phone: ${parsed.senderPhone}` : '',
-          extraInfo.trim(),
-          '',
-          '--- Original message ---',
-          raw.trim().slice(0, 8000),
-        ]
-          .filter((line, index) => line !== '' || index === 2)
-          .join('\n'),
+          cPhone ? `Customer phone: ${cPhone}` : '',
+          receivedBy ? `Received by: ${receivedBy}` : '',
+          notes,
+          email.trim() ? `--- Original email ---\n${email.trim().slice(0, 8000)}` : '',
+        ].filter(Boolean).join('\n'),
+        user_ids: assigned,
       });
     },
     onSuccess: (enquiry) => {
-      toast.success(`${enquiry.enquiry_number} is on the pipeline and in Enquiries`);
-      setRaw('');
-      setParsed(null);
-      setRequirement('');
-      setExtraInfo('');
+      toast.success(`${enquiry.enquiry_number} created`);
       onCreated?.();
     },
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const chips = useMemo(() => {
-    if (!parsed) return [];
-    return [
-      parsed.mode && `Mode: ${parsed.mode.toUpperCase()}`,
-      parsed.incoterm && `Incoterm: ${parsed.incoterm}`,
-      parsed.readyDate && `Ready: ${parsed.readyDate}`,
-      parsed.price && `${parsed.currency || ''} ${parsed.price}`.trim(),
-      parsed.senderEmail && parsed.senderEmail,
-    ].filter(Boolean) as string[];
-  }, [parsed]);
-
-  const inputClass = 'field';
+  const fieldClass = (key: string) => `field${autofill[key] ? ' autofill' : ''}`;
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <div className="panel" style={{ padding: 16 }}>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <Wand2 className="h-4 w-4" />
-            Paste email or WhatsApp message
-          </h2>
-          <span className="hint">
-            {raw.length.toLocaleString()} characters
-            {parsing ? ' · reading…' : parsed ? ' · extracted' : ''}
-          </span>
+    <form
+      className="modal wide"
+      onSubmit={(event) => {
+        event.preventDefault();
+        saveMut.mutate();
+      }}
+    >
+      <header>
+        <h2>New inquiry</h2>
+        <button className="btn ghost sm" type="button" onClick={onCancel}>Close</button>
+      </header>
+      <div className="mbody">
+        <div className="full pastebox">
+          <label htmlFor="f-email">
+            <span className="lbl">1. Paste the customer&apos;s email</span>
+            <textarea
+              className="field"
+              id="f-email"
+              rows={6}
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              autoFocus
+              placeholder="Copy the whole email (including the From line and signature) and paste it here. The details below fill in by themselves."
+            />
+          </label>
+          <div className="acts" style={{ justifyContent: 'space-between' }}>
+            <span className="hint">Fields fill in from the email. Check them before saving.</span>
+            <button className="btn sm" type="button" onClick={() => readEmail(email)}>Read email again</button>
+          </div>
+          {found ? <div className="found"><b>{found}</b></div> : null}
         </div>
-        <Textarea
-          value={raw}
-          onChange={(e) => setRaw(e.target.value)}
-          placeholder={'Paste an email or WhatsApp message. Fields fill in on the right.'}
-          className={`qpaste min-h-[280px] font-mono text-[13px] ${inputClass}`}
-        />
-        {chips.length > 0 && (
-          <div className="quick" style={{ marginTop: 12 }}>
-            {chips.map((chip) => (
-              <span key={chip} className="pill acc">{chip}</span>
-            ))}
+        <div className="full lbl" style={{ marginTop: 4 }}>2. Check the details, then pick who works on it</div>
+        <label className="full" htmlFor="f-ref">
+          Inquiry ID
+          <input
+            className={`${fieldClass('ref')} mono`}
+            id="f-ref"
+            value={refId}
+            placeholder="Fills in by itself, e.g. CHE-LON-17/10"
+            required
+            onChange={(event) => {
+              setManualId(Boolean(event.target.value));
+              setRefId(event.target.value);
+              mark('ref', false);
+            }}
+          />
+        </label>
+        <p className="hint full" style={{ margin: '-6px 0 0' }}>
+          First 3 letters of origin · first 3 letters of destination · day/month added. If that route already has an inquiry today, the customer&apos;s first name is added.
+        </p>
+        <div className="full">
+          <div className="lbl" style={{ marginBottom: 6 }}>Assign to</div>
+          <div className="team">
+            {team.map((person) => {
+              const on = assigned.includes(person.user_id);
+              return (
+                <button
+                  key={person.user_id}
+                  className="tchip"
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setAssigned((current) => (on ? current.filter((id) => id !== person.user_id) : [...current, person.user_id]))}
+                >
+                  <Avatar name={person.full_name} size="s" />
+                  {person.full_name}
+                </button>
+              );
+            })}
           </div>
-        )}
-      </div>
-
-      <div className="panel" style={{ padding: 16 }}>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <Sparkles className="h-4 w-4" />
-            Check and edit
-          </h2>
-          {parsing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
         </div>
-
-        {!parsed ? (
-          <div className="empty" style={{ margin: 0 }}>
-            <Inbox className="mx-auto mb-2 h-8 w-8" />
-            <h3>Paste a message to start</h3>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label className="lbl">Inquiry ID</Label>
-              <Input className={inputClass} value="Assigned automatically" readOnly aria-label="Inquiry ID" />
-              <p className="hint">The next number, such as ENQ-2026-012, is created when you save.</p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label className="lbl">Customer name</Label>
-                <Input className={inputClass} value={parsed.senderName} onChange={(e) => set('senderName', e.target.value)} placeholder="Contact name" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="lbl">Company</Label>
-                <Input className={inputClass} value={parsed.senderCompany} onChange={(e) => set('senderCompany', e.target.value)} placeholder="Customer company" />
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label className="lbl">Customer email</Label>
-                <Input className={inputClass} type="email" value={parsed.senderEmail} onChange={(e) => set('senderEmail', e.target.value)} placeholder="name@company.com" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="lbl">Customer phone</Label>
-                <Input className={inputClass} value={parsed.senderPhone} onChange={(e) => set('senderPhone', e.target.value)} placeholder="Phone number" />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="lbl">Subject</Label>
-              <Input className={inputClass} value={parsed.headline} onChange={(e) => set('headline', e.target.value)} />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label className="lbl">Route from</Label>
-                <Input className={inputClass} value={parsed.origin} onChange={(e) => set('origin', e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="lbl">Route to</Label>
-                <Input className={inputClass} value={parsed.destination} onChange={(e) => set('destination', e.target.value)} />
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="space-y-1.5">
-                <Label className="lbl">Mode</Label>
-                <Select value={parsed.mode || 'none'} onValueChange={(value) => set('mode', (value === 'none' ? '' : value) as TransportMode)}>
-                  <SelectTrigger className={inputClass}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MODE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="lbl">Incoterm</Label>
-                <Select value={parsed.incoterm && INCOTERMS.includes(parsed.incoterm as typeof INCOTERMS[number]) ? parsed.incoterm : parsed.incoterm ? parsed.incoterm : 'none'} onValueChange={(value) => set('incoterm', value === 'none' ? '' : value)}>
-                  <SelectTrigger className={inputClass}>
-                    <SelectValue placeholder="Select incoterm" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Not set</SelectItem>
-                    {parsed.incoterm && !INCOTERMS.includes(parsed.incoterm as typeof INCOTERMS[number]) ? (
-                      <SelectItem value={parsed.incoterm}>{parsed.incoterm}</SelectItem>
-                    ) : null}
-                    {INCOTERMS.map((term) => (
-                      <SelectItem key={term} value={term}>{term}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="lbl">Deadline</Label>
-                <Input className={inputClass} type="date" value={parsed.readyDate} onChange={(e) => set('readyDate', e.target.value)} />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="lbl">Shipment</Label>
-              <Textarea value={requirement} onChange={(e) => setRequirement(e.target.value)} className={`min-h-24 font-mono text-[12px] ${inputClass}`} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="lbl">Extra notes</Label>
-              <Textarea
-                value={extraInfo}
-                onChange={(e) => setExtraInfo(e.target.value)}
-                placeholder="Handling notes. Keep agent rates on the pipeline card."
-                className={`min-h-16 text-sm ${inputClass}`}
-              />
-            </div>
-            <div className="acts" style={{ justifyContent: 'flex-end' }}>
-              <button type="button" className="btn pri" onClick={() => saveMut.mutate()} disabled={saveMut.isPending || requirement.trim().length < 10}>
-                {saveMut.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                Create inquiry
-              </button>
-            </div>
-          </div>
-        )}
+        <label htmlFor="f-cust">Customer company<input className={fieldClass('customer')} id="f-cust" value={customer} onChange={(event) => { setCustomer(event.target.value); mark('customer', false); refreshId(origin, destination, contact, event.target.value); }} placeholder="Company name" /></label>
+        <label htmlFor="f-cname">Contact person<input className={fieldClass('contact')} id="f-cname" value={contact} onChange={(event) => { setContact(event.target.value); mark('contact', false); refreshId(origin, destination, event.target.value, customer); }} placeholder="Name" /></label>
+        <label htmlFor="f-cemail">Customer email<input className={fieldClass('email')} id="f-cemail" type="email" value={cEmail} onChange={(event) => { setCEmail(event.target.value); mark('email', false); }} placeholder="name@company.com" /></label>
+        <label htmlFor="f-cphone">Customer phone<input className={fieldClass('phone')} id="f-cphone" type="tel" value={cPhone} onChange={(event) => { setCPhone(event.target.value); mark('phone', false); }} placeholder="+44 …" /></label>
+        <label htmlFor="f-org">From (origin)<input className={fieldClass('origin')} id="f-org" value={origin} onChange={(event) => { setOrigin(event.target.value); mark('origin', false); refreshId(event.target.value, destination, contact, customer); }} placeholder="City, port or airport" /></label>
+        <label htmlFor="f-dst">To (destination)<input className={fieldClass('destination')} id="f-dst" value={destination} onChange={(event) => { setDestination(event.target.value); mark('destination', false); refreshId(origin, event.target.value, contact, customer); }} placeholder="City, port or airport" /></label>
+        <label htmlFor="f-mode">Service
+          <select className={fieldClass('mode')} id="f-mode" value={mode} onChange={(event) => { setMode(event.target.value); mark('mode', false); refreshId(); }}>
+            <option value="">—</option>
+            {MODES.map((item) => <option key={item}>{item}</option>)}
+          </select>
+        </label>
+        <label htmlFor="f-inco">Incoterm
+          <select className={fieldClass('incoterm')} id="f-inco" value={incoterm} onChange={(event) => { setIncoterm(event.target.value); mark('incoterm', false); }}>
+            <option value="">—</option>
+            {INCOTERMS.map((term) => <option key={term}>{term}</option>)}
+          </select>
+        </label>
+        <label htmlFor="f-rec">Inquiry date<input className="field" id="f-rec" type="date" value={receivedOn} onChange={(event) => setReceivedOn(event.target.value)} /></label>
+        <label htmlFor="f-rby">Received by
+          <select className="field" id="f-rby" value={receivedBy} onChange={(event) => setReceivedBy(event.target.value)}>
+            <option value="">—</option>
+            {RECEIVED_BY.map((item) => <option key={item}>{item}</option>)}
+          </select>
+        </label>
+        <label className="full" htmlFor="f-cargo">Cargo<input className="field" id="f-cargo" value={cargo} onChange={(event) => setCargo(event.target.value)} placeholder="e.g. 12 cartons · 620 kg · 3.2 cbm · general cargo" /></label>
+        <label className="full" htmlFor="f-notes">Notes for the team<textarea className={fieldClass('notes')} id="f-notes" rows={4} value={notes} onChange={(event) => { setNotes(event.target.value); mark('notes', false); }} /></label>
       </div>
-    </div>
+      <div className="mfoot">
+        <span className="msg">{saveMut.error?.message || ''}</span>
+        <button className="btn" type="button" onClick={onCancel}>Cancel</button>
+        <button className="btn pri" type="submit" disabled={saveMut.isPending}>{saveMut.isPending ? 'Saving…' : 'Create and assign'}</button>
+      </div>
+    </form>
   );
 }

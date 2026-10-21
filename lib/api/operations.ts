@@ -47,6 +47,9 @@ export type PipelineInquiry = {
   prospect_name: string | null;
   client_currency?: string | null;
   standalone_project_name?: string | null;
+  client_price_notes?: string | null;
+  outcome?: string | null;
+  notes?: string | null;
   column: BoardColumn;
   priority_rank: number | null;
   rates_sent: number;
@@ -117,10 +120,13 @@ export async function addOperationsAgent(
   });
 }
 
-export async function saveOperationsRate(sendId: string, quoted_price: number, currency?: string | null) {
+export async function saveOperationsRate(
+  sendId: string,
+  input: { quoted_price?: number | null; notes?: string | null; currency?: string | null },
+) {
   return apiRequest(`/operations/agents/${sendId}`, {
     method: 'PUT',
-    body: JSON.stringify({ quoted_price, currency }),
+    body: JSON.stringify(input),
   });
 }
 
@@ -146,8 +152,11 @@ export async function postInquiryUpdate(id: string, body: string) {
   });
 }
 
-export async function closeOperationsEnquiry(id: string) {
-  return apiRequest(`/operations/enquiries/${id}/close`, { method: 'POST' });
+export async function closeOperationsEnquiry(id: string, input?: { outcome?: string; remark?: string | null }) {
+  return apiRequest(`/operations/enquiries/${id}/close`, {
+    method: 'POST',
+    body: JSON.stringify(input || {}),
+  });
 }
 
 export async function deleteOperationsEnquiry(id: string) {

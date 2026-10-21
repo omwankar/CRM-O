@@ -71,6 +71,27 @@ export function money(amount?: number | null, currency?: string | null) {
   return `${currency || ''} ${Number(amount).toLocaleString()}`.trim();
 }
 
+export function quoteText(notes?: string | null, amount?: number | null, currency?: string | null) {
+  const pasted = String(notes || '').trim();
+  if (pasted) return pasted;
+  return money(amount, currency);
+}
+
+export function quoteShort(notes?: string | null, amount?: number | null, currency?: string | null) {
+  const first = quoteText(notes, amount, currency).split('\n').map((line) => line.trim()).find(Boolean) || '';
+  return first.length > 48 ? `${first.slice(0, 47)}…` : first;
+}
+
+export function hasFinalQuote(notes?: string | null) {
+  if (!notes?.trim()) return false;
+  try {
+    const parsed = JSON.parse(notes) as { final?: string };
+    return Boolean(String(parsed.final || '').trim());
+  } catch {
+    return false;
+  }
+}
+
 export function dayGroup(iso: string) {
   const date = new Date(iso);
   const start = new Date();

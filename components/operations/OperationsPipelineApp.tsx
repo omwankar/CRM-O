@@ -9,6 +9,7 @@ import { AgentsTable } from '@/components/operations/AgentsTable';
 import { Board } from '@/components/operations/Board';
 import { InquiryDrawer } from '@/components/operations/InquiryDrawer';
 import { NewInquiryModal } from '@/components/operations/NewInquiryModal';
+import { TeamSettingsModal } from '@/components/operations/TeamSettingsModal';
 import { PeopleFilter } from '@/components/operations/PeopleFilter';
 import { PipelineHeader, type OpsTab } from '@/components/operations/PipelineHeader';
 import { RegisterTable } from '@/components/operations/RegisterTable';
@@ -23,6 +24,7 @@ export function OperationsPipelineApp() {
   const [activityPerson, setActivityPerson] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
+  const [settings, setSettings] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['operations-pipeline', true],
@@ -85,6 +87,7 @@ export function OperationsPipelineApp() {
           tab={tab}
           onTab={setTab}
           onNew={() => setCreating(true)}
+          onSettings={() => setSettings(true)}
           meName={(profile as { full_name?: string } | undefined)?.full_name || user?.email || 'You'}
           isManager={isSuperAdmin}
         />
@@ -116,9 +119,13 @@ export function OperationsPipelineApp() {
               <ActivityFeed
                 people={data?.workload || []}
                 activity={data?.activity || []}
+                inquiries={data?.inquiries || []}
                 personId={activityPerson}
                 onPerson={setActivityPerson}
                 onOpen={setSelectedId}
+                onChanged={refresh}
+                userId={user?.id}
+                isManager={isSuperAdmin}
               />
             )
           ) : null}
@@ -143,7 +150,19 @@ export function OperationsPipelineApp() {
         onChanged={refresh}
         onDismiss={() => setSelectedId(null)}
       />
-      <NewInquiryModal open={creating} onOpenChange={setCreating} onCreated={refresh} />
+      <NewInquiryModal
+        open={creating}
+        onOpenChange={setCreating}
+        onCreated={refresh}
+        team={data?.workload || []}
+        existingIds={(data?.inquiries || []).map((inquiry) => inquiry.enquiry_number)}
+      />
+      <TeamSettingsModal
+        open={settings}
+        onOpenChange={setSettings}
+        meName={(profile as { full_name?: string } | undefined)?.full_name || user?.email || 'You'}
+        team={data?.workload || []}
+      />
     </div>
   );
 }

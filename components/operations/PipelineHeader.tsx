@@ -13,12 +13,14 @@ export function PipelineHeader({
   tab,
   onTab,
   onNew,
+  onSettings,
   meName,
   isManager,
 }: {
   tab: OpsTab;
   onTab: (tab: OpsTab) => void;
   onNew: () => void;
+  onSettings?: () => void;
   meName?: string;
   isManager?: boolean;
 }) {
@@ -51,12 +53,17 @@ export function PipelineHeader({
           </div>
         ) : null}
         {isManager ? (
-          <button type="button" className="btn pri" id="newBtn" onClick={onNew}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            New inquiry
-          </button>
+          <>
+            <button type="button" className="btn pri" id="newBtn" onClick={onNew}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              New inquiry
+            </button>
+            <button type="button" className="btn ghost" id="setBtn" onClick={onSettings}>
+              Team &amp; settings
+            </button>
+          </>
         ) : null}
       </div>
     </div>

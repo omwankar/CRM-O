@@ -1,5 +1,5 @@
 import { AgePill, AvatarStack } from '@/components/operations/bits';
-import { formatRoute, money } from '@/components/operations/opsVisual';
+import { formatRoute, hasFinalQuote } from '@/components/operations/opsVisual';
 import type { PipelineInquiry } from '@/lib/api/operations';
 
 export function InquiryCard({ inquiry, active, onOpen, rank }: { inquiry: PipelineInquiry; active?: boolean; onOpen: () => void; rank?: number | null }) {
@@ -21,7 +21,10 @@ export function InquiryCard({ inquiry, active, onOpen, rank }: { inquiry: Pipeli
         {inquiry.column === 'closed' ? (
           <span className="pill">Closed</span>
         ) : best ? (
-          <span className="price">✓ {best.agent_name}{best.quoted_price != null ? ` ${money(best.quoted_price, best.currency)}` : ''}</span>
+          <span className="price">
+            ✓ {best.agent_name}
+            {hasFinalQuote(inquiry.client_price_notes) ? <span className="pill ok"> Final ready</span> : null}
+          </span>
         ) : (
           <span className="hint mono">
             {inquiry.rates_sent ? `${inquiry.rates_received}/${inquiry.rates_sent} rates` : 'no agents yet'}

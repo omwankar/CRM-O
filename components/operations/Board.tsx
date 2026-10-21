@@ -3,7 +3,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { BoardColumn } from '@/components/operations/BoardColumn';
 import { AgePill, AvatarStack, StatusPill } from '@/components/operations/bits';
-import { COLUMNS, dayShort, formatRoute, inquiryDayKey, money } from '@/components/operations/opsVisual';
+import { COLUMNS, dayShort, formatRoute, inquiryDayKey, quoteShort } from '@/components/operations/opsVisual';
 import type { PipelineInquiry } from '@/lib/api/operations';
 
 type LayoutMode = 'list' | 'board';
@@ -269,7 +269,7 @@ function InquiryList({
                       {best ? (
                         <>
                           {best.agent_name}
-                          {best.quoted_price != null ? ` ${money(best.quoted_price, best.currency)}` : ''}
+                          {quoteShort(best.notes, best.quoted_price, best.currency) ? ` · ${quoteShort(best.notes, best.quoted_price, best.currency)}` : ''}
                         </>
                       ) : <span className="hint">—</span>}
                     </td>

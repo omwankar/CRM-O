@@ -105,6 +105,8 @@ export interface EnquiryQuotationSummary {
 }
 
 export interface EnquiryInput {
+  enquiry_number?: string | null;
+  user_ids?: string[];
   title?: string | null;
   requirement: string;
   project_id?: string | null;

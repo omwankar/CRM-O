@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Copy, Loader2, Star } from 'lucide-react';
+import { Copy, Loader2 } from 'lucide-react';
 import { getEnquiry, updateEnquiry } from '@/lib/api/enquiries';
 import {
   addOperationsAgent,
@@ -20,10 +21,9 @@ import {
   type PipelineInquiry,
 } from '@/lib/api/operations';
 import { AgePill, Avatar, StatusPill } from '@/components/operations/bits';
-import { formatRoute, money } from '@/components/operations/opsVisual';
+import { formatRoute, quoteText } from '@/components/operations/opsVisual';
 import { formatUkDate, formatUkDateTime } from '@/lib/date';
 import { opsFontClass } from '@/components/operations/opsFonts';
-import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 
 export function InquiryDrawer({
   inquiry,
@@ -42,23 +42,23 @@ export function InquiryDrawer({
   onChanged: () => void;
   onDismiss: () => void;
 }) {
-  return (
-    <Sheet open={Boolean(inquiry)} onOpenChange={(open) => { if (!open) onDismiss(); }}>
-      <SheetContent side="right" className={`${opsFontClass} ops drawer w-full max-w-[720px] gap-0 border-0 p-0 data-[state=closed]:duration-200 data-[state=open]:duration-200 sm:max-w-[720px]`} style={{ background: 'var(--surface)', color: 'var(--fg)', position: 'fixed' }}>
-        <SheetTitle className="sr-only">{inquiry?.enquiry_number || 'Inquiry'}</SheetTitle>
-        {inquiry ? (
-          <DrawerBody
-            inquiry={inquiry}
-            userId={userId}
-            isSuperAdmin={isSuperAdmin}
-            team={team}
-            agents={agents}
-            onChanged={onChanged}
-            onDismiss={onDismiss}
-          />
-        ) : null}
-      </SheetContent>
-    </Sheet>
+  if (!inquiry || typeof document === 'undefined') return null;
+  return createPortal(
+    <div className={`${opsFontClass} ops`}>
+      <div className="dscrim" onMouseDown={onDismiss} />
+      <aside className="drawer" role="dialog" aria-label={`Inquiry ${inquiry.enquiry_number}`}>
+        <DrawerBody
+          inquiry={inquiry}
+          userId={userId}
+          isSuperAdmin={isSuperAdmin}
+          team={team}
+          agents={agents}
+          onChanged={onChanged}
+          onDismiss={onDismiss}
+        />
+      </aside>
+    </div>,
+    document.body,
   );
 }
 
@@ -96,7 +96,11 @@ function DrawerBody({
   const [picked, setPicked] = useState<string[]>([]);
   const [update, setUpdate] = useState('');
   const [assignedIds, setAssignedIds] = useState<string[]>([]);
-  const [confirm, setConfirm] = useState<'close' | 'delete' | null>(null);
+  const [confirm, setConfirm] = useState<'delete' | null>(null);
+  const [closeOutcome, setCloseOutcome] = useState('Closed');
+  const [closeRemark, setCloseRemark] = useState('');
+  const [profit, setProfit] = useState('');
+  const [finalQuote, setFinalQuote] = useState('');
 
   useEffect(() => {
     if (!enquiry) return;
@@ -107,14 +111,22 @@ function DrawerBody({
     setDeadline(enquiry.deadline ? enquiry.deadline.slice(0, 10) : '');
     setPriority(enquiry.priority || 'medium');
     setNotes(enquiry.notes || '');
-  }, [enquiry]);
+    try {
+      const pricing = JSON.parse(enquiry.client_price_notes || inquiry.client_price_notes || '');
+      setProfit(pricing.profit || '');
+      setFinalQuote(pricing.final || '');
+    } catch {
+      setProfit('');
+      setFinalQuote(enquiry.client_price_notes || inquiry.client_price_notes || '');
+    }
+  }, [enquiry, inquiry.client_price_notes]);
 
   useEffect(() => {
     setAssignedIds(inquiry.operators.map((operator) => operator.user_id));
   }, [inquiry.id, inquiry.operators]);
 
   const working = inquiry.operators.some((operator) => operator.user_id === userId) || Boolean(isSuperAdmin);
-  const bests = inquiry.sends.filter((send) => send.is_best && send.quoted_price != null);
+  const bests = inquiry.sends.filter((send) => send.is_best);
   const route = formatRoute(inquiry);
   const customerName = inquiry.prospect_name || inquiry.title || 'Inquiry';
 
@@ -159,8 +171,13 @@ function DrawerBody({
     onError: (error: Error) => toast.error(error.message),
   });
   const closeMut = useMutation({
-    mutationFn: () => closeOperationsEnquiry(inquiry.id),
+    mutationFn: () => closeOperationsEnquiry(inquiry.id, { outcome: closeOutcome, remark: closeRemark.trim() || null }),
     onSuccess: () => { toast.success('Inquiry closed'); setConfirm(null); onDismiss(); onChanged(); },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  const pricingMut = useMutation({
+    mutationFn: () => updateEnquiry(inquiry.id, { client_price_notes: JSON.stringify({ profit: profit.trim(), final: finalQuote.trim() }) }),
+    onSuccess: () => { toast.success('Profit and final quote saved'); refreshEnquiry(); },
     onError: (error: Error) => toast.error(error.message),
   });
   const deleteMut = useMutation({
@@ -175,8 +192,8 @@ function DrawerBody({
   }, {});
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col" style={{ background: 'var(--surface)' }}>
-      <div className="dh" style={{ paddingRight: 48 }}>
+    <>
+      <div className="dh">
         <div style={{ minWidth: 0 }}>
           <div className="lbl">Inquiry ID</div>
           <div className="idbig">{inquiry.enquiry_number}</div>
@@ -189,9 +206,22 @@ function DrawerBody({
             <Link href={`/dashboard/enquiries/${inquiry.id}`}>Open in CRM ↗</Link>
           </div>
         </div>
+        <div className="acts">
+          {isSuperAdmin ? <button type="button" className="btn sm danger" onClick={() => setConfirm('delete')}>Delete</button> : null}
+          <button type="button" className="btn ghost" aria-label="Close" onClick={onDismiss}>✕</button>
+        </div>
       </div>
+      {confirm === 'delete' ? (
+        <div className="delbar">
+          <span>Delete <b className="mono">{inquiry.enquiry_number}</b>? This removes it from Enquiries too.</span>
+          <span className="acts">
+            <button type="button" className="btn sm" onClick={() => setConfirm(null)}>Keep it</button>
+            <button type="button" className="btn sm delyes" onClick={() => deleteMut.mutate()}>Delete inquiry</button>
+          </span>
+        </div>
+      ) : null}
 
-      <div className="ops-scroll min-h-0 flex-1 overflow-y-auto">
+      <div>
         {isLoading && !enquiry ? (
           <div className="empty"><h3>Loading…</h3></div>
         ) : (
@@ -240,14 +270,36 @@ function DrawerBody({
             <div className="sec">
               <div className="sec-h"><h3>Best quote</h3></div>
               {bests.length ? bests.map((send) => (
-                <div key={send.id} className="best">
-                  <div>
-                    <div className="lbl">Agent</div>
-                    <div style={{ fontWeight: 700, fontSize: 15 }}>{send.agent_name}</div>
-                    <div className="hint">chosen by {send.user_name}</div>
+                <div key={send.id}>
+                  <div className="best">
+                    <div>
+                      <div className="lbl">Agent</div>
+                      <div style={{ fontWeight: 700, fontSize: 15 }}>{send.agent_name}</div>
+                      {send.contact_name ? <div>{send.contact_name}</div> : null}
+                      <div className="hint">chosen by {send.user_name}</div>
+                    </div>
+                    <div className="qtext best-q">{quoteText(send.notes, send.quoted_price, send.currency) || '—'}</div>
                   </div>
-                  <div className="price">{money(send.quoted_price, send.currency)}</div>
-                  {send.notes ? <div className="qtext best-q">{send.notes}</div> : null}
+                  {working ? (
+                    <div className="pricing">
+                      <div className="pgrid">
+                        <label>
+                          <span className="lbl">Profit</span>
+                          <input className="field" value={profit} onChange={(event) => setProfit(event.target.value)} placeholder="e.g. USD 150 or 0.25/kg" />
+                        </label>
+                        <label>
+                          <span className="lbl">Final quote with profit</span>
+                          <textarea className="field qpaste" rows={5} value={finalQuote} onChange={(event) => setFinalQuote(event.target.value)} placeholder="The quote you send to the customer, profit included" />
+                        </label>
+                      </div>
+                      <div className="pacts">
+                        <button className="btn sm ghost" type="button" onClick={() => setFinalQuote(quoteText(send.notes, send.quoted_price, send.currency))}>Start from selected quote</button>
+                        {finalQuote ? <button className="btn sm ghost" type="button" onClick={() => navigator.clipboard.writeText(finalQuote)}>Copy final quote</button> : null}
+                        <span className="spacer" />
+                        <button className="btn sm pri" type="button" disabled={pricingMut.isPending} onClick={() => pricingMut.mutate()}>Save profit &amp; final quote</button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               )) : <p className="hint" style={{ margin: 0 }}>When quotes come back, choose the best one here.</p>}
             </div>
@@ -296,7 +348,7 @@ function DrawerBody({
                     <table>
                       <thead>
                         <tr>
-                          {['Agent · contact · email · phone', 'Rate', 'Notes', ''].map((heading) => <th key={heading || 'a'}>{heading}</th>)}
+                          {['Agent · contact · email · phone', 'Quote', ''].map((heading) => <th key={heading || 'a'}>{heading}</th>)}
                         </tr>
                       </thead>
                       <tbody>
@@ -312,7 +364,10 @@ function DrawerBody({
             </div>
 
             <div className="sec">
-              <div className="sec-h"><h3>Details</h3></div>
+              <div className="sec-h">
+                <h3>Details</h3>
+                {isSuperAdmin ? <button type="button" className="btn sm" onClick={() => setEditing((value) => !value)}>{editing ? 'Cancel' : 'Edit details'}</button> : null}
+              </div>
               {editing ? (
                 <form className="agform" onSubmit={(event) => { event.preventDefault(); if (requirement.trim().length < 10) { toast.error('The shipment details need at least a short description'); return; } saveMut.mutate(); }}>
                   <label><span className="lbl">Customer</span><input className="field" value={customer} onChange={(event) => setCustomer(event.target.value)} /></label>
@@ -366,60 +421,48 @@ function DrawerBody({
         )}
       </div>
 
-      <div className="sec" style={{ borderTop: '1px solid var(--line-soft)' }}>
-        <div className="acts" style={{ justifyContent: 'space-between' }}>
-          <span className="acts">
-            <button type="button" className="btn sm" onClick={() => setEditing((value) => !value)}>Edit details</button>
-            <button type="button" className="btn sm" disabled={inquiry.stage === 'lost_closed' || inquiry.stage === 'won_closed'} onClick={() => setConfirm('close')}>Close inquiry</button>
-          </span>
-          <button type="button" className="btn sm danger" onClick={() => setConfirm('delete')}>Delete inquiry</button>
-        </div>
-      </div>
-
-      {confirm ? (
-        <div className="scrim" style={{ placeItems: 'center', zIndex: 30 }}>
-          <div className="modal" role="dialog" aria-modal="true" style={{ maxWidth: 440 }}>
-            <header><h2>{confirm === 'delete' ? 'Delete inquiry' : 'Mark closed'}</h2></header>
-            <div className="mbody" style={{ gridTemplateColumns: '1fr' }}>
-              <p className="hint" style={{ margin: 0 }}>
-                {confirm === 'delete'
-                  ? `Delete ${inquiry.enquiry_number}? This removes it from Enquiries too.`
-                  : `Close ${inquiry.enquiry_number}? It leaves the open board.`}
-              </p>
-            </div>
-            <div className="mfoot">
-              <button type="button" className="btn" onClick={() => setConfirm(null)}>Cancel</button>
-              <button type="button" className={`btn ${confirm === 'delete' ? 'delyes' : 'pri'}`} onClick={() => (confirm === 'delete' ? deleteMut.mutate() : closeMut.mutate())}>
-                {confirm === 'delete' ? 'Delete' : 'Mark closed'}
-              </button>
-            </div>
+      {isSuperAdmin && inquiry.column !== 'closed' ? (
+        <div className="sec">
+          <div className="sec-h"><h3>Close this inquiry</h3></div>
+          <div className="closeform">
+            <label htmlFor="clStatus">
+              <span className="lbl">Outcome</span>
+              <select className="field" id="clStatus" value={closeOutcome} onChange={(event) => setCloseOutcome(event.target.value)}>
+                {['Closed', 'Lost', 'No response', 'Follow-up closed'].map((item) => <option key={item}>{item}</option>)}
+              </select>
+            </label>
+            <label htmlFor="clRemark" className="grow">
+              <span className="lbl">Remark</span>
+              <textarea className="field" id="clRemark" rows={2} value={closeRemark} onChange={(event) => setCloseRemark(event.target.value)} placeholder="e.g. Customer went with another forwarder at a lower rate / No reply after 3 follow-ups" />
+            </label>
+            <button className="btn" type="button" onClick={() => closeMut.mutate()}>Close inquiry</button>
           </div>
         </div>
       ) : null}
-    </div>
+
+    </>
   );
 }
 
 function SendRow({ send, mine, onChanged }: { send: AgentSend; mine: boolean; onChanged: () => void }) {
-  const [price, setPrice] = useState(send.quoted_price != null ? String(send.quoted_price) : '');
-  const [editingRate, setEditingRate] = useState(false);
+  const [quote, setQuote] = useState(send.notes || '');
+  const [editing, setEditing] = useState(!send.notes && send.quoted_price == null);
   const rateMut = useMutation({
-    mutationFn: () => saveOperationsRate(send.id, Number(price), send.currency),
-    onSuccess: () => { toast.success('Rate saved'); onChanged(); },
+    mutationFn: () => saveOperationsRate(send.id, { notes: quote, currency: send.currency }),
+    onSuccess: () => { toast.success('Quote saved'); setEditing(false); onChanged(); },
     onError: (error: Error) => toast.error(error.message),
   });
   const bestMut = useMutation({
     mutationFn: async () => {
-      const amount = Number(price);
-      if (!amount || Number.isNaN(amount)) throw new Error('Enter the rate');
-      if (amount !== Number(send.quoted_price)) await saveOperationsRate(send.id, amount, send.currency);
+      if (!quote.trim() && send.quoted_price == null) throw new Error('Paste the quote first');
+      if (quote !== (send.notes || '')) await saveOperationsRate(send.id, { notes: quote, currency: send.currency });
       return chooseOperationsBest(send.id);
     },
     onSuccess: () => { toast.success('Best quote is now on the enquiry'); onChanged(); },
     onError: (error: Error) => toast.error(error.message),
   });
   return (
-    <tr className={send.is_best ? 'isbest' : editingRate ? 'editing' : undefined}>
+    <tr className={send.is_best ? 'isbest' : editing ? 'editing' : undefined}>
       <td className="agcell">
         <b>{send.agent_name}</b>
         {send.contact_name ? <div>{send.contact_name}</div> : null}
@@ -433,22 +476,34 @@ function SendRow({ send, mine, onChanged }: { send: AgentSend; mine: boolean; on
         ) : null}
         {send.contact_phone ? <div className="email"><span className="mono">{send.contact_phone}</span></div> : null}
       </td>
-      <td className="num">
-        {mine ? (
-          <input className="field t" type="number" min="0" value={price} aria-label="Rate" onFocus={() => setEditingRate(true)} onBlur={() => setEditingRate(false)} onChange={(event) => setPrice(event.target.value)} />
+      <td className="qcell">
+        {mine && editing ? (
+          <>
+            <textarea className="field qpaste" rows={5} value={quote} onChange={(event) => setQuote(event.target.value)} placeholder={`Paste the quote from ${send.agent_name}'s email here`} />
+            <div className="hint">Paste the whole quote, not only a number</div>
+          </>
+        ) : send.notes ? (
+          <div className="qtext">{send.notes}</div>
+        ) : send.quoted_price != null ? (
+          quoteText(send.notes, send.quoted_price, send.currency)
         ) : (
-          send.quoted_price != null ? money(send.quoted_price, send.currency) : '—'
+          <span className="hint">—</span>
         )}
       </td>
-      <td>{send.notes || '—'}</td>
       <td>
         <div className="acts">
           {mine ? (
             <>
-              <button type="button" className="btn sm" disabled={rateMut.isPending || !price} onClick={() => rateMut.mutate()}>Save</button>
-              <button type="button" className="btn sm ok" disabled={bestMut.isPending || !price} onClick={() => bestMut.mutate()}>
-                {bestMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Star className="h-3.5 w-3.5" />} Select best
-              </button>
+              {editing ? (
+                <button type="button" className="btn sm pri" disabled={rateMut.isPending || !quote.trim()} onClick={() => rateMut.mutate()}>Save</button>
+              ) : (
+                <button type="button" className="btn sm ghost" onClick={() => setEditing(true)}>Edit</button>
+              )}
+              {(quote.trim() || send.notes || send.quoted_price != null) ? (
+                <button type="button" className="btn sm ok" disabled={bestMut.isPending} onClick={() => bestMut.mutate()}>
+                  {bestMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null} Select best
+                </button>
+              ) : null}
             </>
           ) : (
             send.is_best ? <span className="pill ok">✓ Best</span> : null

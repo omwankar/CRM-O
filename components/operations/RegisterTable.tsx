@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AgePill, AvatarStack, StatusPill } from '@/components/operations/bits';
-import { formatRoute, money } from '@/components/operations/opsVisual';
+import { formatRoute, quoteShort } from '@/components/operations/opsVisual';
 import { formatUkDate } from '@/lib/date';
 import type { PipelineInquiry } from '@/lib/api/operations';
 
@@ -43,14 +43,14 @@ export function RegisterTable({ inquiries, onOpen }: { inquiries: PipelineInquir
         <table className="reg">
           <thead>
             <tr>
-              {['Priority', 'Inquiry ID', 'Customer', 'Route', 'Received', 'Age', 'Assigned', 'Rates', 'Best quote', 'Chosen by', 'Status', 'CRM'].map((heading) => (
+              {['Priority', 'Inquiry ID', 'Customer', 'Route', 'Received', 'Age', 'Assigned', 'Rates', 'Best quote', 'Agent', 'Chosen by', 'Status', 'CRM'].map((heading) => (
                 <th key={heading}>{heading}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td colSpan={12} className="hint" style={{ textAlign: 'center', padding: 24 }}>No inquiries yet.</td></tr>
+              <tr><td colSpan={13} className="hint" style={{ textAlign: 'center', padding: 24 }}>No inquiries yet.</td></tr>
             ) : null}
             {rows.map((inquiry) => {
               const best = inquiry.sends.find((send) => send.is_best);
@@ -69,7 +69,8 @@ export function RegisterTable({ inquiries, onOpen }: { inquiries: PipelineInquir
                   <td><AgePill createdAt={inquiry.created_at} closed={inquiry.column === 'closed'} /></td>
                   <td><AvatarStack names={inquiry.operators.map((operator) => operator.full_name)} /></td>
                   <td className="num">{inquiry.rates_received}/{inquiry.rates_sent}</td>
-                  <td className="num" style={{ color: 'var(--ok)' }}>{best ? money(best.quoted_price, best.currency) : '—'}</td>
+                  <td className="num" style={{ color: 'var(--ok)' }}>{best ? (quoteShort(best.notes, best.quoted_price, best.currency) || '—') : '—'}</td>
+                  <td>{best?.agent_name || '—'}</td>
                   <td>{best?.user_name || '—'}</td>
                   <td><StatusPill column={inquiry.column} /></td>
                   <td>
