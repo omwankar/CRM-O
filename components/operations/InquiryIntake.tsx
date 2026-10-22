@@ -145,6 +145,8 @@ export function InquiryIntake({
           notes,
           email.trim() ? `--- Original email ---\n${email.trim().slice(0, 8000)}` : '',
         ].filter(Boolean).join('\n'),
+        customer_contact: contact || null,
+        customer_phone: cPhone || null,
         user_ids: assigned,
       });
     },

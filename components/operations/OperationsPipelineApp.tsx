@@ -6,6 +6,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { getOperationsPipeline } from '@/lib/api/operations';
 import { ActivityFeed } from '@/components/operations/ActivityFeed';
 import { AgentsTable } from '@/components/operations/AgentsTable';
+import { CustomersTable } from '@/components/operations/CustomersTable';
 import { Board } from '@/components/operations/Board';
 import { InquiryDrawer } from '@/components/operations/InquiryDrawer';
 import { NewInquiryModal } from '@/components/operations/NewInquiryModal';
@@ -95,7 +96,13 @@ export function OperationsPipelineApp() {
           {error ? <div className="banner err"><b>{(error as Error).message}</b></div> : null}
           {tab === 'inquiries' ? (
             <>
-              <PeopleFilter people={data?.workload || []} personId={personId} onPerson={setPersonId} meId={user?.id} />
+              <PeopleFilter
+                people={data?.workload || []}
+                personId={personId}
+                onPerson={setPersonId}
+                meId={user?.id}
+                allCount={(data?.inquiries || []).filter((inquiry) => inquiry.column !== 'closed').length}
+              />
               {isLoading ? (
                 <div className="empty"><h3>Loading…</h3></div>
               ) : (
@@ -139,6 +146,11 @@ export function OperationsPipelineApp() {
               <AgentsTable agents={data?.agents || []} onChanged={refresh} />
             )
           ) : null}
+          {tab === 'customers' ? (
+            isLoading ? <div className="empty"><h3>Loading…</h3></div> : (
+              <CustomersTable customers={data?.customers || []} onChanged={refresh} />
+            )
+          ) : null}
         </main>
       </div>
       <InquiryDrawer
@@ -162,6 +174,7 @@ export function OperationsPipelineApp() {
         onOpenChange={setSettings}
         meName={(profile as { full_name?: string } | undefined)?.full_name || user?.email || 'You'}
         team={data?.workload || []}
+        onCleared={refresh}
       />
     </div>
   );

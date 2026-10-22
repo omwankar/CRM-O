@@ -80,11 +80,21 @@ export type DirectoryAgent = {
   chosen: number;
 };
 
+export type DirectoryCustomer = {
+  id: string;
+  company_name: string;
+  contact_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  inquiries: number;
+};
+
 export type OperationsPipeline = {
   workload: Array<{ user_id: string; full_name: string; open_count: number; rates_awaited: number }>;
   inquiries: PipelineInquiry[];
   activity: PipelineActivity[];
   agents: DirectoryAgent[];
+  customers?: DirectoryCustomer[];
   viewer_is_super_admin: boolean;
 };
 
@@ -161,4 +171,19 @@ export async function closeOperationsEnquiry(id: string, input?: { outcome?: str
 
 export async function deleteOperationsEnquiry(id: string) {
   return apiRequest(`/operations/enquiries/${id}`, { method: 'DELETE' });
+}
+
+export async function clearOperationsPipeline() {
+  return apiRequest('/operations/pipeline', { method: 'DELETE' }) as Promise<{ ok: boolean; deleted: number }>;
+}
+
+export async function saveDirectoryCustomer(input: { company_name: string; contact_name?: string | null; email?: string | null; phone?: string | null }, id?: string) {
+  return apiRequest(id ? `/operations/customers/${id}` : '/operations/customers', {
+    method: id ? 'PUT' : 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteDirectoryCustomer(id: string) {
+  return apiRequest(`/operations/customers/${id}`, { method: 'DELETE' });
 }

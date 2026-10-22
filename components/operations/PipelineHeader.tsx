@@ -5,6 +5,7 @@ const TABS = [
   ['activity', 'Activity'],
   ['register', 'Register'],
   ['agents', 'Agents'],
+  ['customers', 'Customers'],
 ] as const;
 
 export type OpsTab = (typeof TABS)[number][0];

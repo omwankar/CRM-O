@@ -124,6 +124,8 @@ export interface EnquiryInput {
   stage?: EnquiryStage;
   notes?: string | null;
   outcome?: string | null;
+  customer_contact?: string | null;
+  customer_phone?: string | null;
 }
 
 export function isTerminalEnquiryStage(stage: EnquiryStage): boolean {
