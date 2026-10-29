@@ -1,5 +1,8 @@
 import type { PipelineInquiry } from '@/lib/api/operations';
 
+export const AGENT_MODES = ['Air', 'Ocean', 'Land'] as const;
+export type AgentMode = (typeof AGENT_MODES)[number];
+
 export const COLUMNS = [
   { id: 'to_send', label: 'To send', bar: 'var(--faint)', empty: 'Not sent to any agent yet' },
   { id: 'waiting', label: 'Waiting for rates', bar: 'var(--warn)', empty: 'Sent, no rates back yet' },

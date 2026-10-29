@@ -17,6 +17,8 @@ export type AgentSend = {
   contact_name?: string | null;
   contact_email?: string | null;
   contact_phone?: string | null;
+  country?: string | null;
+  mode?: string | null;
   sent_at: string;
   quoted_price?: number | null;
   currency?: string | null;
@@ -75,6 +77,8 @@ export type DirectoryAgent = {
   contact_name?: string | null;
   email?: string | null;
   phone?: string | null;
+  country?: string | null;
+  mode?: string | null;
   requests: number;
   rates: number;
   chosen: number;
@@ -122,7 +126,7 @@ export async function assignOperationsPeople(id: string, user_ids: string[]) {
 
 export async function addOperationsAgent(
   id: string,
-  input: { agent_name?: string; contact_name?: string | null; contact_email?: string | null; contact_phone?: string | null; saved_agent_ids?: string[] },
+  input: { agent_name?: string; contact_name?: string | null; contact_email?: string | null; contact_phone?: string | null; country?: string | null; mode?: string | null; saved_agent_ids?: string[] },
 ) {
   return apiRequest(`/operations/enquiries/${id}/agents`, {
     method: 'POST',
@@ -144,7 +148,7 @@ export async function chooseOperationsBest(sendId: string) {
   return apiRequest(`/operations/agents/${sendId}/best`, { method: 'POST' });
 }
 
-export async function saveDirectoryAgent(input: { company_name: string; contact_name?: string | null; email?: string | null; phone?: string | null }, id?: string) {
+export async function saveDirectoryAgent(input: { company_name: string; contact_name?: string | null; email?: string | null; phone?: string | null; country?: string | null; mode?: string | null }, id?: string) {
   return apiRequest(id ? `/operations/directory/${id}` : '/operations/directory', {
     method: id ? 'PUT' : 'POST',
     body: JSON.stringify(input),

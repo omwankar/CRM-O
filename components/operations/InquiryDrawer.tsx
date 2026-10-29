@@ -21,7 +21,7 @@ import {
   type PipelineInquiry,
 } from '@/lib/api/operations';
 import { AgePill, Avatar, StatusPill } from '@/components/operations/bits';
-import { formatRoute, quoteText } from '@/components/operations/opsVisual';
+import { AGENT_MODES, formatRoute, quoteText } from '@/components/operations/opsVisual';
 import { formatUkDate, formatUkDateTime } from '@/lib/date';
 import { opsFontClass } from '@/components/operations/opsFonts';
 
@@ -93,6 +93,8 @@ function DrawerBody({
   const [contact, setContact] = useState('');
   const [agentEmail, setAgentEmail] = useState('');
   const [agentPhone, setAgentPhone] = useState('');
+  const [agentCountry, setAgentCountry] = useState('');
+  const [agentMode, setAgentMode] = useState('');
   const [picked, setPicked] = useState<string[]>([]);
   const [update, setUpdate] = useState('');
   const [assignedIds, setAssignedIds] = useState<string[]>([]);
@@ -161,8 +163,8 @@ function DrawerBody({
   const agentMut = useMutation({
     mutationFn: (mode: 'typed' | 'saved') => addOperationsAgent(inquiry.id, mode === 'saved'
       ? { saved_agent_ids: picked }
-      : { agent_name: company.trim(), contact_name: contact.trim() || null, contact_email: agentEmail.trim() || null, contact_phone: agentPhone.trim() || null }),
-    onSuccess: () => { setCompany(''); setContact(''); setAgentEmail(''); setAgentPhone(''); setPicked([]); toast.success('Agent added'); onChanged(); },
+      : { agent_name: company.trim(), contact_name: contact.trim() || null, contact_email: agentEmail.trim() || null, contact_phone: agentPhone.trim() || null, country: agentCountry.trim() || null, mode: agentMode || null }),
+    onSuccess: () => { setCompany(''); setContact(''); setAgentEmail(''); setAgentPhone(''); setAgentCountry(''); setAgentMode(''); setPicked([]); toast.success('Agent added'); onChanged(); },
     onError: (error: Error) => toast.error(error.message),
   });
   const updateMut = useMutation({
@@ -324,6 +326,8 @@ function DrawerBody({
                           setContact(matches[0].contact_name || '');
                           setAgentEmail(matches[0].email || '');
                           setAgentPhone(matches[0].phone || '');
+                          setAgentCountry(matches[0].country || '');
+                          setAgentMode(matches[0].mode || '');
                         }
                       }}
                       placeholder="Agent company"
@@ -344,6 +348,8 @@ function DrawerBody({
                         if (match) {
                           setAgentEmail(match.email || '');
                           setAgentPhone(match.phone || '');
+                          setAgentCountry(match.country || '');
+                          setAgentMode(match.mode || '');
                         }
                       }}
                       placeholder="Contact person"
@@ -357,6 +363,11 @@ function DrawerBody({
                     </datalist>
                     <input className="field" type="email" value={agentEmail} onChange={(event) => setAgentEmail(event.target.value)} placeholder="Email" aria-label="Agent email" />
                     <input className="field" type="tel" value={agentPhone} onChange={(event) => setAgentPhone(event.target.value)} placeholder="Phone" aria-label="Agent phone number" />
+                    <input className="field" value={agentCountry} onChange={(event) => setAgentCountry(event.target.value)} placeholder="Country" aria-label="Country" />
+                    <select className="field" value={agentMode} onChange={(event) => setAgentMode(event.target.value)} aria-label="Mode">
+                      <option value="">Mode</option>
+                      {AGENT_MODES.map((item) => <option key={item} value={item}>{item}</option>)}
+                    </select>
                     <button type="button" className="btn pri" disabled={agentMut.isPending || company.trim().length < 2} onClick={() => agentMut.mutate('typed')}>Add agent</button>
                   </div>
                   {agents.length > 0 ? (
@@ -370,7 +381,7 @@ function DrawerBody({
                           const on = picked.includes(agent.id);
                           return (
                             <button key={agent.id} type="button" className="qchip" aria-pressed={on} onClick={() => setPicked((current) => (on ? current.filter((id) => id !== agent.id) : [...current, agent.id]))}>
-                              {agent.company_name}{agent.contact_name ? ` · ${agent.contact_name}` : ''}
+                              {agent.company_name}{agent.contact_name ? ` · ${agent.contact_name}` : ''}{[agent.country, agent.mode].filter(Boolean).length ? ` · ${[agent.country, agent.mode].filter(Boolean).join(' · ')}` : ''}
                             </button>
                           );
                         })}
@@ -388,7 +399,7 @@ function DrawerBody({
                     <table>
                       <thead>
                         <tr>
-                          {['Agent · contact · email · phone', 'Quote', ''].map((heading) => <th key={heading || 'a'}>{heading}</th>)}
+                          {['Agent · contact · country · mode · email · phone', 'Quote', ''].map((heading) => <th key={heading || 'a'}>{heading}</th>)}
                         </tr>
                       </thead>
                       <tbody>
@@ -515,6 +526,9 @@ function SendRow({ send, mine, onChanged }: { send: AgentSend; mine: boolean; on
           </div>
         ) : null}
         {send.contact_phone ? <div className="email"><span className="mono">{send.contact_phone}</span></div> : null}
+        {send.country || send.mode ? (
+          <div className="hint">{[send.country, send.mode].filter(Boolean).join(' · ')}</div>
+        ) : null}
       </td>
       <td className="qcell">
         {mine && editing ? (
