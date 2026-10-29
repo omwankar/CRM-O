@@ -312,9 +312,49 @@ function DrawerBody({
               {working ? (
                 <>
                   <div className="agform">
-                    <input className="field" list="ops-agent-companies" value={company} onChange={(event) => { const value = event.target.value; setCompany(value); const match = agents.find((agent) => agent.company_name === value); if (match) { setContact(match.contact_name || ''); setAgentEmail(match.email || ''); setAgentPhone(match.phone || ''); } }} placeholder="Agent company" aria-label="Agent company" />
-                    <datalist id="ops-agent-companies">{agents.map((agent) => <option key={agent.id} value={agent.company_name} />)}</datalist>
-                    <input className="field" value={contact} onChange={(event) => setContact(event.target.value)} placeholder="Contact person" aria-label="Contact person" />
+                    <input
+                      className="field"
+                      list="ops-agent-companies"
+                      value={company}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setCompany(value);
+                        const matches = agents.filter((agent) => agent.company_name.toLowerCase() === value.trim().toLowerCase());
+                        if (matches.length === 1) {
+                          setContact(matches[0].contact_name || '');
+                          setAgentEmail(matches[0].email || '');
+                          setAgentPhone(matches[0].phone || '');
+                        }
+                      }}
+                      placeholder="Agent company"
+                      aria-label="Agent company"
+                    />
+                    <datalist id="ops-agent-companies">{[...new Set(agents.map((agent) => agent.company_name))].map((name) => <option key={name} value={name} />)}</datalist>
+                    <input
+                      className="field"
+                      list="ops-agent-contacts"
+                      value={contact}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setContact(value);
+                        const match = agents.find((agent) =>
+                          agent.company_name.toLowerCase() === company.trim().toLowerCase()
+                          && (agent.contact_name || '').toLowerCase() === value.trim().toLowerCase(),
+                        );
+                        if (match) {
+                          setAgentEmail(match.email || '');
+                          setAgentPhone(match.phone || '');
+                        }
+                      }}
+                      placeholder="Contact person"
+                      aria-label="Contact person"
+                    />
+                    <datalist id="ops-agent-contacts">
+                      {agents
+                        .filter((agent) => !company.trim() || agent.company_name.toLowerCase() === company.trim().toLowerCase())
+                        .filter((agent) => agent.contact_name)
+                        .map((agent) => <option key={agent.id} value={agent.contact_name || ''} />)}
+                    </datalist>
                     <input className="field" type="email" value={agentEmail} onChange={(event) => setAgentEmail(event.target.value)} placeholder="Email" aria-label="Agent email" />
                     <input className="field" type="tel" value={agentPhone} onChange={(event) => setAgentPhone(event.target.value)} placeholder="Phone" aria-label="Agent phone number" />
                     <button type="button" className="btn pri" disabled={agentMut.isPending || company.trim().length < 2} onClick={() => agentMut.mutate('typed')}>Add agent</button>
@@ -322,7 +362,7 @@ function DrawerBody({
                   {agents.length > 0 ? (
                     <div className="pickbox">
                       <div className="pickhead">
-                        <span className="lbl">Or pick saved agents</span>
+                        <span className="lbl">Or pick saved agents (select several)</span>
                         <button type="button" className="btn sm pri" disabled={!picked.length || agentMut.isPending} onClick={() => agentMut.mutate('saved')}>Add {picked.length || ''} selected</button>
                       </div>
                       <div className="quick">
@@ -330,7 +370,7 @@ function DrawerBody({
                           const on = picked.includes(agent.id);
                           return (
                             <button key={agent.id} type="button" className="qchip" aria-pressed={on} onClick={() => setPicked((current) => (on ? current.filter((id) => id !== agent.id) : [...current, agent.id]))}>
-                              {agent.company_name}
+                              {agent.company_name}{agent.contact_name ? ` · ${agent.contact_name}` : ''}
                             </button>
                           );
                         })}
