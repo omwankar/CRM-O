@@ -6,12 +6,14 @@ export function PeopleFilter({
   onPerson,
   meId,
   allCount,
+  onAddFromCrm,
 }: {
   people: Array<{ user_id: string; full_name: string; open_count: number; rates_awaited: number }>;
   personId: string | null;
   onPerson: (id: string | null) => void;
   meId?: string;
   allCount: number;
+  onAddFromCrm?: () => void;
 }) {
   return (
     <div className="strip">
@@ -23,6 +25,13 @@ export function PeopleFilter({
           on the pipeline
         </div>
       </button>
+      {onAddFromCrm ? (
+        <button type="button" className="wk" onClick={onAddFromCrm}>
+          <span className="av" style={{ background: '#1E3F8C', fontSize: 16, lineHeight: 1 }}>+</span>
+          <div className="nm">Add from CRM</div>
+          <div className="ct">Bring in another login</div>
+        </button>
+      ) : null}
       {people.map((person) => (
         <button
           key={person.user_id}

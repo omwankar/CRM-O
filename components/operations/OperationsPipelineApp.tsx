@@ -102,6 +102,7 @@ export function OperationsPipelineApp() {
                 onPerson={setPersonId}
                 meId={user?.id}
                 allCount={(data?.inquiries || []).filter((inquiry) => inquiry.column !== 'closed').length}
+                onAddFromCrm={() => setSettings(true)}
               />
               {isLoading ? (
                 <div className="empty"><h3>Loading…</h3></div>
@@ -174,7 +175,8 @@ export function OperationsPipelineApp() {
         onOpenChange={setSettings}
         meName={(profile as { full_name?: string } | undefined)?.full_name || user?.email || 'You'}
         team={data?.workload || []}
-        onCleared={refresh}
+        isSuperAdmin={isSuperAdmin}
+        onChanged={refresh}
       />
     </div>
   );

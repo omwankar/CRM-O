@@ -181,6 +181,25 @@ export async function clearOperationsPipeline() {
   return apiRequest('/operations/pipeline', { method: 'DELETE' }) as Promise<{ ok: boolean; deleted: number }>;
 }
 
+export type CrmPerson = {
+  id: string;
+  full_name: string;
+  email: string | null;
+  in_operations: boolean;
+};
+
+export async function getOperationsCrmPeople() {
+  const result = await apiRequest('/operations/crm-people') as { data: CrmPerson[] };
+  return result.data || [];
+}
+
+export async function addOperationsTeam(user_ids: string[]) {
+  return apiRequest('/operations/team', {
+    method: 'POST',
+    body: JSON.stringify({ user_ids }),
+  }) as Promise<{ data: Array<{ id: string; full_name: string; email: string | null }> }>;
+}
+
 export async function saveDirectoryCustomer(input: { company_name: string; contact_name?: string | null; email?: string | null; phone?: string | null }, id?: string) {
   return apiRequest(id ? `/operations/customers/${id}` : '/operations/customers', {
     method: id ? 'PUT' : 'POST',
