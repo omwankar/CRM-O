@@ -22,7 +22,6 @@ import {
 import { toast } from 'sonner';
 import {
   Mail,
-  RefreshCw,
   Search,
   Inbox,
   Link2,
@@ -37,15 +36,12 @@ import {
 } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import {
-  discoverCompanyMailboxes,
   getCompanyEmails,
   getEmailContacts,
   getEmailStats,
   getMailboxes,
   importEmailContacts,
-  backfillEmailSignatures,
   purgeSyncedEmails,
-  syncCompanyEmails,
   type CompanyEmail,
   type ExtractedEmailContact,
 } from '@/lib/api/emails';
@@ -250,14 +246,13 @@ function ExtractContactsDialog({
 
 export default function CompanyEmailsPage() {
   const qc = useQueryClient();
-  const { isSuperAdmin, canWrite, profile, isLoading: userLoading } = useCurrentUser();
+  const { isSuperAdmin, canWrite, isLoading: userLoading } = useCurrentUser();
   const inboxEnabled = !userLoading;
 
   const [search, setSearch] = useState('');
   const [mailbox, setMailbox] = useState('all');
   const [linked, setLinked] = useState('all');
   const [category, setCategory] = useState('all');
-  const [discoverOpen, setDiscoverOpen] = useState(false);
   const [extractOpen, setExtractOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -286,15 +281,6 @@ export default function CompanyEmailsPage() {
     enabled: inboxEnabled,
   });
 
-  const discoverMut = useMutation({
-    mutationFn: discoverCompanyMailboxes,
-    onSuccess: (result) => {
-      setDiscoverOpen(true);
-      toast.success(`Azure AD: ${result.included} mailboxes will sync (${result.total} members total)`);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
   const purgeMut = useMutation({
     mutationFn: purgeSyncedEmails,
     onSuccess: (result) => {
@@ -302,39 +288,6 @@ export default function CompanyEmailsPage() {
       qc.invalidateQueries({ queryKey: ['company-emails'] });
       qc.invalidateQueries({ queryKey: ['email-stats'] });
       qc.invalidateQueries({ queryKey: ['email-mailboxes'] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const syncMut = useMutation({
-    mutationFn: syncCompanyEmails,
-    onSuccess: (result) => {
-      toast.success(
-        `Synced ${result.messages_upserted} messages from ${result.mailboxes_synced} mailboxes (${result.mailboxes_discovered ?? result.mailboxes_synced} discovered in Azure)`,
-      );
-      qc.invalidateQueries({ queryKey: ['company-emails'] });
-      qc.invalidateQueries({ queryKey: ['email-stats'] });
-      qc.invalidateQueries({ queryKey: ['email-mailboxes'] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const backfillMut = useMutation({
-    mutationFn: () => backfillEmailSignatures(300, { all: true, force: true }),
-    onSuccess: (result) => {
-      if (result.background) {
-        toast.success(
-          result.message ||
-            'Full signature parse started for all emails. This runs in the background — check back in a few minutes.',
-        );
-      } else {
-        toast.success(
-          `Parsed ${result.updated ?? 0} emails — found ${result.phones ?? 0} phones, ${result.companies ?? 0} companies` +
-            (result.errors ? ` (${result.errors} errors)` : ''),
-        );
-      }
-      qc.invalidateQueries({ queryKey: ['email-contacts-extract'] });
-      qc.invalidateQueries({ queryKey: ['company-emails'] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -355,7 +308,6 @@ export default function CompanyEmailsPage() {
   const emails = data?.data || [];
   const mailboxes = mailboxesData?.data || [];
   const lastSync = stats?.last_sync;
-  const ownMailbox = stats?.mailbox_email || profile?.email || '';
   const hasActiveFilters = Boolean(search) || category !== 'all' || linked !== 'all';
 
   return (
@@ -367,9 +319,7 @@ export default function CompanyEmailsPage() {
             {isSuperAdmin ? 'Company Inbox' : 'My Inbox'}
           </h1>
           <p className="text-muted-foreground">
-            {isSuperAdmin
-              ? 'All company Outlook mailboxes from Azure AD'
-              : `Your synced Outlook mailbox${ownMailbox ? ` (${ownMailbox})` : ''}`}
+            Inbox sync is off. Existing mail stays here; new Outlook messages are not pulled into CRM.
           </p>
           {isSuperAdmin && lastSync ? (
             <p className="text-xs text-muted-foreground mt-1">
@@ -387,14 +337,7 @@ export default function CompanyEmailsPage() {
               <Users className="w-4 h-4 mr-2" />
               Extract Contacts
             </Button>
-            {isSuperAdmin && <>
-              <Button
-                variant="outline"
-                onClick={() => discoverMut.mutate()}
-                disabled={discoverMut.isPending || !stats?.graph_configured}
-              >
-                {discoverMut.isPending ? 'Checking…' : 'Preview Azure users'}
-              </Button>
+            {isSuperAdmin && (
               <Button
                 variant="outline"
                 className="text-red-600 hover:text-red-600 border-red-500/40"
@@ -402,7 +345,7 @@ export default function CompanyEmailsPage() {
                 onClick={() => {
                   if (
                     confirm(
-                      `Delete all ${stats?.total ?? 0} synced emails and reset mailboxes? This cannot be undone. You can sync again after.`,
+                      `Delete all ${stats?.total ?? 0} synced emails and reset mailboxes? This cannot be undone.`,
                     )
                   ) {
                     purgeMut.mutate();
@@ -412,27 +355,7 @@ export default function CompanyEmailsPage() {
                 <Trash2 className={`w-4 h-4 mr-2 ${purgeMut.isPending ? 'animate-pulse' : ''}`} />
                 {purgeMut.isPending ? 'Clearing…' : 'Clear all emails'}
               </Button>
-              <Button onClick={() => syncMut.mutate()} disabled={syncMut.isPending || !stats?.graph_configured}>
-                <RefreshCw className={`w-4 h-4 mr-2 ${syncMut.isPending ? 'animate-spin' : ''}`} />
-                {syncMut.isPending ? 'Syncing…' : 'Sync now'}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  if (
-                    confirm(
-                      'Re-parse phone & company from ALL inbound emails in the database? This runs in the background and may take a while. Outlook is not changed.',
-                    )
-                  ) {
-                    backfillMut.mutate();
-                  }
-                }}
-                disabled={backfillMut.isPending || syncMut.isPending || !stats?.graph_configured}
-              >
-                <Phone className={`w-4 h-4 mr-2 ${backfillMut.isPending ? 'animate-pulse' : ''}`} />
-                {backfillMut.isPending ? 'Starting…' : 'Parse all signatures'}
-              </Button>
-            </>}
+            )}
           </div>
         ) : null}
       </div>
@@ -539,9 +462,7 @@ export default function CompanyEmailsPage() {
           <p className="text-sm text-muted-foreground mb-4">
             {hasActiveFilters
               ? 'Try a different category or clear your filters.'
-              : isSuperAdmin
-                ? 'Click "Sync now" to pull mail from all company Outlook mailboxes.'
-                : 'Your mailbox has not been synced yet. Ask a Super Admin to run email sync.'}
+              : 'Inbox sync is turned off, so new Outlook mail will not appear here.'}
           </p>
           {hasActiveFilters ? (
             <Button
@@ -553,10 +474,6 @@ export default function CompanyEmailsPage() {
               }}
             >
               Clear filters
-            </Button>
-          ) : isSuperAdmin ? (
-            <Button onClick={() => syncMut.mutate()} disabled={syncMut.isPending}>
-              Sync now
             </Button>
           ) : null}
         </Card>
@@ -597,40 +514,6 @@ export default function CompanyEmailsPage() {
       )}
 
       <EmailDetailDialog emailId={selectedId} onClose={() => setSelectedId(null)} />
-
-      <Dialog open={discoverOpen} onOpenChange={setDiscoverOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Azure AD mailbox preview</DialogTitle>
-          </DialogHeader>
-          {discoverMut.data ? (
-            <div className="space-y-2 text-sm">
-              <p className="text-muted-foreground">
-                {discoverMut.data.included} of {discoverMut.data.total} members will be synced. If someone is missing,
-                check their Azure AD profile has a mailbox license.
-              </p>
-              <div className="divide-y divide-border border border-border rounded-lg max-h-96 overflow-y-auto">
-                {discoverMut.data.data.map((row) => (
-                  <div key={`${row.displayName}-${row.mailboxEmail}`} className="p-3 flex flex-wrap justify-between gap-2">
-                    <div>
-                      <p className="font-medium">{row.displayName}</p>
-                      <p className="text-muted-foreground text-xs">{row.mailboxEmail || '—'}</p>
-                      {row.allEmails.length > 1 ? (
-                        <p className="text-xs text-muted-foreground mt-0.5">Also: {row.allEmails.join(', ')}</p>
-                      ) : null}
-                    </div>
-                    <Badge variant={row.included ? 'default' : 'secondary'}>
-                      {row.included ? 'Will sync' : row.reason}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <p className="text-muted-foreground">Click Preview Azure users to load the list.</p>
-          )}
-        </DialogContent>
-      </Dialog>
 
       <ExtractContactsDialog open={extractOpen} onClose={() => setExtractOpen(false)} />
     </div>

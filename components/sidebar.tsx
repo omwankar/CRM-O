@@ -151,7 +151,6 @@ function getMenuSections(role?: string, pendingCount?: number, showPipeline?: bo
         { label: 'Memberships', href: '/dashboard/memberships' },
         { label: 'Insurance', href: '/dashboard/insurance' },
         { label: 'Documents', href: '/dashboard/documents' },
-        { label: isSuperAdmin ? 'Company Inbox' : 'My Inbox', href: '/dashboard/emails' },
         ...(isSuperAdmin ? [{ label: 'Users', href: '/dashboard/users' }] : []),
         { label: 'Settings', href: '/dashboard/settings' },
       ],
