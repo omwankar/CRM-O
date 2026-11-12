@@ -12,6 +12,7 @@ import {
   assignOperationsPeople,
   chooseOperationsBest,
   closeOperationsEnquiry,
+  deleteOperationsAgentSend,
   deleteOperationsEnquiry,
   joinOperationsEnquiry,
   postInquiryUpdate,
@@ -21,7 +22,7 @@ import {
   type PipelineInquiry,
 } from '@/lib/api/operations';
 import { AgePill, Avatar, StatusPill } from '@/components/operations/bits';
-import { AGENT_MODES, formatRoute, quoteText } from '@/components/operations/opsVisual';
+import { AGENT_MODES, formatRoute, parsePricingNotes, quoteText } from '@/components/operations/opsVisual';
 import { formatUkDate, formatUkDateTime } from '@/lib/date';
 import { opsFontClass } from '@/components/operations/opsFonts';
 
@@ -103,6 +104,8 @@ function DrawerBody({
   const [closeRemark, setCloseRemark] = useState('');
   const [profit, setProfit] = useState('');
   const [finalQuote, setFinalQuote] = useState('');
+  const [quoteSent, setQuoteSent] = useState(false);
+  const [quoteSentAt, setQuoteSentAt] = useState('');
 
   useEffect(() => {
     if (!enquiry) return;
@@ -113,14 +116,11 @@ function DrawerBody({
     setDeadline(enquiry.deadline ? enquiry.deadline.slice(0, 10) : '');
     setPriority(enquiry.priority || 'medium');
     setNotes(enquiry.notes || '');
-    try {
-      const pricing = JSON.parse(enquiry.client_price_notes || inquiry.client_price_notes || '');
-      setProfit(pricing.profit || '');
-      setFinalQuote(pricing.final || '');
-    } catch {
-      setProfit('');
-      setFinalQuote(enquiry.client_price_notes || inquiry.client_price_notes || '');
-    }
+    const pricing = parsePricingNotes(enquiry.client_price_notes || inquiry.client_price_notes);
+    setProfit(pricing.profit);
+    setFinalQuote(pricing.final);
+    setQuoteSent(pricing.sent);
+    setQuoteSentAt(pricing.sentAt);
   }, [enquiry, inquiry.client_price_notes]);
 
   useEffect(() => {
@@ -178,8 +178,28 @@ function DrawerBody({
     onError: (error: Error) => toast.error(error.message),
   });
   const pricingMut = useMutation({
-    mutationFn: () => updateEnquiry(inquiry.id, { client_price_notes: JSON.stringify({ profit: profit.trim(), final: finalQuote.trim() }) }),
-    onSuccess: () => { toast.success('Profit and final quote saved'); refreshEnquiry(); },
+    mutationFn: (sent?: boolean) => {
+      const sentNow = sent ? new Date().toISOString() : quoteSentAt;
+      return updateEnquiry(inquiry.id, {
+        client_price_notes: JSON.stringify({
+          profit: profit.trim(),
+          final: finalQuote.trim(),
+          sent: sent ? true : quoteSent,
+          sent_at: sent ? sentNow : quoteSentAt || undefined,
+        }),
+      });
+    },
+    onSuccess: (_data, sent) => {
+      if (sent) {
+        setQuoteSent(true);
+        setQuoteSentAt(new Date().toISOString());
+        if (finalQuote.trim()) navigator.clipboard.writeText(finalQuote).catch(() => undefined);
+        toast.success('Quote marked as sent');
+      } else {
+        toast.success('Profit and final quote saved');
+      }
+      refreshEnquiry();
+    },
     onError: (error: Error) => toast.error(error.message),
   });
   const deleteMut = useMutation({
@@ -298,12 +318,48 @@ function DrawerBody({
                         <button className="btn sm ghost" type="button" onClick={() => setFinalQuote(quoteText(send.notes, send.quoted_price, send.currency))}>Start from selected quote</button>
                         {finalQuote ? <button className="btn sm ghost" type="button" onClick={() => navigator.clipboard.writeText(finalQuote)}>Copy final quote</button> : null}
                         <span className="spacer" />
-                        <button className="btn sm pri" type="button" disabled={pricingMut.isPending} onClick={() => pricingMut.mutate()}>Save profit &amp; final quote</button>
+                        <button className="btn sm pri" type="button" disabled={pricingMut.isPending} onClick={() => pricingMut.mutate(undefined)}>Save profit &amp; final quote</button>
+                      </div>
+                      <div className="pacts">
+                        {quoteSent ? (
+                          <span className="pill ok">Quote sent{quoteSentAt ? ` · ${formatUkDateTime(quoteSentAt)}` : ''}</span>
+                        ) : null}
+                        <button
+                          className="btn sm pri"
+                          type="button"
+                          disabled={pricingMut.isPending || !finalQuote.trim()}
+                          onClick={() => pricingMut.mutate(true)}
+                        >
+                          {quoteSent ? 'Send quote again' : 'Send quote'}
+                        </button>
+                        {enquiry?.client_email && finalQuote.trim() ? (
+                          <a className="btn sm ghost" href={`mailto:${encodeURIComponent(enquiry.client_email)}?subject=${encodeURIComponent(`Quote ${inquiry.enquiry_number}`)}&body=${encodeURIComponent(finalQuote)}`}>
+                            Open email
+                          </a>
+                        ) : null}
                       </div>
                     </div>
                   ) : null}
                 </div>
               )) : <p className="hint" style={{ margin: 0 }}>When quotes come back, choose the best one here.</p>}
+              {working && inquiry.column !== 'closed' ? (
+                <div className="closebox" style={{ marginTop: 12 }}>
+                  <div className="lbl" style={{ marginBottom: 8 }}>Close this inquiry</div>
+                  <div className="closeform">
+                    <label htmlFor="clStatus">
+                      <span className="lbl">Outcome</span>
+                      <select className="field" id="clStatus" value={closeOutcome} onChange={(event) => setCloseOutcome(event.target.value)}>
+                        {['Closed', 'Lost', 'No response', 'Follow-up closed'].map((item) => <option key={item}>{item}</option>)}
+                      </select>
+                    </label>
+                    <label htmlFor="clRemark" className="grow">
+                      <span className="lbl">Remark</span>
+                      <textarea className="field" id="clRemark" rows={2} value={closeRemark} onChange={(event) => setCloseRemark(event.target.value)} placeholder="e.g. Customer went with another forwarder at a lower rate / No reply after 3 follow-ups" />
+                    </label>
+                    <button className="btn" type="button" disabled={closeMut.isPending} onClick={() => closeMut.mutate()}>Close inquiry</button>
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div className="sec">
@@ -404,7 +460,7 @@ function DrawerBody({
                       </thead>
                       <tbody>
                         {sends.map((send) => (
-                          <SendRow key={send.id} send={send} mine={send.user_id === userId} onChanged={onChanged} />
+                          <SendRow key={send.id} send={send} mine={send.user_id === userId} isSuperAdmin={isSuperAdmin} onChanged={onChanged} />
                         ))}
                       </tbody>
                     </table>
@@ -472,32 +528,15 @@ function DrawerBody({
         )}
       </div>
 
-      {isSuperAdmin && inquiry.column !== 'closed' ? (
-        <div className="sec">
-          <div className="sec-h"><h3>Close this inquiry</h3></div>
-          <div className="closeform">
-            <label htmlFor="clStatus">
-              <span className="lbl">Outcome</span>
-              <select className="field" id="clStatus" value={closeOutcome} onChange={(event) => setCloseOutcome(event.target.value)}>
-                {['Closed', 'Lost', 'No response', 'Follow-up closed'].map((item) => <option key={item}>{item}</option>)}
-              </select>
-            </label>
-            <label htmlFor="clRemark" className="grow">
-              <span className="lbl">Remark</span>
-              <textarea className="field" id="clRemark" rows={2} value={closeRemark} onChange={(event) => setCloseRemark(event.target.value)} placeholder="e.g. Customer went with another forwarder at a lower rate / No reply after 3 follow-ups" />
-            </label>
-            <button className="btn" type="button" onClick={() => closeMut.mutate()}>Close inquiry</button>
-          </div>
-        </div>
-      ) : null}
-
     </>
   );
 }
 
-function SendRow({ send, mine, onChanged }: { send: AgentSend; mine: boolean; onChanged: () => void }) {
+function SendRow({ send, mine, isSuperAdmin, onChanged }: { send: AgentSend; mine: boolean; isSuperAdmin?: boolean; onChanged: () => void }) {
   const [quote, setQuote] = useState(send.notes || '');
   const [editing, setEditing] = useState(!send.notes && send.quoted_price == null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const canManage = mine || Boolean(isSuperAdmin);
   const rateMut = useMutation({
     mutationFn: () => saveOperationsRate(send.id, { notes: quote, currency: send.currency }),
     onSuccess: () => { toast.success('Quote saved'); setEditing(false); onChanged(); },
@@ -510,6 +549,11 @@ function SendRow({ send, mine, onChanged }: { send: AgentSend; mine: boolean; on
       return chooseOperationsBest(send.id);
     },
     onSuccess: () => { toast.success('Best quote is now on the enquiry'); onChanged(); },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  const removeMut = useMutation({
+    mutationFn: () => deleteOperationsAgentSend(send.id),
+    onSuccess: () => { toast.success('Agent removed from this inquiry'); setConfirmRemove(false); onChanged(); },
     onError: (error: Error) => toast.error(error.message),
   });
   return (
@@ -546,22 +590,28 @@ function SendRow({ send, mine, onChanged }: { send: AgentSend; mine: boolean; on
       </td>
       <td>
         <div className="acts">
-          {mine ? (
-            <>
-              {editing ? (
-                <button type="button" className="btn sm pri" disabled={rateMut.isPending || !quote.trim()} onClick={() => rateMut.mutate()}>Save</button>
-              ) : (
-                <button type="button" className="btn sm ghost" onClick={() => setEditing(true)}>Edit</button>
-              )}
-              {(quote.trim() || send.notes || send.quoted_price != null) ? (
-                <button type="button" className="btn sm ok" disabled={bestMut.isPending} onClick={() => bestMut.mutate()}>
-                  {bestMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null} Select best
-                </button>
-              ) : null}
-            </>
-          ) : (
-            send.is_best ? <span className="pill ok">✓ Best</span> : null
-          )}
+          {mine && editing ? (
+            <button type="button" className="btn sm pri" disabled={rateMut.isPending || !quote.trim()} onClick={() => rateMut.mutate()}>Save</button>
+          ) : mine ? (
+            <button type="button" className="btn sm ghost" onClick={() => setEditing(true)}>Edit</button>
+          ) : send.is_best ? (
+            <span className="pill ok">✓ Best</span>
+          ) : null}
+          {canManage && (quote.trim() || send.notes || send.quoted_price != null) ? (
+            <button type="button" className="btn sm ok" disabled={bestMut.isPending} onClick={() => bestMut.mutate()}>
+              {bestMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null} Select best
+            </button>
+          ) : null}
+          {canManage ? (
+            confirmRemove ? (
+              <>
+                <button type="button" className="btn sm" onClick={() => setConfirmRemove(false)}>Keep</button>
+                <button type="button" className="btn sm delyes" disabled={removeMut.isPending} onClick={() => removeMut.mutate()}>Remove</button>
+              </>
+            ) : (
+              <button type="button" className="btn sm ghost" onClick={() => setConfirmRemove(true)}>Remove</button>
+            )
+          ) : null}
         </div>
       </td>
     </tr>

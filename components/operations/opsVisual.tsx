@@ -85,14 +85,27 @@ export function quoteShort(notes?: string | null, amount?: number | null, curren
   return first.length > 48 ? `${first.slice(0, 47)}…` : first;
 }
 
-export function hasFinalQuote(notes?: string | null) {
-  if (!notes?.trim()) return false;
+export function parsePricingNotes(notes?: string | null) {
+  if (!notes?.trim()) return { profit: '', final: '', sent: false, sentAt: '' };
   try {
-    const parsed = JSON.parse(notes) as { final?: string };
-    return Boolean(String(parsed.final || '').trim());
+    const parsed = JSON.parse(notes) as { profit?: string; final?: string; sent?: boolean; sent_at?: string };
+    return {
+      profit: String(parsed.profit || '').trim(),
+      final: String(parsed.final || '').trim(),
+      sent: Boolean(parsed.sent),
+      sentAt: String(parsed.sent_at || '').trim(),
+    };
   } catch {
-    return false;
+    return { profit: '', final: notes.trim(), sent: false, sentAt: '' };
   }
+}
+
+export function hasFinalQuote(notes?: string | null) {
+  return Boolean(parsePricingNotes(notes).final);
+}
+
+export function hasQuoteSent(notes?: string | null) {
+  return parsePricingNotes(notes).sent;
 }
 
 export function dayGroup(iso: string) {

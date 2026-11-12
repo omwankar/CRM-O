@@ -148,6 +148,10 @@ export async function chooseOperationsBest(sendId: string) {
   return apiRequest(`/operations/agents/${sendId}/best`, { method: 'POST' });
 }
 
+export async function deleteOperationsAgentSend(sendId: string) {
+  return apiRequest(`/operations/agents/${sendId}`, { method: 'DELETE' });
+}
+
 export async function saveDirectoryAgent(input: { company_name: string; contact_name?: string | null; email?: string | null; phone?: string | null; country?: string | null; mode?: string | null }, id?: string) {
   return apiRequest(id ? `/operations/directory/${id}` : '/operations/directory', {
     method: id ? 'PUT' : 'POST',

@@ -1,5 +1,5 @@
 import { AgePill, AvatarStack } from '@/components/operations/bits';
-import { formatRoute, hasFinalQuote } from '@/components/operations/opsVisual';
+import { formatRoute, hasFinalQuote, hasQuoteSent } from '@/components/operations/opsVisual';
 import type { PipelineInquiry } from '@/lib/api/operations';
 
 export function InquiryCard({ inquiry, active, onOpen, rank }: { inquiry: PipelineInquiry; active?: boolean; onOpen: () => void; rank?: number | null }) {
@@ -23,7 +23,7 @@ export function InquiryCard({ inquiry, active, onOpen, rank }: { inquiry: Pipeli
         ) : best ? (
           <span className="price">
             ✓ {best.agent_name}
-            {hasFinalQuote(inquiry.client_price_notes) ? <span className="pill ok"> Final ready</span> : null}
+            {hasQuoteSent(inquiry.client_price_notes) ? <span className="pill ok"> Quote sent</span> : hasFinalQuote(inquiry.client_price_notes) ? <span className="pill ok"> Final ready</span> : null}
           </span>
         ) : (
           <span className="hint mono">
