@@ -175,7 +175,6 @@ export function OperationsPipelineApp() {
         onOpenChange={setSettings}
         meName={(profile as { full_name?: string } | undefined)?.full_name || user?.email || 'You'}
         team={data?.workload || []}
-        isSuperAdmin={isSuperAdmin}
         onChanged={refresh}
       />
     </div>

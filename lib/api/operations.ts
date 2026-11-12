@@ -181,10 +181,6 @@ export async function deleteOperationsEnquiry(id: string) {
   return apiRequest(`/operations/enquiries/${id}`, { method: 'DELETE' });
 }
 
-export async function clearOperationsPipeline() {
-  return apiRequest('/operations/pipeline', { method: 'DELETE' }) as Promise<{ ok: boolean; deleted: number }>;
-}
-
 export type CrmPerson = {
   id: string;
   full_name: string;

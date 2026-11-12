@@ -6,25 +6,22 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Avatar } from '@/components/operations/bits';
 import { opsFontClass } from '@/components/operations/opsFonts';
-import { addOperationsTeam, clearOperationsPipeline, getOperationsCrmPeople } from '@/lib/api/operations';
+import { addOperationsTeam, getOperationsCrmPeople } from '@/lib/api/operations';
 
 export function TeamSettingsModal({
   open,
   onOpenChange,
   meName,
   team,
-  isSuperAdmin,
   onChanged,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   meName: string;
   team: Array<{ user_id: string; full_name: string }>;
-  isSuperAdmin?: boolean;
   onChanged?: () => void;
 }) {
   const qc = useQueryClient();
-  const [confirm, setConfirm] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
   const peopleQuery = useQuery({
     queryKey: ['operations-crm-people'],
@@ -43,16 +40,6 @@ export function TeamSettingsModal({
       toast.success(names ? `Added ${names} to the pipeline.` : 'Added to the pipeline.');
       setPicked([]);
       qc.invalidateQueries({ queryKey: ['operations-crm-people'] });
-      onChanged?.();
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
-
-  const clearMut = useMutation({
-    mutationFn: clearOperationsPipeline,
-    onSuccess: (result) => {
-      toast.success(`Removed ${result.deleted} pipeline inquir${result.deleted === 1 ? 'y' : 'ies'}. CRM enquiries outside this module were left alone.`);
-      setConfirm(false);
       onChanged?.();
     },
     onError: (error: Error) => toast.error(error.message),
@@ -134,22 +121,6 @@ export function TeamSettingsModal({
               </p>
             </div>
             <p className="hint full" style={{ margin: 0 }}>Agent companies and customers are managed in the Agents and Customers tabs.</p>
-            {isSuperAdmin ? (
-              <div className="full closebox crit">
-                <div className="lbl">Clear this module</div>
-                <p className="hint" style={{ margin: '6px 0 10px' }}>Deletes every inquiry on the Operations Pipeline only. Enquiries in the rest of CRM are not removed.</p>
-                {confirm ? (
-                  <div className="acts">
-                    <button className="btn sm" type="button" onClick={() => setConfirm(false)}>Keep them</button>
-                    <button className="btn sm delyes" type="button" disabled={clearMut.isPending} onClick={() => clearMut.mutate()}>
-                      {clearMut.isPending ? 'Deleting…' : 'Delete pipeline inquiries'}
-                    </button>
-                  </div>
-                ) : (
-                  <button className="btn sm danger" type="button" onClick={() => setConfirm(true)}>Delete pipeline data</button>
-                )}
-              </div>
-            ) : null}
           </div>
           <div className="mfoot">
             <span className="msg" />
