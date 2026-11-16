@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -22,7 +22,7 @@ import {
   type PipelineInquiry,
 } from '@/lib/api/operations';
 import { AgePill, Avatar, StatusPill } from '@/components/operations/bits';
-import { AGENT_MODES, formatRoute, parsePricingNotes, quoteText } from '@/components/operations/opsVisual';
+import { AGENT_MODES, agentCountries, formatRoute, matchesAgentFilter, parsePricingNotes, quoteText } from '@/components/operations/opsVisual';
 import { formatUkDate, formatUkDateTime } from '@/lib/date';
 import { opsFontClass } from '@/components/operations/opsFonts';
 
@@ -97,6 +97,8 @@ function DrawerBody({
   const [agentCountry, setAgentCountry] = useState('');
   const [agentMode, setAgentMode] = useState('');
   const [picked, setPicked] = useState<string[]>([]);
+  const [pickCountry, setPickCountry] = useState('');
+  const [pickMode, setPickMode] = useState('');
   const [update, setUpdate] = useState('');
   const [assignedIds, setAssignedIds] = useState<string[]>([]);
   const [confirm, setConfirm] = useState<'delete' | null>(null);
@@ -207,6 +209,12 @@ function DrawerBody({
     onSuccess: () => { toast.success('Inquiry deleted'); setConfirm(null); onDismiss(); onChanged(); },
     onError: (error: Error) => toast.error(error.message),
   });
+
+  const pickable = useMemo(
+    () => agents.filter((agent) => matchesAgentFilter(agent, pickCountry, pickMode)),
+    [agents, pickCountry, pickMode],
+  );
+  const pickCountries = useMemo(() => agentCountries(agents), [agents]);
 
   const grouped = inquiry.sends.reduce<Record<string, AgentSend[]>>((acc, send) => {
     (acc[send.user_name] ||= []).push(send);
@@ -430,17 +438,31 @@ function DrawerBody({
                     <div className="pickbox">
                       <div className="pickhead">
                         <span className="lbl">Or pick saved agents (select several)</span>
+                        <label className="chk" htmlFor="pickCountry">
+                          Country{' '}
+                          <select className="field sel" id="pickCountry" value={pickCountry} onChange={(event) => setPickCountry(event.target.value)}>
+                            <option value="">Any country</option>
+                            {pickCountries.map((item) => <option key={item} value={item}>{item}</option>)}
+                          </select>
+                        </label>
+                        <label className="chk" htmlFor="pickMode">
+                          Mode{' '}
+                          <select className="field sel" id="pickMode" value={pickMode} onChange={(event) => setPickMode(event.target.value)}>
+                            <option value="">Any mode</option>
+                            {AGENT_MODES.map((item) => <option key={item} value={item}>{item}</option>)}
+                          </select>
+                        </label>
                         <button type="button" className="btn sm pri" disabled={!picked.length || agentMut.isPending} onClick={() => agentMut.mutate('saved')}>Add {picked.length || ''} selected</button>
                       </div>
                       <div className="quick">
-                        {agents.map((agent) => {
+                        {pickable.length ? pickable.map((agent) => {
                           const on = picked.includes(agent.id);
                           return (
                             <button key={agent.id} type="button" className="qchip" aria-pressed={on} onClick={() => setPicked((current) => (on ? current.filter((id) => id !== agent.id) : [...current, agent.id]))}>
                               {agent.company_name}{agent.contact_name ? ` · ${agent.contact_name}` : ''}{[agent.country, agent.mode].filter(Boolean).length ? ` · ${[agent.country, agent.mode].filter(Boolean).join(' · ')}` : ''}
                             </button>
                           );
-                        })}
+                        }) : <p className="hint" style={{ margin: 0 }}>No saved agents match that country and mode.</p>}
                       </div>
                     </div>
                   ) : null}

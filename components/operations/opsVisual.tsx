@@ -3,6 +3,21 @@ import type { PipelineInquiry } from '@/lib/api/operations';
 export const AGENT_MODES = ['Air', 'Ocean', 'Land'] as const;
 export type AgentMode = (typeof AGENT_MODES)[number];
 
+export function agentCountries(agents: Array<{ country?: string | null }>) {
+  return [...new Set(agents.map((agent) => String(agent.country || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+}
+
+export function matchesAgentFilter(
+  agent: { country?: string | null; mode?: string | null },
+  country: string,
+  mode: string,
+) {
+  const wantedCountry = country.trim().toLowerCase();
+  if (wantedCountry && String(agent.country || '').trim().toLowerCase() !== wantedCountry) return false;
+  if (mode && String(agent.mode || '') !== mode) return false;
+  return true;
+}
+
 export const COLUMNS = [
   { id: 'to_send', label: 'To send', bar: 'var(--faint)', empty: 'Not sent to any agent yet' },
   { id: 'waiting', label: 'Waiting for rates', bar: 'var(--warn)', empty: 'Sent, no rates back yet' },

@@ -4,7 +4,7 @@ import { Fragment, useMemo, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { deleteDirectoryAgent, saveDirectoryAgent, type DirectoryAgent } from '@/lib/api/operations';
-import { AGENT_MODES } from '@/components/operations/opsVisual';
+import { AGENT_MODES, agentCountries, matchesAgentFilter } from '@/components/operations/opsVisual';
 
 export function AgentsTable({ agents, onChanged }: { agents: DirectoryAgent[]; onChanged: () => void }) {
   const [company, setCompany] = useState('');
@@ -13,7 +13,10 @@ export function AgentsTable({ agents, onChanged }: { agents: DirectoryAgent[]; o
   const [email, setEmail] = useState('');
   const [country, setCountry] = useState('');
   const [mode, setMode] = useState('');
+  const [filterCountry, setFilterCountry] = useState('');
+  const [filterMode, setFilterMode] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
+  const countries = useMemo(() => agentCountries(agents), [agents]);
   const saveMut = useMutation({
     mutationFn: () => saveDirectoryAgent({
       company_name: company.trim(),
@@ -35,13 +38,14 @@ export function AgentsTable({ agents, onChanged }: { agents: DirectoryAgent[]; o
   const groups = useMemo(() => {
     const map = new Map<string, DirectoryAgent[]>();
     for (const agent of agents) {
+      if (!matchesAgentFilter(agent, filterCountry, filterMode)) continue;
       const key = agent.company_name.trim().toLowerCase();
       const list = map.get(key) || [];
       list.push(agent);
       map.set(key, list);
     }
     return [...map.values()];
-  }, [agents]);
+  }, [agents, filterCountry, filterMode]);
 
   return (
     <div>
@@ -75,6 +79,26 @@ export function AgentsTable({ agents, onChanged }: { agents: DirectoryAgent[]; o
         </form>
         <p className="hint" style={{ margin: '8px 0 0' }}>Saving again with the same company and a different name adds another person at that agent.</p>
       </div>
+      <div className="toolbar" style={{ marginTop: 0, marginBottom: 10 }}>
+        <label className="chk" htmlFor="agCountry">
+          Country{' '}
+          <select className="field sel" id="agCountry" value={filterCountry} onChange={(event) => setFilterCountry(event.target.value)}>
+            <option value="">Any country</option>
+            {countries.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+        </label>
+        <label className="chk" htmlFor="agMode">
+          Mode{' '}
+          <select className="field sel" id="agMode" value={filterMode} onChange={(event) => setFilterMode(event.target.value)}>
+            <option value="">Any mode</option>
+            {AGENT_MODES.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+        </label>
+        {filterCountry || filterMode ? (
+          <button className="btn sm ghost" type="button" onClick={() => { setFilterCountry(''); setFilterMode(''); }}>Clear filters</button>
+        ) : null}
+        <span className="hint">{groups.reduce((count, list) => count + list.length, 0)} of {agents.length}</span>
+      </div>
       <div className="panel tbl-wrap">
         <table>
           <thead>
@@ -88,7 +112,9 @@ export function AgentsTable({ agents, onChanged }: { agents: DirectoryAgent[]; o
             {groups.length === 0 ? (
               <tr>
                 <td colSpan={10} className="hint" style={{ textAlign: 'center', padding: 24 }}>
-                  No agents yet. Add your first agent above, or add one on an inquiry.
+                  {agents.length && (filterCountry || filterMode)
+                    ? 'No agents match that country and mode.'
+                    : 'No agents yet. Add your first agent above, or add one on an inquiry.'}
                 </td>
               </tr>
             ) : null}
