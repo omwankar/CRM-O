@@ -99,6 +99,7 @@ function DrawerBody({
   const [picked, setPicked] = useState<string[]>([]);
   const [pickCountry, setPickCountry] = useState('');
   const [pickMode, setPickMode] = useState('');
+  const [showAllSaved, setShowAllSaved] = useState(false);
   const [update, setUpdate] = useState('');
   const [assignedIds, setAssignedIds] = useState<string[]>([]);
   const [confirm, setConfirm] = useState<'delete' | null>(null);
@@ -210,11 +211,21 @@ function DrawerBody({
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const pickable = useMemo(
-    () => agents.filter((agent) => matchesAgentFilter(agent, pickCountry, pickMode)),
-    [agents, pickCountry, pickMode],
-  );
   const pickCountries = useMemo(() => agentCountries(agents), [agents]);
+  const { pickable, savedCompanyCount } = useMemo(() => {
+    const filtered = agents.filter((agent) => matchesAgentFilter(agent, pickCountry, pickMode));
+    const ranked = [...filtered].sort((a, b) => {
+      const newest = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      if (newest) return newest;
+      return (b.requests || 0) - (a.requests || 0);
+    });
+    const companyKeys = [...new Set(ranked.map((agent) => agent.company_name.trim().toLowerCase()).filter(Boolean))];
+    const shownKeys = new Set(showAllSaved ? companyKeys : companyKeys.slice(0, 8));
+    return {
+      pickable: ranked.filter((agent) => shownKeys.has(agent.company_name.trim().toLowerCase())),
+      savedCompanyCount: companyKeys.length,
+    };
+  }, [agents, pickCountry, pickMode, showAllSaved]);
 
   const grouped = inquiry.sends.reduce<Record<string, AgentSend[]>>((acc, send) => {
     (acc[send.user_name] ||= []).push(send);
@@ -452,6 +463,11 @@ function DrawerBody({
                             {AGENT_MODES.map((item) => <option key={item} value={item}>{item}</option>)}
                           </select>
                         </label>
+                        {savedCompanyCount > 8 ? (
+                          <button type="button" className="btn sm ghost" onClick={() => setShowAllSaved((value) => !value)}>
+                            {showAllSaved ? 'Show recent 8' : `Show all ${savedCompanyCount}`}
+                          </button>
+                        ) : null}
                         <button type="button" className="btn sm pri" disabled={!picked.length || agentMut.isPending} onClick={() => agentMut.mutate('saved')}>Add {picked.length || ''} selected</button>
                       </div>
                       <div className="quick">

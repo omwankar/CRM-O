@@ -79,6 +79,7 @@ export type DirectoryAgent = {
   phone?: string | null;
   country?: string | null;
   mode?: string | null;
+  created_at?: string | null;
   requests: number;
   rates: number;
   chosen: number;
