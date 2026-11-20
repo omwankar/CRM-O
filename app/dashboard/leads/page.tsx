@@ -39,9 +39,11 @@ import {
   type Lead,
   type LeadInput,
   type LeadStatus,
+  LEAD_CONTACTED_BY,
   convertLead,
   createLead,
   deleteLead,
+  getLeadCategories,
   getLeadStats,
   getLeads,
   restoreLead,
@@ -79,6 +81,13 @@ const emptyForm: LeadInput = {
   status: 'new',
   notes: '',
   assigned_to: null,
+  category: '',
+  contacted_by: null,
+  job_title: '',
+  city: '',
+  website: '',
+  linkedin_company: '',
+  linkedin_person: '',
 };
 
 export default function LeadsPage() {
@@ -87,6 +96,9 @@ export default function LeadsPage() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search, 300);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
   const [showTrash, setShowTrash] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Lead | null>(null);
@@ -94,17 +106,20 @@ export default function LeadsPage() {
   const [sortCold, setSortCold] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['leads', statusFilter, debouncedSearch, showTrash],
+    queryKey: ['leads', statusFilter, categoryFilter, debouncedSearch, showTrash],
     queryFn: () =>
       getLeads({
         status: statusFilter,
+        category: categoryFilter,
         search: debouncedSearch || undefined,
-        limit: 100,
+        limit: 200,
         trash: showTrash,
       }),
   });
 
   const { data: stats } = useQuery({ queryKey: ['lead-stats'], queryFn: getLeadStats });
+  const { data: categoryData } = useQuery({ queryKey: ['lead-categories'], queryFn: getLeadCategories });
+  const categories = categoryData?.data || [];
 
   const { data: usersData } = useQuery({
     queryKey: ['users-lead-assign'],
@@ -117,6 +132,7 @@ export default function LeadsPage() {
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['leads'] });
     qc.invalidateQueries({ queryKey: ['lead-stats'] });
+    qc.invalidateQueries({ queryKey: ['lead-categories'] });
   };
 
   const saveMut = useMutation({
@@ -129,6 +145,13 @@ export default function LeadsPage() {
         phone: form.phone || null,
         notes: form.notes || null,
         assigned_to: form.assigned_to || null,
+        category: form.category || null,
+        contacted_by: form.contacted_by || null,
+        job_title: form.job_title || null,
+        city: form.city || null,
+        website: form.website || null,
+        linkedin_company: form.linkedin_company || null,
+        linkedin_person: form.linkedin_person || null,
       };
       return editing ? updateLead(editing.id, payload) : createLead(payload);
     },
@@ -200,6 +223,8 @@ export default function LeadsPage() {
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm);
+    setAddingCategory(false);
+    setNewCategory('');
     setDialogOpen(true);
   };
 
@@ -215,7 +240,16 @@ export default function LeadsPage() {
       status: lead.status,
       notes: lead.notes || '',
       assigned_to: lead.assigned_to || null,
+      category: lead.category || '',
+      contacted_by: lead.contacted_by || null,
+      job_title: lead.job_title || '',
+      city: lead.city || '',
+      website: lead.website || '',
+      linkedin_company: lead.linkedin_company || '',
+      linkedin_person: lead.linkedin_person || '',
     });
+    setAddingCategory(false);
+    setNewCategory('');
     setDialogOpen(true);
   };
 
@@ -288,6 +322,21 @@ export default function LeadsPage() {
           </Select>
         )}
         {!showTrash && (
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-64">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All categories</SelectItem>
+              {categories.map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {!showTrash && (
           <Button
             variant={sortCold ? 'default' : 'outline'}
             size="sm"
@@ -326,6 +375,9 @@ export default function LeadsPage() {
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <h3 className="font-semibold truncate">{lead.lead_name}</h3>
                     <Badge className={STATUS_BADGE[lead.status]}>{lead.status}</Badge>
+                    {lead.category ? (
+                      <Badge variant="outline">{lead.category}</Badge>
+                    ) : null}
                     {lead.source ? (
                       <span className="text-xs text-muted-foreground">
                         via {lead.source.replace('_', ' ')}
@@ -342,6 +394,7 @@ export default function LeadsPage() {
                     {lead.contact_person ? <span>{lead.contact_person}</span> : null}
                     {lead.email ? <span>{lead.email}</span> : null}
                     {lead.phone ? <span>{lead.phone}</span> : null}
+                    {lead.contacted_by ? <span>Contacted by: {lead.contacted_by}</span> : null}
                     {lead.assignee?.full_name ? (
                       <span>Assigned: {lead.assignee.full_name}</span>
                     ) : null}
@@ -349,6 +402,23 @@ export default function LeadsPage() {
                       days={lead.days_since_last_activity}
                       lastAt={lead.last_activity_at}
                     />
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                    {lead.website ? (
+                      <a className="text-primary hover:underline" href={lead.website} target="_blank" rel="noreferrer">
+                        Website
+                      </a>
+                    ) : null}
+                    {lead.linkedin_company ? (
+                      <a className="text-primary hover:underline" href={lead.linkedin_company} target="_blank" rel="noreferrer">
+                        Company LinkedIn
+                      </a>
+                    ) : null}
+                    {lead.linkedin_person ? (
+                      <a className="text-primary hover:underline" href={lead.linkedin_person} target="_blank" rel="noreferrer">
+                        Contact LinkedIn
+                      </a>
+                    ) : null}
                   </div>
                   {lead.notes ? (
                     <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{lead.notes}</p>
@@ -467,6 +537,115 @@ export default function LeadsPage() {
               <div className="grid gap-1.5">
                 <Label>Phone</Label>
                 <Input value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Category</Label>
+              {addingCategory ? (
+                <div className="flex gap-2">
+                  <Input
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    placeholder="e.g. Scottish manufacturing event 2026"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const name = newCategory.trim();
+                      if (!name) return;
+                      setForm({ ...form, category: name });
+                      setAddingCategory(false);
+                    }}
+                  >
+                    Use
+                  </Button>
+                  <Button type="button" variant="ghost" onClick={() => setAddingCategory(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <Select
+                  value={form.category || 'none'}
+                  onValueChange={(v) => {
+                    if (v === '__new') {
+                      setAddingCategory(true);
+                      return;
+                    }
+                    setForm({ ...form, category: v === 'none' ? '' : v });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="No category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No category</SelectItem>
+                    {[...new Set([form.category, ...categories].filter(Boolean) as string[])].map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="__new">Add category…</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Contacted by</Label>
+              <Select
+                value={form.contacted_by || 'none'}
+                onValueChange={(v) => setForm({ ...form, contacted_by: v === 'none' ? null : v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Not set" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Not set</SelectItem>
+                  {LEAD_CONTACTED_BY.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1.5">
+                <Label>Job title</Label>
+                <Input
+                  value={form.job_title || ''}
+                  onChange={(e) => setForm({ ...form, job_title: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label>City</Label>
+                <Input value={form.city || ''} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Website</Label>
+              <Input
+                value={form.website || ''}
+                onChange={(e) => setForm({ ...form, website: e.target.value })}
+                placeholder="https://"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1.5">
+                <Label>Company LinkedIn</Label>
+                <Input
+                  value={form.linkedin_company || ''}
+                  onChange={(e) => setForm({ ...form, linkedin_company: e.target.value })}
+                  placeholder="https://linkedin.com/company/…"
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label>Contact LinkedIn</Label>
+                <Input
+                  value={form.linkedin_person || ''}
+                  onChange={(e) => setForm({ ...form, linkedin_person: e.target.value })}
+                  placeholder="https://linkedin.com/in/…"
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">

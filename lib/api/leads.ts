@@ -2,6 +2,9 @@ import { apiRequest } from './client';
 
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
 
+export const LEAD_CONTACTED_BY = ['Freeda', 'Shyam', 'Manju', 'Santhosh'] as const;
+export type LeadContactedBy = (typeof LEAD_CONTACTED_BY)[number];
+
 export interface Lead {
   id: string;
   lead_name: string;
@@ -10,6 +13,13 @@ export interface Lead {
   email: string | null;
   phone: string | null;
   source: string | null;
+  category: string | null;
+  contacted_by: string | null;
+  job_title: string | null;
+  city: string | null;
+  website: string | null;
+  linkedin_company: string | null;
+  linkedin_person: string | null;
   status: LeadStatus;
   estimated_value: number | null;
   currency: string | null;
@@ -42,13 +52,26 @@ export interface LeadInput {
   currency?: string | null;
   notes?: string | null;
   assigned_to?: string | null;
+  category?: string | null;
+  contacted_by?: string | null;
+  job_title?: string | null;
+  city?: string | null;
+  website?: string | null;
+  linkedin_company?: string | null;
+  linkedin_person?: string | null;
+}
+
+export async function getLeadCategories() {
+  return apiRequest('/leads/categories') as Promise<{ data: string[]; contacted_by: string[] }>;
 }
 
 export async function getLeads(
-  params: { status?: string; search?: string; page?: number; limit?: number; trash?: boolean } = {},
+  params: { status?: string; search?: string; page?: number; limit?: number; trash?: boolean; category?: string; contacted_by?: string } = {},
 ) {
   const q = new URLSearchParams();
   if (params.status) q.set('status', params.status);
+  if (params.category) q.set('category', params.category);
+  if (params.contacted_by) q.set('contacted_by', params.contacted_by);
   if (params.search) q.set('search', params.search);
   if (params.page) q.set('page', String(params.page));
   if (params.limit) q.set('limit', String(params.limit));
