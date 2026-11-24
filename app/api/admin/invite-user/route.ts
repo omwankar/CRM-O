@@ -7,7 +7,7 @@ type InviteBody = {
   email?: string;
   fullName?: string;
   password?: string;
-  role?: 'super_admin' | 'admin' | 'manager';
+  role?: 'super_admin' | 'admin' | 'manager' | 'user';
 };
 
 export async function POST(request: NextRequest) {
@@ -54,13 +54,14 @@ export async function POST(request: NextRequest) {
   const fullName = body.fullName?.trim();
   const password = body.password;
   // Normalize role casing coming from the UI (e.g. "Manager" -> "manager").
-  const nextRole = String(body.role ?? 'manager').trim().toLowerCase();
+  const nextRoleRaw = String(body.role ?? 'manager').trim().toLowerCase();
+  const nextRole = nextRoleRaw === 'admin' ? 'manager' : nextRoleRaw;
 
   if (!email || !fullName || !password) {
     return NextResponse.json({ error: 'Email, full name and password are required' }, { status: 400 });
   }
 
-  if (!['super_admin', 'admin', 'manager'].includes(nextRole)) {
+  if (!['super_admin', 'manager', 'user'].includes(nextRole)) {
     return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
   }
 

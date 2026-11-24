@@ -498,7 +498,7 @@ function DrawerBody({
                       </thead>
                       <tbody>
                         {sends.map((send) => (
-                          <SendRow key={send.id} send={send} mine={send.user_id === userId} isSuperAdmin={isSuperAdmin} onChanged={onChanged} />
+                          <SendRow key={send.id} send={send} canQuote={working} canManage={working} onChanged={onChanged} />
                         ))}
                       </tbody>
                     </table>
@@ -570,11 +570,10 @@ function DrawerBody({
   );
 }
 
-function SendRow({ send, mine, isSuperAdmin, onChanged }: { send: AgentSend; mine: boolean; isSuperAdmin?: boolean; onChanged: () => void }) {
+function SendRow({ send, canQuote, canManage, onChanged }: { send: AgentSend; canQuote: boolean; canManage: boolean; onChanged: () => void }) {
   const [quote, setQuote] = useState(send.notes || '');
-  const [editing, setEditing] = useState(!send.notes && send.quoted_price == null);
+  const [editing, setEditing] = useState(canQuote && !send.notes && send.quoted_price == null);
   const [confirmRemove, setConfirmRemove] = useState(false);
-  const canManage = mine || Boolean(isSuperAdmin);
   const rateMut = useMutation({
     mutationFn: () => saveOperationsRate(send.id, { notes: quote, currency: send.currency }),
     onSuccess: () => { toast.success('Quote saved'); setEditing(false); onChanged(); },
@@ -613,7 +612,7 @@ function SendRow({ send, mine, isSuperAdmin, onChanged }: { send: AgentSend; min
         ) : null}
       </td>
       <td className="qcell">
-        {mine && editing ? (
+        {canQuote && editing ? (
           <>
             <textarea className="field qpaste" rows={5} value={quote} onChange={(event) => setQuote(event.target.value)} placeholder={`Paste the quote from ${send.agent_name}'s email here`} />
             <div className="hint">Paste the whole quote, not only a number</div>
@@ -622,15 +621,17 @@ function SendRow({ send, mine, isSuperAdmin, onChanged }: { send: AgentSend; min
           <div className="qtext">{send.notes}</div>
         ) : send.quoted_price != null ? (
           quoteText(send.notes, send.quoted_price, send.currency)
+        ) : canQuote ? (
+          <button type="button" className="btn sm pri" onClick={() => setEditing(true)}>Add quote</button>
         ) : (
           <span className="hint">—</span>
         )}
       </td>
       <td>
         <div className="acts">
-          {mine && editing ? (
+          {canQuote && editing ? (
             <button type="button" className="btn sm pri" disabled={rateMut.isPending || !quote.trim()} onClick={() => rateMut.mutate()}>Save</button>
-          ) : mine ? (
+          ) : canQuote ? (
             <button type="button" className="btn sm ghost" onClick={() => setEditing(true)}>Edit</button>
           ) : send.is_best ? (
             <span className="pill ok">✓ Best</span>

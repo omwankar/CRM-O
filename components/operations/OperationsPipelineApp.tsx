@@ -132,7 +132,7 @@ export function OperationsPipelineApp() {
                 onPerson={setActivityPerson}
                 onOpen={setSelectedId}
                 onChanged={refresh}
-                userId={user?.id}
+                userId={user?.id || (profile as { id?: string } | undefined)?.id}
                 isManager={isSuperAdmin}
               />
             )
@@ -156,7 +156,7 @@ export function OperationsPipelineApp() {
       </div>
       <InquiryDrawer
         inquiry={selected}
-        userId={user?.id}
+        userId={user?.id || (profile as { id?: string } | undefined)?.id}
         isSuperAdmin={isSuperAdmin}
         team={data?.workload || []}
         agents={data?.agents || []}
