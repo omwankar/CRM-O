@@ -127,7 +127,7 @@ to{transform:none;opacity:1}}}
 .ops .best .price{font-family:var(--f-mono);font-size:20px;font-weight:600;color:var(--ok)}
 .ops .agform{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
 .ops .ccontact{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;margin-top:4px;font-size:13px}
-.ops td.agcell{width:34%;min-width:0;overflow-wrap:anywhere}
+.ops .by td.agcell{width:34%;min-width:0;overflow-wrap:anywhere}
 .ops .email{font-size:12px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;word-break:break-all}
 .ops .email .copy{padding:0 6px;font-size:11px}
 .ops .pickbox{margin-top:12px;border:1px solid var(--line-soft);border-radius:10px;padding:10px 12px;background:var(--bg)}
@@ -142,16 +142,19 @@ to{transform:none;opacity:1}}}
 .ops .by{margin-top:14px}
 .ops .by-h{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;margin-bottom:6px}
 .ops .by-h > span:not(.av){font-weight:500;color:var(--muted);font-size:12px}
-.ops .tbl-wrap{overflow-x:visible;border:1px solid var(--line-soft);border-radius:8px}
-.ops table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:13px}
-.ops th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;padding:7px 10px;background:var(--sunk);border-bottom:1px solid var(--line-soft);white-space:normal}
+.ops .tbl-wrap{overflow-x:auto;border:1px solid var(--line-soft);border-radius:8px}
+.ops table{border-collapse:collapse;width:100%;font-size:13px}
+.ops th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;padding:7px 10px;background:var(--sunk);border-bottom:1px solid var(--line-soft);white-space:nowrap}
+.ops .by .tbl-wrap{overflow-x:hidden}
+.ops .by table{table-layout:fixed}
+.ops .by th{white-space:normal}
 .ops td{padding:7px 10px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
 .ops tr:last-child td{border-bottom:0}
 .ops td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
 .ops tr.isbest td{background:var(--ok-soft)}
 .ops tr.editing td{background:var(--accent-soft)}
 .ops .acts{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
-.ops td.qcell{width:46%;min-width:0}
+.ops .by td.qcell{width:46%;min-width:0}
 .ops .who-upd{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12px;color:var(--muted)}
 .ops .typing{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:12px;font-weight:600;color:var(--warn);background:var(--warn-soft);border-radius:999px;padding:2px 10px 2px 3px;width:fit-content}
 @media (prefers-reduced-motion:no-preference){.typing span{animation:pulse 1.4s ease-in-out infinite}@keyframes pulse{50%{opacity:.55}}}
